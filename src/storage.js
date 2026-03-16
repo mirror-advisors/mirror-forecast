@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 const LOCAL_KEY = "mirror_forecast_v1";
+
 function migrateData(parsed, defaultData) {
   if (!parsed.pt) parsed.pt = defaultData.pt;
   if (!parsed.dh) parsed.dh = defaultData.dh;
@@ -15,29 +16,33 @@ function migrateData(parsed, defaultData) {
   }
   return parsed;
 }
+
 export async function loadData(defaultData) {
   try {
     const { data, error } = await supabase.from('forecast_data').select('data').eq('id', 1).single();
-    if (data?.data && Object.keys(data.data).length > 0) {
+    if (!error && data && data.data && Object.keys(data.data).length > 0) {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(data.data));
       return migrateData(data.data, defaultData);
     }
-    const raw = localStorage.getItem(LOCAL_KEY);
-    if (raw) {
-      const parsed = migrateData(JSON.parse(raw), defaultData);
-      await supabase.from('forecast_data').upsert({ id: 1, data: parsed, updated_at: new Date().toISOString() });
-      return parsed;
-    }
   } catch (e) {
-    console.error('Load error:', e);
-    try { const raw = localStorage.getItem(LOCAL_KEY); if (raw) return migrateData(JSON.parse(raw), defaultData); } catch {}
+    console.error('Supabase load error:', e);
   }
-  const seeded = migrateData({...defaultData}, defaultData);
-  await supabase.from('forecast_data').upsert({ id: 1, data: seeded, updated_at: new Date().toISOString() }).catch(() => {});
-  return seeded;
+
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (raw) return migrateData(JSON.parse(raw), defaultData);
+  } catch (e) {
+    console.error('LocalStorage load error:', e);
+  }
+
+  return migrateData({ ...defaultData }, defaultData);
 }
-export async function saveData(data, isAdmin) {
+
+export async function saveData(data) {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
-  const { error } = await supabase.from('forecast_data').upsert({ id: 1, data, updated_at: new Date().toISOString() });
-  if (error) console.error('Save error:', error);
+  try {
+    await supabase.from('forecast_data').upsert({ id: 1, data: data, updated_at: new Date().toISOString() });
+  } catch (e) {
+    console.error('Save error:', e);
+  }
 }

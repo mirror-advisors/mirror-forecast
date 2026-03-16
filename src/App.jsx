@@ -15,7 +15,7 @@ export default function App() {
   const [arc, setArc] = useState(false);
   const [ptab, setPtab] = useState("model");
   useEffect(() => { loadData(D0).then(setD); }, []);
-  const save = useCallback((nd) => { setD(nd); saveData(nd, isAdmin); }, [isAdmin]);
+  const save = useCallback((nd) => { setD(nd); saveData(nd); }, []);
   const pt = d?.pt || D0.pt;
   const dh = d?.dh || D0.dh;
   const pm = useMemo(() => computePartnership(pt), [pt]);
