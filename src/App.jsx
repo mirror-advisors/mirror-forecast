@@ -84,7 +84,7 @@ export default function App() {
         </div>
         <Card style={{ padding:0,overflow:"hidden",marginBottom:20 }}>
           <div style={{ display:"grid",gridTemplateColumns:"repeat(12,1fr)" }}>
-            {MO.map((m,i)=>{const cm=new Date().getMonth();const bg=c.bl[i]>5000?P.gB:c.bl[i]>0?P.aB:P.rB;const fg=c.bl[i]>5000?P.g:c.bl[i]>0?P.a:P.r;return(<div key={m} style={{ padding:"12px 2px",textAlign:"center",background:bg,border:i===cm?"2px solid #d4a017":"none",borderRight:i<11&&i!==cm?`1px solid ${P.bg}`:undefined }}><div style={{ fontSize:9,color:fg,opacity:.6 }}>{m}</div><div style={{ fontSize:13,fontWeight:800,color:fg }}>{fK(c.bl[i])}</div><div style={{ fontSize:9,color:fg,opacity:.4 }}>{fK(c.nt[i])}</div></div>);})}
+            {MO.map((m,i)=>{const cm=new Date().getMonth();const bg=c.bl[i]>5000?P.gB:c.bl[i]>0?P.aB:P.rB;const fg=c.bl[i]>5000?P.g:c.bl[i]>0?P.a:P.r;return(<div key={m} style={{ padding:"12px 2px",textAlign:"center",background:bg,border:i===cm?"2px solid #d4a017":"none",borderRadius:i===cm?4:0,position:"relative",zIndex:i===cm?2:0,borderRight:i<11&&i!==cm?`1px solid ${P.bg}`:undefined }}><div style={{ fontSize:9,color:fg,opacity:.6 }}>{m}</div><div style={{ fontSize:13,fontWeight:800,color:fg }}>{fK(c.bl[i])}</div><div style={{ fontSize:9,color:fg,opacity:.4 }}>{fK(c.nt[i])}</div></div>);})}
           </div>
         </Card>
         <Lbl>Unit Economics</Lbl>
