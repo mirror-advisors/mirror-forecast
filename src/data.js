@@ -1,12 +1,12 @@
 export const MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 export const P = {
-  bg: "#0B1120", c1: "#151D2E", c2: "#1E293B", bd: "#1E3A5F",
-  g: "#10B981", gB: "#022C22", gM: "#065F46",
-  r: "#F43F5E", rB: "#2D0A10", rM: "#881337",
-  a: "#F59E0B", aB: "#2D1B00",
-  b: "#3B82F6", p: "#A78BFA", t: "#14B8A6",
-  tx: "#E2E8F0", tm: "#8B9DB8", td: "#506680",
+  bg: "#0f1419", c1: "#181f2a", c2: "#1e2a38", bd: "#2a3a4a",
+  g: "#34d399", gB: "#0d2e22", gM: "#065F46",
+  r: "#fb7185", rB: "#2d1520", rM: "#881337",
+  a: "#fbbf24", aB: "#2d2510",
+  b: "#60a5fa", p: "#c4b5fd", t: "#2dd4bf",
+  tx: "#e8edf4", tm: "#8899ab", td: "#566a80",
 };
 
 export const DC = { Development: P.b, Marketing: P.p, Operations: P.a, Leadership: P.t };
