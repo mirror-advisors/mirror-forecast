@@ -1,12 +1,32 @@
 export const MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 export const P = {
-  bg: "#0f1419", c1: "#181f2a", c2: "#1e2a38", bd: "#2a3a4a",
-  g: "#34d399", gB: "#0d2e22", gM: "#065F46",
-  r: "#fb7185", rB: "#2d1520", rM: "#881337",
-  a: "#fbbf24", aB: "#2d2510",
-  b: "#60a5fa", p: "#c4b5fd", t: "#2dd4bf",
-  tx: "#e8edf4", tm: "#8899ab", td: "#566a80",
+  // Backgrounds
+  bg: "#FAF8F5",    // main page background — warm cream
+  c1: "#FFFFFF",    // card background — white
+  c2: "#F3F0EB",    // input/inset background — warm light gray
+  bd: "#D6D0C8",    // borders — warm medium gray
+
+  // Semantic colors — darkened for visibility
+  g: "#3D7A47",     // positive/green — dark sage
+  gB: "#E2F0E4",    // green background tint
+  gM: "#2E5E36",    // green accent/dark
+
+  r: "#C0392B",     // negative/red — dark dusty rose
+  rB: "#F5E1DE",    // red background tint
+  rM: "#8B1A1A",    // red accent/dark
+
+  a: "#B8860B",     // warning/amber — dark goldenrod
+  aB: "#FBF0D1",    // amber background tint
+
+  b: "#3A6FA0",     // info/blue — muted steel blue
+  p: "#7C5CBF",     // purple — muted violet
+  t: "#1E8A7A",     // teal — dark teal
+
+  // Text
+  tx: "#2C2A26",    // primary text — dark charcoal
+  tm: "#6B6560",    // muted text — warm gray
+  td: "#9A928A",    // dim text — light warm gray
 };
 
 export const DC = { Development: P.b, Marketing: P.p, Operations: P.a, Leadership: P.t };
@@ -16,7 +36,7 @@ export const TIERS = {
   im: { l: "Infinity Mirror", c: P.g },
   zen: { l: "Zen Support", c: P.t },
   mktg: { l: "Marketing", c: P.p },
-  zho: { l: "Zoho-Commission-Only", c: "#0EA5E9" },
+  zho: { l: "Zoho-Commission-Only", c: "#2A7AB5" },
   ot: { l: "One-Time", c: P.a },
 };
 

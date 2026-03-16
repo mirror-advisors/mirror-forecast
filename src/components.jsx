@@ -2,11 +2,11 @@ import { useState } from "react";
 import { P, MO, fmt, sm } from "./data.js";
 
 export const Card = ({ children, style: s }) => (
-  <div style={{ background: P.c1, borderRadius: 10, padding: 20, border: `1px solid ${P.bd}`, ...s }}>{children}</div>
+  <div style={{ background: P.c1, borderRadius: 10, padding: 20, border: `1px solid ${P.bd}`, boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)", ...s }}>{children}</div>
 );
 
 export const Lbl = ({ children }) => (
-  <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontWeight: 600 }}>{children}</div>
+  <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{children}</div>
 );
 
 export const Bdg = ({ children, c }) => (
@@ -14,7 +14,7 @@ export const Bdg = ({ children, c }) => (
 );
 
 export const NumIn = ({ value, onChange, w }) => (
-  <input type="number" value={value} onChange={onChange} style={{ background: P.c2, border: `1px solid ${P.bd}`, color: P.a, borderRadius: 4, padding: "5px 8px", fontFamily: "inherit", fontSize: 12, width: w || 70, textAlign: "right" }} />
+  <input type="number" value={value} onChange={onChange} style={{ background: P.c2, border: `1px solid ${P.bd}`, color: P.a, borderRadius: 6, padding: "5px 8px", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, width: w || 70, textAlign: "right", outline: "none" }} />
 );
 
 export function Pie({ data: dd, size }) {
@@ -32,10 +32,10 @@ export function Pie({ data: dd, size }) {
     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
       <svg width={sz} height={sz}>{sl.map((s, i) => <path key={i} d={s.path} fill={s.color} stroke={P.bg} strokeWidth={2} />)}</svg>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>{sl.map((s, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
           <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
           <span style={{ color: P.tm }}>{s.label}</span>
-          <span style={{ color: P.tx, fontWeight: 700, marginLeft: "auto" }}>{(s.pc * 100).toFixed(0)}%</span>
+          <span style={{ color: P.tx, fontWeight: 700, marginLeft: "auto", fontFamily: "'JetBrains Mono', monospace" }}>{(s.pc * 100).toFixed(0)}%</span>
         </div>
       ))}</div>
     </div>
@@ -47,17 +47,17 @@ export function XRow({ label, vals, details }) {
   return (
     <>
       <tr style={{ cursor: details ? "pointer" : "default" }} onClick={() => details && setOpen(!open)}>
-        <td style={{ padding: "5px 10px", color: P.r, borderBottom: `1px solid ${P.bd}10` }}>
+        <td style={{ padding: "5px 10px", color: P.r, borderBottom: `1px solid ${P.bd}20` }}>
           {details ? <span style={{ display: "inline-block", width: 14, fontSize: 9, color: P.td, transition: "transform 0.15s", transform: open ? "rotate(90deg)" : "rotate(0)" }}>{"\u25b6"}</span> : null}{label}
         </td>
-        {vals.map((v, i) => <td key={i} style={{ padding: "5px 6px", textAlign: "right", color: P.r, borderBottom: `1px solid ${P.bd}10` }}>{fmt(v)}</td>)}
-        <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: P.r, borderBottom: `1px solid ${P.bd}10` }}>{fmt(sm(vals))}</td>
+        {vals.map((v, i) => <td key={i} style={{ padding: "5px 6px", textAlign: "right", color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{fmt(v)}</td>)}
+        <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{fmt(sm(vals))}</td>
       </tr>
       {open && details ? details.map((dd, di) => (
-        <tr key={di} style={{ background: `${P.c2}60` }}>
-          <td style={{ padding: "3px 10px 3px 30px", fontSize: 11, color: P.tm, borderBottom: `1px solid ${P.bd}08` }}>{dd.n}</td>
-          {dd.v.map((v, i) => <td key={i} style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, color: v ? P.tm : P.td, borderBottom: `1px solid ${P.bd}08` }}>{v ? fmt(v) : "\u2014"}</td>)}
-          <td style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, fontWeight: 600, color: P.tm, borderBottom: `1px solid ${P.bd}08` }}>{fmt(sm(dd.v))}</td>
+        <tr key={di} style={{ background: P.c2 }}>
+          <td style={{ padding: "3px 10px 3px 30px", fontSize: 11, color: P.tm, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'DM Sans', sans-serif" }}>{dd.n}</td>
+          {dd.v.map((v, i) => <td key={i} style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, color: v ? P.tm : P.td, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{v ? fmt(v) : "\u2014"}</td>)}
+          <td style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, fontWeight: 600, color: P.tm, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(sm(dd.v))}</td>
         </tr>
       )) : null}
     </>
@@ -69,8 +69,8 @@ export function Sld({ label, value, onChange, min, max, step = 1, pre = "", suf 
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-        <span style={{ fontSize: 10, color: P.td, letterSpacing: "0.05em", textTransform: "uppercase" }}>{label}</span>
-        <span style={{ fontSize: 12, color, fontWeight: 700 }}>{pre}{typeof value === "number" ? value.toLocaleString() : value}{suf}</span>
+        <span style={{ fontSize: 10, color: P.td, letterSpacing: "0.05em", textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+        <span style={{ fontSize: 12, color, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>{pre}{typeof value === "number" ? value.toLocaleString() : value}{suf}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(parseFloat(e.target.value))}
         style={{ width: "100%", height: 5, appearance: "none", borderRadius: 3, cursor: "pointer", background: `linear-gradient(to right,${color} 0%,${color} ${pct}%,${P.c2} ${pct}%,${P.c2} 100%)`, outline: "none" }} />
@@ -80,10 +80,10 @@ export function Sld({ label, value, onChange, min, max, step = 1, pre = "", suf 
 
 export function KPI({ label, value, sub, color = P.g, warn }) {
   return (
-    <div style={{ background: warn ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${warn ? "#f59e0b33" : "#ffffff0a"}`, borderRadius: 8, padding: "10px 12px", minWidth: 120 }}>
-      <div style={{ fontSize: 9, color: P.td, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color }}>{value}</div>
-      {sub && <div style={{ fontSize: 9, color: P.td, marginTop: 2 }}>{sub}</div>}
+    <div style={{ background: warn ? P.aB : P.c1, border: `1px solid ${warn ? P.a + "40" : P.bd}`, borderRadius: 8, padding: "10px 12px", minWidth: 120, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+      <div style={{ fontSize: 9, color: P.td, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+      {sub && <div style={{ fontSize: 9, color: P.td, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{sub}</div>}
     </div>
   );
 }
