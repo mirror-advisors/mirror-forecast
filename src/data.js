@@ -20,6 +20,7 @@ export const P = {
   aB: "#FBF0D1",    // amber background tint
 
   b: "#3A6FA0",     // info/blue — muted steel blue
+  bB: "#E3EDF6",    // blue background tint
   p: "#7C5CBF",     // purple — muted violet
   t: "#1E8A7A",     // teal — dark teal
 
