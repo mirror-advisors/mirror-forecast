@@ -42,22 +42,22 @@ export function Pie({ data: dd, size }) {
   );
 }
 
+// V2.1: XRow — line item numbers in muted white (P.tm), only TOTAL row stays red
 export function XRow({ label, vals, details, win }) {
   const [open, setOpen] = useState(false);
-  // If win (rolling window) is provided, use it for column backgrounds
   return (
     <>
       <tr style={{ cursor: details ? "pointer" : "default" }} onClick={() => details && setOpen(!open)}>
-        <td style={{ padding: "5px 10px", color: P.r, borderBottom: `1px solid ${P.bd}20` }}>
+        <td style={{ padding: "5px 10px", color: P.tm, borderBottom: `1px solid ${P.bd}20` }}>
           {details ? <span style={{ display: "inline-block", width: 14, fontSize: 9, color: P.td, transition: "transform 0.15s", transform: open ? "rotate(90deg)" : "rotate(0)" }}>{"\u25b6"}</span> : null}{label}
         </td>
-        {vals.map((v, i) => <td key={i} style={{ padding: "5px 6px", textAlign: "right", color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, background: win ? (win[i]?.isCurrent ? P.bB : "transparent") : "transparent" }}>{fmt(v)}</td>)}
+        {vals.map((v, i) => <td key={i} style={{ padding: "5px 6px", textAlign: "right", color: P.tm, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, background: win ? (win[i]?.isCurrent ? P.bB : "transparent") : "transparent" }}>{fmt(v)}</td>)}
         <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{fmt(sm(vals))}</td>
       </tr>
       {open && details ? details.map((dd, di) => (
         <tr key={di} style={{ background: `${P.c2}80` }}>
-          <td style={{ padding: "3px 10px 3px 30px", fontSize: 11, color: P.tm, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'DM Sans', sans-serif" }}>{dd.n}</td>
-          {dd.v.map((v, i) => <td key={i} style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, color: v ? P.tm : P.td, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{v ? fmt(v) : "\u2014"}</td>)}
+          <td style={{ padding: "3px 10px 3px 30px", fontSize: 11, color: P.td, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'DM Sans', sans-serif" }}>{dd.n}</td>
+          {dd.v.map((v, i) => <td key={i} style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, color: v ? P.td : `${P.td}60`, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{v ? fmt(v) : "\u2014"}</td>)}
           <td style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, fontWeight: 600, color: P.tm, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(sm(dd.v))}</td>
         </tr>
       )) : null}
@@ -89,7 +89,6 @@ export function KPI({ label, value, sub, color = P.g, warn }) {
   );
 }
 
-// V2: Toggle Switch component
 export function Toggle({ label, value, onChange, color = P.g }) {
   return (
     <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
