@@ -18,8 +18,11 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight:'100vh',background:P.bg,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans', sans-serif" }}>
       <div style={{ background:P.c1,borderRadius:12,padding:40,width:380,border:`1px solid ${P.bd}` }}>
-        <div style={{ fontSize:20,fontWeight:700,color:P.g,marginBottom:4 }}>Mirror Forecast</div>
-        <div style={{ fontSize:12,color:P.tm,marginBottom:28 }}>Sign in to continue</div>
+        <div style={{ textAlign:'center',marginBottom:24 }}>
+          <img src="/mirror-logo.png" alt="Mirror Advisors" style={{ height:40,marginBottom:12 }} />
+          <div style={{ fontSize:14,color:P.g,fontWeight:600,opacity:.7 }}>Forecast</div>
+        </div>
+        <div style={{ fontSize:12,color:P.tm,marginBottom:28,textAlign:'center' }}>Sign in to continue</div>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom:16 }}>
             <label style={{ fontSize:10,color:P.td,textTransform:'uppercase',letterSpacing:'0.08em',display:'block',marginBottom:6 }}>Email</label>
