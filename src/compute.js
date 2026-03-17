@@ -23,7 +23,11 @@ export function compute(d) {
     let t = 0;
     at.filter(p => p.ct === "PH").forEach(p => {
       if (p.nm === "Mark" && (i < 1 || i > 4)) return;
-      if (p.nm === "Jeanna" && (i < 2 || i > 4)) return;
+      // V2.2: Jeanna endMo — she stops after endMo (March = 2)
+      if (p.nm === "Jeanna") {
+        const endMo = p.endMo !== undefined ? p.endMo : 4;
+        if (i < 2 || i > endMo) return;
+      }
       t -= (p.nm === "Janna" && i < 2 ? 800 : p.co);
     });
     return t;
@@ -44,17 +48,20 @@ export function compute(d) {
   return { rv, sb, oc, db, us, ph, ind, ex, nt, bl, at };
 }
 
-// V2.1: Partnership with delay months (dl) — revenue doesn't start for dl months after start
+// V2.2: Partnership with separate Zoho split and delay
 export function computePartnership(pt) {
   const months = [];
   let cumCash = 0, breakeven = -1;
   const zmBase = 984;
-  const dl = pt.dl || 0; // delay months before first revenue
+  const dl = pt.dl || 0;
+
+  // Zoho split: check if lead bonus is active
+  const zMarkPct = pt.zLeadBonus ? (pt.zLeadMark || 40) : (pt.nzp || 10);
+  const zCoPct = pt.zLeadBonus ? (pt.zLeadCo || 60) : (pt.nzcs || 90);
 
   for (let i = 0; i < 12; i++) {
     const active = i >= pt.sm;
     const monthsActive = active ? i - pt.sm + 1 : 0;
-    // Revenue only starts after delay period
     const revenueActive = active && monthsActive > dl;
     const revenueMonths = revenueActive ? monthsActive - dl : 0;
     const qIn = revenueActive ? Math.floor(revenueMonths / 3) + 1 : 0;
@@ -62,32 +69,38 @@ export function computePartnership(pt) {
     const nZ = revenueActive ? qIn * pt.nzq : 0;
     const dN = Math.floor(oC / pt.den);
 
+    // Odoo splits: Mark (ops) / Company (ocs) / Paul (ips)
     const oGross = oC * pt.oar;
-    const oCR = oGross * (pt.ocs / 100);
-    const oPR = oGross * (pt.ips / 100);
-    const oMR = oGross * (pt.ops / 100);
-    const nZR = nZ * pt.azr;
+    const oCR = oGross * (pt.ocs / 100); // company
+    const oPR = oGross * (pt.ips / 100); // paul
+    const oMR = oGross * (pt.ops / 100); // mark
 
-    // Comp is paid from start (even during delay)
+    // Zoho splits: Mark (zMarkPct) / Company (zCoPct)
+    const nZR = nZ * pt.azr;
+    const nzMarkCut = nZR * (zMarkPct / 100);
+    const nzCoCut = nZR * (zCoPct / 100);
+
     const base = active ? pt.bs : 0;
     const ezC = active ? zmBase * (pt.ezp / 100) : 0;
-    const nzC = revenueActive ? nZR * (pt.nzp / 100) : 0;
-    const mComp = base + ezC + nzC + oMR;
+    const mComp = base + ezC + (revenueActive ? nzMarkCut + oMR : 0);
 
     const devCo = dN * pt.dch;
     const pCost = (active && monthsActive === 1) ? pt.opc : 0;
-    const net = active ? (oCR + oPR + (nZR - nzC) - base - ezC - devCo - pCost) : 0;
+    // Net = company keeps + paul keeps + zoho company keeps - mark's total comp - dev costs - setup
+    const net = active ? (oCR + oPR + nzCoCut - base - ezC - devCo - pCost) : 0;
 
     cumCash += net;
     if (breakeven === -1 && cumCash > 0 && active && i > pt.sm) breakeven = i;
 
     months.push({
       oC, nZ, mComp: Math.round(mComp), dH: dN,
-      newRev: Math.round(oCR + oPR + nZR), net: Math.round(net), cum: Math.round(cumCash),
+      newRev: Math.round(oGross + nZR),
+      net: Math.round(net), cum: Math.round(cumCash),
       oCR: Math.round(oCR), oPR: Math.round(oPR), oMR: Math.round(oMR),
-      base, ezC: Math.round(ezC), nzC: Math.round(nzC), devCo, pCost,
+      nzMarkCut: Math.round(nzMarkCut), nzCoCut: Math.round(nzCoCut),
+      base, ezC: Math.round(ezC), devCo, pCost,
       totalCost: Math.round(mComp + devCo + pCost),
-      totalRev: Math.round(oCR + oPR + nZR),
+      totalRev: Math.round(oCR + oPR + nzCoCut),
       inDelay: active && !revenueActive,
     });
   }
@@ -99,7 +112,6 @@ export function computePartnership(pt) {
   return { months, breakeven, beC, worst, ok: worst > -8000, tight: worst > -3000 };
 }
 
-// V2.1: Dev hire with mode — "capacity" (no new revenue) vs "growth" (opens new client slots)
 export function computeDevHire(dh) {
   const months = [];
   let cumCash = 0, breakeven = -1;
@@ -119,42 +131,24 @@ export function computeDevHire(dh) {
     if (breakeven === -1 && cumCash > 0 && active && i > dh.sm) breakeven = i;
     months.push({ rev, cost, net, cum: cumCash, ramp, capacity: active ? capacity : 0 });
   }
-
   return { months, breakeven, totalCost, capacity, addedRev, isGrowth, worst: Math.min(...months.map(m => m.cum)) };
 }
 
-// Compute forecast with scenario overlays
 export function computeWithOverlays(d, options = { partnership: false, devHire: false }) {
   const base = compute(d);
-  const oRv = [...base.rv];
-  const oEx = [...base.ex];
-  const pCostArr = new Array(12).fill(0);
-  const pRevArr = new Array(12).fill(0);
-  const dhCostArr = new Array(12).fill(0);
-  const dhRevArr = new Array(12).fill(0);
+  const oRv = [...base.rv], oEx = [...base.ex];
+  const pCostArr = new Array(12).fill(0), pRevArr = new Array(12).fill(0);
+  const dhCostArr = new Array(12).fill(0), dhRevArr = new Array(12).fill(0);
 
   if (options.partnership) {
     const pm = computePartnership(d.pt || {});
-    for (let i = 0; i < 12; i++) {
-      pCostArr[i] = pm.months[i].totalCost;
-      pRevArr[i] = pm.months[i].totalRev;
-      oRv[i] += pRevArr[i];
-      oEx[i] -= pCostArr[i];
-    }
+    for (let i = 0; i < 12; i++) { pCostArr[i] = pm.months[i].totalCost; pRevArr[i] = pm.months[i].totalRev; oRv[i] += pRevArr[i]; oEx[i] -= pCostArr[i]; }
   }
   if (options.devHire) {
     const dm = computeDevHire(d.dh || {});
-    for (let i = 0; i < 12; i++) {
-      dhCostArr[i] = dm.months[i].cost;
-      dhRevArr[i] = dm.months[i].rev;
-      oRv[i] += dhRevArr[i];
-      oEx[i] -= dhCostArr[i];
-    }
+    for (let i = 0; i < 12; i++) { dhCostArr[i] = dm.months[i].cost; dhRevArr[i] = dm.months[i].rev; oRv[i] += dhRevArr[i]; oEx[i] -= dhCostArr[i]; }
   }
-
   const oNt = oRv.map((r, i) => r + oEx[i]);
-  const oBl = [];
-  oNt.forEach((n, i) => oBl.push(i === 0 ? d.openBal + n : oBl[i - 1] + n));
-
+  const oBl = []; oNt.forEach((n, i) => oBl.push(i === 0 ? d.openBal + n : oBl[i - 1] + n));
   return { base, overlay: { rv: oRv, ex: oEx, nt: oNt, bl: oBl }, pCost: pCostArr, pRev: pRevArr, dhCost: dhCostArr, dhRev: dhRevArr };
 }

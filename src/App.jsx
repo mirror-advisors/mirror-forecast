@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { MO, P, DC, FL, TIERS, PIE_COLORS, D0, fmt, fK, sm, preciseRunway, getRollingWindow, getWinVal } from "./data.js";
+/* v2.2 changes: 14-month window, outstanding+runway KPI, commission tab, Zoho splits, Option One fix, Jeanna endMo */
 import { loadData, saveData } from "./storage.js";
 import { compute, computePartnership, computeDevHire, computeWithOverlays } from "./compute.js";
 import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle } from "./components.jsx";
@@ -86,7 +87,8 @@ export default function App() {
 
   const outstanding = d.cl.reduce((s, x) => s + x.st.filter(v => v === "U").length * x.rt, 0);
   const monthlyBurn = Math.abs(sm(c.ex) / 12);
-  const extraRunway = monthlyBurn > 0 ? Math.round(outstanding / monthlyBurn * 10) / 10 : 0;
+  const extraRunway = monthlyBurn > 0 ? Math.round(outstanding / monthlyBurn * 4) / 4 : 0;
+  const runwayIfCollected = Math.round((mg + extraRunway) * 4) / 4;
 
   const ov = computeWithOverlays(d, { partnership: showPartnership, devHire: showDevHire });
 
@@ -115,7 +117,7 @@ export default function App() {
       {/* Nav bar with logo — mix-blend-mode:lighten makes black bg invisible */}
       <div style={{ display:"flex",flexWrap:"wrap",alignItems:"center",borderBottom:`1px solid ${P.bd}`,background:P.c1,position:"sticky",top:0,zIndex:10 }}>
         <div style={{ padding:"10px 20px",display:"flex",alignItems:"center",gap:10 }}>
-          <img src="/mirror-logo.png" alt="Mirror Advisors" style={{ height:28,mixBlendMode:"lighten" }} />
+          <img src="/mirror-logo.png" alt="Mirror Advisors" style={{ height:28 }} />
           <span style={{ fontWeight:700,fontSize:14,color:P.g,opacity:.7 }}>Forecast</span>
         </div>
         {tabs.map(t=>(<button key={t} onClick={()=>setTab(t)} style={{ padding:"14px 10px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:tab===t?P.bg:"transparent",color:tab===t?P.tx:P.tm,borderBottom:tab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>))}
@@ -145,7 +147,7 @@ export default function App() {
               <Lbl>Outstanding Invoices</Lbl>
               <div style={{ display:"flex",alignItems:"baseline",gap:10 }}>
                 <span style={{ fontSize:22,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(outstanding)}</span>
-                {outstanding > 0 && <span style={{ fontSize:11,color:P.tm }}>If collected: <b style={{ color:P.g }}>+{extraRunway} months</b></span>}
+                {outstanding > 0 && <span style={{ fontSize:11,color:P.tm }}>If collected: <b style={{ color:P.g }}>+{extraRunway} ({runwayIfCollected} months)</b></span>}
               </div>
             </Card>
           </div>
@@ -261,16 +263,15 @@ export default function App() {
         )}
 
         <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
+          {/* SERVICE CLIENTS VIEW — payment tracker */}
+          {clFilter === "service" && <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
             <thead><tr>
               <th style={{ ...th,textAlign:"left",width:200,cursor:"pointer" }} onClick={()=>toggleSort("nm")}>Client{sortIcon("nm")}</th>
               <th style={{ ...th,textAlign:"left",width:70 }}>Tier</th>
-              {clFilter !== "commission" && <th style={{ ...th,textAlign:"right",width:90,cursor:"pointer" }} onClick={()=>toggleSort("rt")}>Rate{sortIcon("rt")}</th>}
-              <th style={{ ...th,textAlign:"right",width:120,cursor:"pointer" }} onClick={()=>toggleSort("zhAnnual")}>{clFilter==="commission"?"Commission":"Zoho"}{sortIcon("zhAnnual")}</th>
-              <th style={{ ...th,textAlign:"right",width:100,cursor:"pointer" }} onClick={()=>toggleSort("totalValue")}>Total Value{sortIcon("totalValue")}</th>
-              {/* Only show payment tracker for service clients */}
-              {clFilter !== "commission" && win.map((s,i)=><th key={i} style={{ ...th,textAlign:"center",width:34,background:s.isCurrent?P.bB:"transparent",color:s.isCurrent?P.b:P.td,fontWeight:s.isCurrent?700:500 }}>{s.label}</th>)}
-              {clFilter !== "commission" && <th style={th}>YTD</th>}
+              <th style={{ ...th,textAlign:"right",width:90,cursor:"pointer" }} onClick={()=>toggleSort("rt")}>Rate{sortIcon("rt")}</th>
+              <th style={{ ...th,textAlign:"right",width:100 }}>Zoho</th>
+              {win.map((s,i)=><th key={i} style={{ ...th,textAlign:"center",width:34,background:s.isCurrent?P.bB:"transparent",color:s.isCurrent?P.b:P.td,fontWeight:s.isCurrent?700:500 }}>{s.label}</th>)}
+              <th style={th}>YTD</th>
               <th style={{ width:24 }}></th>
             </tr></thead>
             <tbody>{filteredClients.map((cl)=>{
@@ -278,26 +279,16 @@ export default function App() {
               const isExp = clExpanded === ci;
               const tier = TIERS[cl.tier]||TIERS.ot;
               const ytd = cl.st.filter(s=>s==="P").length*cl.rt;
-              const zhMonthly = cl.zh || 0;
-              const zhAnnualDirect = cl.zha || 0;
-              let zhDisplay = null;
-              if (zhMonthly > 0) zhDisplay = <><span style={{ color:P.t,fontWeight:600 }}>${zhMonthly}/mo</span><span style={{ color:P.td,fontSize:10 }}> (${(zhMonthly*12).toLocaleString()}/yr)</span></>;
-              else if (zhAnnualDirect > 0) zhDisplay = <><span style={{ color:P.t,fontWeight:600 }}>${zhAnnualDirect.toLocaleString()}/yr</span><span style={{ color:P.td,fontSize:10 }}> (~${Math.round(zhAnnualDirect/12).toLocaleString()}/mo)</span></>;
-
+              const zhM = cl.zh||0; const zhA = cl.zha||0;
+              let zhD = zhM > 0 ? `$${zhM}/mo` : zhA > 0 ? `$${zhA.toLocaleString()}/yr` : null;
               return(<React.Fragment key={cl.id}>
                 <tr style={{ cursor:"pointer" }} onClick={()=>setClExpanded(isExp?null:ci)}>
-                  <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                      <span style={{ fontSize:9,color:P.td,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"rotate(0)",display:"inline-block" }}>▶</span>
-                      <span style={{ fontWeight:600 }}>{cl.nm}</span>
-                    </div>
-                  </td>
+                  <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}><div style={{ display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:9,color:P.td,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"rotate(0)",display:"inline-block" }}>▶</span><span style={{ fontWeight:600 }}>{cl.nm}</span></div></td>
                   <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}><span style={{ fontSize:9,padding:"2px 6px",borderRadius:3,background:`${tier.c}15`,color:tier.c,fontWeight:600 }}>{tier.l}</span></td>
-                  {clFilter !== "commission" && <td style={{ padding:"6px 8px",textAlign:"right",color:cl.rt?P.g:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{cl.rt?`${fmt(cl.rt)}/mo`:"\u2014"}</td>}
-                  <td style={{ padding:"6px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{zhDisplay||"\u2014"}</td>
-                  <td style={{ padding:"6px 8px",textAlign:"right",fontWeight:700,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",color:cl.totalValue>20000?P.g:cl.totalValue>5000?P.a:P.t }}>{fmt(cl.totalValue)}</td>
-                  {clFilter !== "commission" && win.map((s,wi)=>{const mi=s.idx;const stVal=s.inCurrentYear?(cl.st[mi]||""):"";return<td key={wi} style={{ padding:"2px 1px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,background:s.isCurrent?P.bB:"transparent" }} onClick={e=>{e.stopPropagation();if(s.inCurrentYear&&cl.rt>0)cyc(ci,mi);}}><div style={sSty(stVal)}>{stVal||"·"}</div></td>})}
-                  {clFilter !== "commission" && <td style={{ padding:"6px 8px",textAlign:"right",color:P.g,fontWeight:600,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</td>}
+                  <td style={{ padding:"6px 8px",textAlign:"right",color:cl.rt?P.g:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{cl.rt?`${fmt(cl.rt)}/mo`:"\u2014"}</td>
+                  <td style={{ padding:"6px 8px",textAlign:"right",color:zhD?P.t:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{zhD||"\u2014"}</td>
+                  {win.map((s,wi)=>{const mi=s.idx;const stVal=s.inCurrentYear?(cl.st[mi]||""):"";return<td key={wi} style={{ padding:"2px 1px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,background:s.isCurrent?P.bB:"transparent" }} onClick={e=>{e.stopPropagation();if(s.inCurrentYear&&cl.rt>0)cyc(ci,mi);}}><div style={sSty(stVal)}>{stVal||"·"}</div></td>})}
+                  <td style={{ padding:"6px 8px",textAlign:"right",color:P.g,fontWeight:600,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</td>
                   <td style={{ borderBottom:`1px solid ${P.bd}10` }} onClick={e=>e.stopPropagation()}><button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:"transparent",border:"none",color:P.rM,cursor:"pointer",fontSize:13 }}>×</button></td>
                 </tr>
                 {isExp && <tr><td colSpan={99} style={{ padding:"0 8px 12px 28px",borderBottom:`1px solid ${P.bd}20` }}>
@@ -306,18 +297,47 @@ export default function App() {
                     <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Term</div><input value={cl.tr||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tr:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
                     <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Via</div><input value={cl.vi||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,vi:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
                     <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Tier</div><select value={cl.tier} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tier:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}>{Object.entries(TIERS).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Monthly</div><input type="number" value={cl.zh||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zh:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Annual</div><input type="number" value={cl.zha||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zha:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Seats</div><input type="number" value={cl.seats||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,seats:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Signing Date</div><input type="date" value={cl.signed||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,signed:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
                   </div>
                 </td></tr>}
               </React.Fragment>);
             })}</tbody>
-          </table>
+          </table>}
+
+          {/* COMMISSION VIEW — all clients with Zoho commission details */}
+          {clFilter === "commission" && <>
+            <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
+              <thead><tr>
+                <th style={{ ...th,textAlign:"left",width:200 }}>Client</th>
+                <th style={{ ...th,textAlign:"center",width:80 }}>Type</th>
+                <th style={{ ...th,textAlign:"right",width:120 }}>Monthly</th>
+                <th style={{ ...th,textAlign:"right",width:120 }}>Annual</th>
+                <th style={{ ...th,textAlign:"left",width:140 }}>Renewal/Payment</th>
+              </tr></thead>
+              <tbody>
+                {d.cl.filter(cl=>(cl.zh||0)>0||(cl.zha||0)>0).map(cl=>{
+                  const zhM = cl.zh||0; const zhA = cl.zha||0;
+                  const isMonthly = zhM > 0;
+                  const annualized = isMonthly ? zhM * 12 : zhA;
+                  const monthlyEquiv = isMonthly ? zhM : Math.round(zhA / 12);
+                  return <tr key={cl.id}><td style={{ padding:"6px 8px",fontWeight:600,borderBottom:`1px solid ${P.bd}10` }}>{cl.nm}</td><td style={{ padding:"6px 8px",textAlign:"center",borderBottom:`1px solid ${P.bd}10` }}><span style={{ fontSize:9,padding:"2px 8px",borderRadius:3,background:isMonthly?P.bB:`${P.t}15`,color:isMonthly?P.b:P.t,fontWeight:600 }}>{isMonthly?"Monthly":"Annual"}</span></td><td style={{ padding:"6px 8px",textAlign:"right",color:P.t,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>${monthlyEquiv.toLocaleString()}/mo</td><td style={{ padding:"6px 8px",textAlign:"right",color:P.t,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontWeight:isMonthly?400:700 }}>${annualized.toLocaleString()}/yr</td><td style={{ padding:"6px 8px",color:P.tm,fontSize:11,borderBottom:`1px solid ${P.bd}10` }}>{cl.renewal||cl.zhRenewal||(isMonthly?"Recurring":"—")}</td></tr>;
+                })}
+              </tbody>
+            </table>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginTop:16 }}>
+              <Card style={{ padding:12 }}><Lbl>Monthly Commissions</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>${d.cl.reduce((s,x)=>s+(x.zh||0),0).toLocaleString()}<span style={{ fontSize:11,fontWeight:500,color:P.tm }}>/mo</span></div></Card>
+              <Card style={{ padding:12 }}><Lbl>Annual Commissions</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>${d.cl.reduce((s,x)=>s+(x.zha||0),0).toLocaleString()}<span style={{ fontSize:11,fontWeight:500,color:P.tm }}>/yr</span></div></Card>
+              <Card style={{ padding:12 }}><Lbl>Total Annual</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(zhTotal)}<span style={{ fontSize:11,fontWeight:500,color:P.tm }}>/yr</span></div></Card>
+            </div>
+          </>}
+
+          {/* ALL VIEW — value ranking, no payment tracker */}
+          {clFilter === "all" && <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
+            <thead><tr>{["#","Client","Tier","Service","Zoho","Total Value"].map(h=><th key={h} style={{ ...th,textAlign:h==="#"||h==="Client"||h==="Tier"?"left":"right" }}>{h}</th>)}</tr></thead>
+            <tbody>{clientsByValue.map((cl,i)=>{const tier=TIERS[cl.tier]||TIERS.ot;return <tr key={cl.id}><td style={{ padding:"5px 8px",color:P.td,fontSize:11,borderBottom:`1px solid ${P.bd}10` }}>{i+1}</td><td style={{ padding:"5px 8px",fontWeight:600,borderBottom:`1px solid ${P.bd}10` }}>{cl.nm}</td><td style={{ padding:"5px 8px",borderBottom:`1px solid ${P.bd}10` }}><span style={{ fontSize:9,padding:"2px 6px",borderRadius:3,background:`${tier.c}15`,color:tier.c,fontWeight:600 }}>{tier.l}</span></td><td style={{ padding:"5px 8px",textAlign:"right",color:cl.svcAnnual?P.g:P.td,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{cl.svcAnnual?fmt(cl.svcAnnual)+"/yr":"\u2014"}</td><td style={{ padding:"5px 8px",textAlign:"right",color:cl.zhAnnual?P.t:P.td,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{cl.zhAnnual?fmt(cl.zhAnnual)+"/yr":"\u2014"}</td><td style={{ padding:"5px 8px",textAlign:"right",fontWeight:700,fontFamily:"'JetBrains Mono', monospace",color:cl.totalValue>20000?P.g:cl.totalValue>5000?P.a:P.t,borderBottom:`1px solid ${P.bd}10` }}>{fmt(cl.totalValue)}</td></tr>})}</tbody>
+          </table>}
         </div>
 
-        {clFilter !== "commission" && <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:20 }}>
+        {clFilter === "service" && <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:20 }}>
           <Card style={{ padding:12 }}><Lbl>Collected YTD</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==="P").length*x.rt,0))}</div></Card>
           <Card style={{ padding:12 }}><Lbl>Overdue</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==="U").length*x.rt,0))}</div></Card>
           <Card style={{ padding:12 }}><Lbl>Credits</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==="C").length*x.rt,0))}</div></Card>
@@ -370,7 +390,35 @@ export default function App() {
         </div>
         {ptab==="model"&&(<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20 }}><div><Lbl>Compensation Levers</Lbl><Sld label="Base Salary" value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={3000} step={50} pre="$" suf="/mo"/><Sld label="Existing Zoho Comm %" value={pt.ezp} onChange={v=>setPt("ezp",v)} min={0} max={25} suf={`% = $${Math.round(984*pt.ezp/100)}/mo`} color={P.a}/><Sld label="New Zoho Service Rev %" value={pt.nzp} onChange={v=>setPt("nzp",v)} min={0} max={30} suf="%" color={P.b}/><Sld label="Start Month" value={pt.sm} onChange={v=>setPt("sm",v)} min={0} max={11} suf={` (${MO[pt.sm]})`} color={P.p}/>{/* V2.1: Revenue delay slider */}<Sld label="Revenue Delay (Ramp-Up)" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf={` months (cost starts, revenue waits)`} color={P.a}/><div style={{ height:12 }}/><Lbl>Growth Assumptions</Lbl><Sld label="Odoo Clients / Quarter" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={8} suf=" clients"/><Sld label="Avg Odoo Client Rev" value={pt.oar} onChange={v=>setPt("oar",v)} min={1000} max={6000} step={250} pre="$" suf="/mo"/><Sld label="New Zoho Clients / Qtr" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={4} suf=" clients"/><Sld label="Avg Zoho Service Rev" value={pt.azr} onChange={v=>setPt("azr",v)} min={500} max={4000} step={250} pre="$" suf="/mo"/></div><div><Lbl>Cumulative Cash Impact</Lbl><div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div><Card style={{ padding:14,marginBottom:12 }}><Lbl>At Full Ramp (December)</Lbl><div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}><div><span style={{ color:P.td }}>Odoo clients:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].oC}</span></div><div><span style={{ color:P.td }}>New Zoho:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].nZ}</span></div><div><span style={{ color:P.td }}>{pt.nm} gets:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].mComp.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Paul gets:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oPR.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Company:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oCR.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Dev hires:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].dH} (${(pm.months[11].dH*pt.dch).toLocaleString()}/mo)</span></div><div style={{ gridColumn:"1/-1" }}><span style={{ color:P.td }}>Net monthly:</span> <span style={{ color:pm.months[11].net>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].net>=0?"+":""}${pm.months[11].net.toLocaleString()}/mo</span></div></div></Card><div style={{ padding:12,borderRadius:8,background:pm.months[11].cum>24000?P.gB:P.rB,border:`1px solid ${pm.months[11].cum>24000?P.gM:P.rM}` }}><div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4 }}>Can you go back to $10k/mo?</div><div style={{ fontSize:12,fontWeight:600,color:pm.months[11].cum>24000?P.g:P.r }}>{pm.months[11].cum>24000?"Yes — partnership generates enough":"Not yet — need more client volume first"}</div></div></div></div>)}
         {ptab==="monthly"&&(<div style={{ overflowX:"auto" }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}><thead><tr>{["Month","","Odoo","Zoho","Comp","Devs","New Rev","Net","Cumul."].map(h=><th key={h} style={{ ...th,fontSize:9 }}>{h}</th>)}</tr></thead><tbody>{pm.months.map((m,i)=>(<tr key={i} style={{ opacity:i>=pt.sm?1:.3 }}><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10` }}>{MO[i]}</td><td style={{ padding:"4px 8px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,fontSize:9,color:P.a }}>{m.inDelay?"⏳":""}</td><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.oC}</td><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.nZ}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.mComp)}</td><td style={{ padding:"4px 8px",textAlign:"right",color:m.dH?P.a:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.dH}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.newRev)}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,color:m.net>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.net>=0?"+":""}{fmt(m.net)}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,color:m.cum>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.cum)}</td></tr>))}</tbody></table></div>)}
-        {ptab==="splits"&&(<div style={{ maxWidth:500 }}><Lbl>Odoo Revenue Split (must total 100%)</Lbl><Sld label={`${pt.nm}'s Cut`} value={pt.ops} onChange={v=>{const r=100-v;const oR=Math.round(r*pt.ocs/(pt.ocs+pt.ips||1));setPt("ops",v);setTimeout(()=>{setPt("ocs",oR);setPt("ips",r-oR);},0);}} min={0} max={80} suf="%" color={P.a}/><Sld label="Company Cut" value={pt.ocs} onChange={v=>{const r=100-v;const oR=Math.round(r*pt.ops/(pt.ops+pt.ips||1));setPt("ocs",v);setTimeout(()=>{setPt("ops",oR);setPt("ips",r-oR);},0);}} min={0} max={80} suf="%" color={P.b}/><Sld label="Paul's Cut" value={pt.ips} onChange={v=>{const r=100-v;const oR=Math.round(r*pt.ops/(pt.ops+pt.ocs||1));setPt("ips",v);setTimeout(()=>{setPt("ops",oR);setPt("ocs",r-oR);},0);}} min={0} max={80} suf="%" color={P.g}/><div style={{ fontSize:10,color:(pt.ops+pt.ocs+pt.ips)===100?P.g:P.r,marginBottom:12,fontFamily:"'JetBrains Mono', monospace" }}>Total: {pt.ops+pt.ocs+pt.ips}%</div><div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:28,marginBottom:8 }}>{[[pt.ops,P.a],[pt.ocs,P.b],[pt.ips,P.g]].map(([v,co],i)=><div key={i} style={{ width:`${v}%`,background:co,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#000",transition:"width 0.3s" }}>{v>8?`${v}%`:""}</div>)}</div><div style={{ display:"flex",gap:12,fontSize:10,color:P.tm,marginBottom:16 }}><span><span style={{ display:"inline-block",width:8,height:8,borderRadius:2,background:P.a,marginRight:4 }}/>{pt.nm}</span><span><span style={{ display:"inline-block",width:8,height:8,borderRadius:2,background:P.b,marginRight:4 }}/>Company</span><span><span style={{ display:"inline-block",width:8,height:8,borderRadius:2,background:P.g,marginRight:4 }}/>Paul</span></div><Card style={{ padding:14 }}><Lbl>Per Odoo Client @ ${pt.oar.toLocaleString()}/mo</Lbl><div style={{ fontSize:11,display:"grid",gap:5,marginTop:6 }}><div><span style={{ color:P.a }}>{pt.nm}:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.oar*pt.ops/100).toLocaleString()}/mo</span></div><div><span style={{ color:P.b }}>Company:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.oar*pt.ocs/100).toLocaleString()}/mo</span> <span style={{ color:P.td }}>(dev hires from here)</span></div><div><span style={{ color:P.g }}>Paul:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.oar*pt.ips/100).toLocaleString()}/mo</span></div><div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4,color:P.td }}>Dev cost/client: <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.dch/pt.den).toLocaleString()}/mo</span> (1 per {pt.den})</div></div></Card><div style={{ marginTop:16 }}><Lbl>Partnership Setup Cost</Lbl><div style={{ display:"flex",gap:8 }}>{[1000,4000].map(v=><button key={v} onClick={()=>setPt("opc",v)} style={{ padding:"8px 20px",borderRadius:6,border:`1px solid ${pt.opc===v?P.g:P.bd}`,background:pt.opc===v?`${P.g}15`:"transparent",color:pt.opc===v?P.g:P.tm,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"'JetBrains Mono', monospace" }}>${v.toLocaleString()}</button>)}</div></div></div>)}
+        {ptab==="splits"&&(<div style={{ maxWidth:600 }}>
+          <Lbl>Odoo Revenue Split (must total 100%)</Lbl>
+          <Sld label={`${pt.nm}'s Cut`} value={pt.ops} onChange={v=>{const r=100-v;const oR=Math.round(r*pt.ocs/(pt.ocs+pt.ips||1));setPt("ops",v);setTimeout(()=>{setPt("ocs",oR);setPt("ips",r-oR);},0);}} min={0} max={80} suf="%" color={P.a}/>
+          <Sld label="Company Cut" value={pt.ocs} onChange={v=>{const r=100-v;const oR=Math.round(r*pt.ops/(pt.ops+pt.ips||1));setPt("ocs",v);setTimeout(()=>{setPt("ops",oR);setPt("ips",r-oR);},0);}} min={0} max={80} suf="%" color={P.b}/>
+          <Sld label="Paul's Cut" value={pt.ips} onChange={v=>{const r=100-v;const oR=Math.round(r*pt.ops/(pt.ops+pt.ocs||1));setPt("ips",v);setTimeout(()=>{setPt("ops",oR);setPt("ocs",r-oR);},0);}} min={0} max={80} suf="%" color={P.g}/>
+          <div style={{ fontSize:10,color:(pt.ops+pt.ocs+pt.ips)===100?P.g:P.r,marginBottom:12,fontFamily:"'JetBrains Mono', monospace" }}>Total: {pt.ops+pt.ocs+pt.ips}%</div>
+          <div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:28,marginBottom:8 }}>{[[pt.ops,P.a,pt.nm],[pt.ocs,P.b,"Company"],[pt.ips,P.g,"Paul"]].map(([v,co,n],i)=><div key={i} style={{ width:`${v}%`,background:co,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#000",transition:"width 0.3s" }}>{v>8?`${v}%`:""}</div>)}</div>
+          <div style={{ display:"flex",gap:12,fontSize:10,color:P.tm,marginBottom:20 }}><span><span style={{ display:"inline-block",width:8,height:8,borderRadius:2,background:P.a,marginRight:4 }}/>{pt.nm}</span><span><span style={{ display:"inline-block",width:8,height:8,borderRadius:2,background:P.b,marginRight:4 }}/>Company</span><span><span style={{ display:"inline-block",width:8,height:8,borderRadius:2,background:P.g,marginRight:4 }}/>Paul</span></div>
+
+          {/* V2.2: New Zoho Service Split — separate from Odoo */}
+          <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:16,marginTop:8 }}>
+            <Lbl>New Zoho Service Split</Lbl>
+            <div style={{ fontSize:11,color:P.tm,marginBottom:12 }}>Internet leads, website, referrals — recurring monthly commissions</div>
+            <Sld label={`${pt.nm}'s Commission`} value={pt.nzp||10} onChange={v=>{setPt("nzp",v);setPt("nzcs",100-v);}} min={0} max={50} suf="%" color={P.a}/>
+            <Sld label="Company Keeps" value={pt.nzcs||90} onChange={v=>{setPt("nzcs",v);setPt("nzp",100-v);}} min={50} max={100} suf="%" color={P.b}/>
+            <div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:20,marginBottom:12 }}><div style={{ width:`${pt.nzp||10}%`,background:P.a,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#000" }}>{(pt.nzp||10)>8?`${pt.nzp||10}%`:""}</div><div style={{ width:`${pt.nzcs||90}%`,background:P.b,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#000" }}>{(pt.nzcs||90)>8?`${pt.nzcs||90}%`:""}</div></div>
+
+            {/* V2.2: Lead bonus toggle */}
+            <div style={{ padding:12,borderRadius:8,background:`${P.a}08`,border:`1px solid ${P.a}22`,marginTop:12 }}>
+              <Toggle label={`If ${pt.nm} re-establishes Zoho lead flow → ${pt.zLeadMark||40}/${pt.zLeadCo||60} split`} value={pt.zLeadBonus||false} onChange={v=>setPt("zLeadBonus",v)} color={P.a}/>
+              {pt.zLeadBonus && <div style={{ marginTop:8 }}><Sld label={`${pt.nm}'s Lead Bonus %`} value={pt.zLeadMark||40} onChange={v=>{setPt("zLeadMark",v);setPt("zLeadCo",100-v);}} min={10} max={60} suf="%" color={P.a}/></div>}
+            </div>
+          </div>
+
+          <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:16,marginTop:16 }}>
+            <Card style={{ padding:14 }}><Lbl>Per Odoo Client @ ${pt.oar.toLocaleString()}/mo</Lbl><div style={{ fontSize:11,display:"grid",gap:5,marginTop:6 }}><div><span style={{ color:P.a }}>{pt.nm}:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.oar*pt.ops/100).toLocaleString()}/mo</span></div><div><span style={{ color:P.b }}>Company:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.oar*pt.ocs/100).toLocaleString()}/mo</span> <span style={{ color:P.td }}>(dev hires from here)</span></div><div><span style={{ color:P.g }}>Paul:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.oar*pt.ips/100).toLocaleString()}/mo</span></div><div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4,color:P.td }}>Dev cost/client: <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(pt.dch/pt.den).toLocaleString()}/mo</span> (1 per {pt.den})</div></div></Card>
+            <div style={{ marginTop:16 }}><Lbl>Partnership Setup Cost</Lbl><div style={{ display:"flex",gap:8 }}>{[1000,4000].map(v=><button key={v} onClick={()=>setPt("opc",v)} style={{ padding:"8px 20px",borderRadius:6,border:`1px solid ${pt.opc===v?P.g:P.bd}`,background:pt.opc===v?`${P.g}15`:"transparent",color:pt.opc===v?P.g:P.tm,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"'JetBrains Mono', monospace" }}>${v.toLocaleString()}</button>)}</div></div>
+          </div>
+        </div>)}
         {ptab==="config"&&(<div style={{ maxWidth:400 }}><Lbl>Partner Profile</Lbl><div style={{ marginBottom:10,marginTop:8 }}><div style={{ fontSize:10,color:P.td,marginBottom:3 }}>PARTNER NAME</div><input value={pt.nm} onChange={e=>setPt("nm",e.target.value)} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 12px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",width:"100%" }}/></div><div style={{ marginBottom:12 }}><div style={{ fontSize:10,color:P.td,marginBottom:3 }}>ROLE</div><input value={pt.rl} onChange={e=>setPt("rl",e.target.value)} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 12px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",width:"100%" }}/></div><Sld label="Dev Cost Per Hire" value={pt.dch} onChange={v=>setPt("dch",v)} min={300} max={2000} step={50} pre="$" suf="/mo"/><Sld label="Dev Hire Every N Odoo Clients" value={pt.den} onChange={v=>setPt("den",v)} min={1} max={6} suf=" clients"/><div style={{ marginTop:16,padding:14,borderRadius:8,background:`${P.p}08`,border:`1px solid ${P.p}22` }}><div style={{ fontSize:11,color:P.p,fontWeight:600,marginBottom:4 }}>MENA Partner?</div><div style={{ fontSize:11,color:P.tm }}>Change the name and role above, adjust sliders — same model, different terms.</div></div></div>)}
       </>)}
 
