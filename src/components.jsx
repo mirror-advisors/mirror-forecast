@@ -2,7 +2,7 @@ import { useState } from "react";
 import { P, MO, fmt, sm } from "./data.js";
 
 export const Card = ({ children, style: s }) => (
-  <div style={{ background: P.c1, borderRadius: 10, padding: 20, border: `1px solid ${P.bd}`, boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)", ...s }}>{children}</div>
+  <div style={{ background: P.c1, borderRadius: 10, padding: 20, border: `1px solid ${P.bd}`, ...s }}>{children}</div>
 );
 
 export const Lbl = ({ children }) => (
@@ -14,7 +14,7 @@ export const Bdg = ({ children, c }) => (
 );
 
 export const NumIn = ({ value, onChange, w }) => (
-  <input type="number" value={value} onChange={onChange} style={{ background: P.c2, border: `1px solid ${P.bd}`, color: P.a, borderRadius: 6, padding: "5px 8px", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, width: w || 70, textAlign: "right", outline: "none" }} />
+  <input type="number" value={value} onChange={onChange} style={{ background: P.c2, border: `1px solid ${P.bd}`, color: P.a, borderRadius: 4, padding: "5px 8px", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, width: w || 70, textAlign: "right" }} />
 );
 
 export function Pie({ data: dd, size }) {
@@ -54,7 +54,7 @@ export function XRow({ label, vals, details }) {
         <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{fmt(sm(vals))}</td>
       </tr>
       {open && details ? details.map((dd, di) => (
-        <tr key={di} style={{ background: P.c2 }}>
+        <tr key={di} style={{ background: `${P.c2}80` }}>
           <td style={{ padding: "3px 10px 3px 30px", fontSize: 11, color: P.tm, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'DM Sans', sans-serif" }}>{dd.n}</td>
           {dd.v.map((v, i) => <td key={i} style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, color: v ? P.tm : P.td, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{v ? fmt(v) : "\u2014"}</td>)}
           <td style={{ padding: "3px 6px", textAlign: "right", fontSize: 11, fontWeight: 600, color: P.tm, borderBottom: `1px solid ${P.bd}15`, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(sm(dd.v))}</td>
@@ -80,7 +80,7 @@ export function Sld({ label, value, onChange, min, max, step = 1, pre = "", suf 
 
 export function KPI({ label, value, sub, color = P.g, warn }) {
   return (
-    <div style={{ background: warn ? P.aB : P.c1, border: `1px solid ${warn ? P.a + "40" : P.bd}`, borderRadius: 8, padding: "10px 12px", minWidth: 120, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+    <div style={{ background: warn ? P.aB : P.c1, border: `1px solid ${warn ? P.a + "33" : P.bd}`, borderRadius: 8, padding: "10px 12px", minWidth: 120 }}>
       <div style={{ fontSize: 9, color: P.td, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
       {sub && <div style={{ fontSize: 9, color: P.td, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{sub}</div>}
