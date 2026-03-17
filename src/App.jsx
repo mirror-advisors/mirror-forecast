@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { MO, P, DC, FL, TIERS, D0, fmt, fK, sm, getRollingWindow, getWinVal } from "./data.js";
 import { loadData, saveData } from "./storage.js";
 import { compute, computePartnership, computeDevHire, computeWithOverlays } from "./compute.js";
@@ -287,8 +287,8 @@ export default function App() {
               if (zhMonthly > 0) zhDisplay = <><span style={{ color:P.t,fontWeight:600 }}>${zhMonthly}/mo</span><span style={{ color:P.td,fontSize:10 }}> (${(zhMonthly*12).toLocaleString()}/yr)</span></>;
               else if (zhAnnualDirect > 0) zhDisplay = <><span style={{ color:P.t,fontWeight:600 }}>${zhAnnualDirect.toLocaleString()}/yr</span><span style={{ color:P.td,fontSize:10 }}> (~${Math.round(zhAnnualDirect/12).toLocaleString()}/mo)</span></>;
 
-              return(<>
-                <tr key={cl.id} style={{ cursor:"pointer" }} onClick={()=>setClExpanded(isExp?null:ci)}>
+              return(<React.Fragment key={cl.id}>
+                <tr style={{ cursor:"pointer" }} onClick={()=>setClExpanded(isExp?null:ci)}>
                   <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}>
                     <div style={{ display:"flex",alignItems:"center",gap:6 }}>
                       <span style={{ fontSize:9,color:P.td,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"rotate(0)",display:"inline-block" }}>▶</span>
@@ -320,7 +320,7 @@ export default function App() {
                     <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Seats</div><input type="number" value={cl.seats||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,seats:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
                   </div>
                 </td></tr>}
-              </>);
+              </React.Fragment>);
             })}</tbody>
           </table>
         </div>
