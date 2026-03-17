@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext.jsx';
-import { MO, P, fmt } from './data.js';
+import { MO, P, fmt, getRollingWindow } from './data.js';
 import { Card, Lbl } from './components.jsx';
+
 export default function InternView({ d, save }) {
   const { signOut, profile } = useAuth();
   const [expanded, setExpanded] = useState(null);
   const payingClients = d.cl.filter(cl => cl.rt > 0);
   const currentMonth = new Date().getMonth();
+  // V2: Rolling 13-month window
+  const win = useMemo(() => getRollingWindow(), []);
+
   const inTerm = (cl, mi) => { const sm = cl.startMo ?? 0; const em = cl.endMo ?? 11; return mi >= sm && mi <= em; };
   const late = payingClients.flatMap(cl => cl.st.map((s, mi) => s === 'L' ? { client: cl, month: mi } : null).filter(Boolean));
   const dueThisMonth = payingClients.filter(cl => inTerm(cl, currentMonth) && cl.st[currentMonth] !== 'P');
+
   const cyc = (ci, mi) => {
     const realIdx = d.cl.indexOf(payingClients[ci]);
     const cl = d.cl[realIdx];
@@ -18,6 +23,7 @@ export default function InternView({ d, save }) {
     const s = cl.st[mi] || 'U';
     save({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : { ...x, st: x.st.map((v, j) => j === mi ? (nx[s] || 'P') : v) }) });
   };
+
   const updateClient = (ci, field, value) => {
     const realIdx = d.cl.indexOf(payingClients[ci]);
     const updated = { ...d.cl[realIdx], [field]: value };
@@ -35,13 +41,18 @@ export default function InternView({ d, save }) {
     }
     save({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : updated) });
   };
+
   const sSty = (s, active) => ({ display:'inline-flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:6,cursor:active?'pointer':'default',userSelect:'none',fontWeight:700,fontSize:11,fontFamily:"'JetBrains Mono', monospace",background:!active?`${P.bd}10`:s==='P'?P.gB:s==='L'?P.rB:s==='U'?P.aB:`${P.bd}25`,color:!active?`${P.td}40`:s==='P'?P.g:s==='L'?P.r:s==='U'?P.a:P.td,opacity:active?1:0.3 });
   const th = { padding:'6px 8px',textAlign:'right',color:P.td,fontSize:10,borderBottom:`1px solid ${P.bd}`,fontFamily:"'DM Sans', sans-serif",fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em' };
   const inp = { background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",padding:'6px 8px',outline:'none',width:'100%',boxSizing:'border-box' };
+
   return (
     <div style={{ background:P.bg,minHeight:'100vh',color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13 }}>
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:`1px solid ${P.bd}`,background:P.c1,padding:'12px 20px' }}>
-        <div style={{ fontWeight:700,fontSize:15,color:P.g }}>Mirror Forecast</div>
+        <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+          <img src="/mirror-logo.png" alt="Mirror Advisors" style={{ height:28 }} />
+          <span style={{ fontWeight:700,fontSize:14,color:P.g,opacity:.7 }}>Forecast</span>
+        </div>
         <div style={{ display:'flex',alignItems:'center',gap:12 }}>
           <span style={{ fontSize:11,color:P.tm }}>{profile?.name||profile?.email}</span>
           <button onClick={signOut} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:6,padding:'6px 12px',fontFamily:"'DM Sans', sans-serif",fontSize:11,cursor:'pointer' }}>Sign Out</button>
@@ -61,11 +72,21 @@ export default function InternView({ d, save }) {
           <span>→ <span style={{ color:P.a,fontWeight:700 }}>U</span></span>
           <span style={{ marginLeft:'auto',color:P.td }}>▶ Click name to edit details</span>
         </div>
-        <Lbl>Payment Tracker</Lbl>
+        <Lbl>Payment Tracker (Rolling 13-Month)</Lbl>
         <div style={{ overflowX:'auto' }}>
           <table style={{ width:'100%',borderCollapse:'collapse',fontSize:12 }}>
-            <thead><tr><th style={{ ...th,textAlign:'left',width:180 }}>Client</th><th style={{ ...th,textAlign:'left',width:90 }}>Rate</th><th style={{ ...th,textAlign:'left',width:50 }}>Term</th>{MO.map((m,i)=><th key={m} style={{ ...th,textAlign:'center',width:36,background:i===currentMonth?P.bB:'transparent',color:i===currentMonth?P.b:P.td,fontWeight:i===currentMonth?700:500 }}>{m}</th>)}<th style={th}>YTD</th></tr></thead>
-            <tbody>{payingClients.map((cl,ci)=>{const ytd=cl.st.filter(s=>s==='P').length*cl.rt;const isExp=expanded===ci;const termLabel=cl.termMo?`${cl.termMo}mo`:(cl.tr||'\u2014');return(
+            <thead><tr>
+              <th style={{ ...th,textAlign:'left',width:180 }}>Client</th>
+              <th style={{ ...th,textAlign:'left',width:90 }}>Rate</th>
+              <th style={{ ...th,textAlign:'left',width:50 }}>Term</th>
+              {win.map((s,i)=><th key={i} style={{ ...th,textAlign:'center',width:36,background:s.isCurrent?P.bB:'transparent',color:s.isCurrent?P.b:P.td,fontWeight:s.isCurrent?700:500 }}>{s.label}</th>)}
+              <th style={th}>YTD</th>
+            </tr></thead>
+            <tbody>{payingClients.map((cl,ci)=>{
+              const ytd=cl.st.filter(s=>s==='P').length*cl.rt;
+              const isExp=expanded===ci;
+              const termLabel=cl.termMo?`${cl.termMo}mo`:(cl.tr||'\u2014');
+              return(
               <tr key={cl.id} style={{ verticalAlign:'top' }}>
                 <td style={{ padding:'6px 8px',borderBottom:`1px solid ${P.bd}10` }}>
                   <div onClick={()=>setExpanded(isExp?null:ci)} style={{ cursor:'pointer',fontWeight:600,display:'flex',alignItems:'center',gap:6 }}>
@@ -84,9 +105,17 @@ export default function InternView({ d, save }) {
                 </td>
                 <td style={{ padding:'6px 8px',color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(cl.rt)}/mo</td>
                 <td style={{ padding:'6px 8px',color:P.tm,fontSize:11,borderBottom:`1px solid ${P.bd}10` }}>{termLabel}</td>
-                {MO.map((_,mi)=>{const active=inTerm(cl,mi);const s=active?(cl.st[mi]||'U'):'';return(<td key={mi} style={{ padding:'2px',textAlign:'center',borderBottom:`1px solid ${P.bd}10`,background:mi===currentMonth?P.bB:'transparent' }}><div onClick={()=>active&&cyc(ci,mi)} style={sSty(s,active)}>{active?(s||'U'):''}</div></td>);})}
+                {win.map((slot,wi)=>{
+                  const mi = slot.idx;
+                  const active = slot.inCurrentYear && inTerm(cl, mi);
+                  const s = active ? (cl.st[mi]||'U') : '';
+                  return(<td key={wi} style={{ padding:'2px',textAlign:'center',borderBottom:`1px solid ${P.bd}10`,background:slot.isCurrent?P.bB:'transparent' }}>
+                    <div onClick={()=>active&&cyc(ci,mi)} style={sSty(s,active)}>{active?(s||'U'):''}</div>
+                  </td>);
+                })}
                 <td style={{ padding:'6px 8px',textAlign:'right',color:P.g,fontWeight:600,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):'\u2014'}</td>
-              </tr>);})}</tbody>
+              </tr>);
+            })}</tbody>
           </table>
         </div>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginTop:20 }}>

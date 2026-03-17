@@ -86,6 +86,9 @@ export function computePartnership(pt) {
       newRev: Math.round(oCR + oPR + nZR), net: Math.round(net), cum: Math.round(cumCash),
       oCR: Math.round(oCR), oPR: Math.round(oPR), oMR: Math.round(oMR),
       base, ezC: Math.round(ezC), nzC: Math.round(nzC), devCo, pCost,
+      // V2: separate cost/rev for overlay
+      totalCost: Math.round(mComp + devCo + pCost),
+      totalRev: Math.round(oCR + oPR + nZR),
     });
   }
 
@@ -117,4 +120,50 @@ export function computeDevHire(dh) {
   }
 
   return { months, breakeven, totalCost, capacity, addedRev, worst: Math.min(...months.map(m => m.cum)) };
+}
+
+// V2: Compute forecast with scenario overlays
+export function computeWithOverlays(d, options = { partnership: false, devHire: false }) {
+  const base = compute(d);
+  const pt = d.pt;
+  const dh = d.dh;
+
+  // Start with base arrays
+  const oRv = [...base.rv];
+  const oEx = [...base.ex];
+  const pCostArr = new Array(12).fill(0);
+  const pRevArr = new Array(12).fill(0);
+  const dhCostArr = new Array(12).fill(0);
+  const dhRevArr = new Array(12).fill(0);
+
+  if (options.partnership) {
+    const pm = computePartnership(pt);
+    for (let i = 0; i < 12; i++) {
+      pCostArr[i] = pm.months[i].totalCost;
+      pRevArr[i] = pm.months[i].totalRev;
+      oRv[i] += pRevArr[i];
+      oEx[i] -= pCostArr[i]; // expenses are negative
+    }
+  }
+
+  if (options.devHire) {
+    const dm = computeDevHire(dh);
+    for (let i = 0; i < 12; i++) {
+      dhCostArr[i] = dm.months[i].cost;
+      dhRevArr[i] = dm.months[i].rev;
+      oRv[i] += dhRevArr[i];
+      oEx[i] -= dhCostArr[i];
+    }
+  }
+
+  const oNt = oRv.map((r, i) => r + oEx[i]);
+  const oBl = [];
+  oNt.forEach((n, i) => oBl.push(i === 0 ? d.openBal + n : oBl[i - 1] + n));
+
+  return {
+    base,
+    overlay: { rv: oRv, ex: oEx, nt: oNt, bl: oBl },
+    pCost: pCostArr, pRev: pRevArr,
+    dhCost: dhCostArr, dhRev: dhRevArr,
+  };
 }

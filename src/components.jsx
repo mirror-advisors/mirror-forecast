@@ -42,15 +42,16 @@ export function Pie({ data: dd, size }) {
   );
 }
 
-export function XRow({ label, vals, details }) {
+export function XRow({ label, vals, details, win }) {
   const [open, setOpen] = useState(false);
+  // If win (rolling window) is provided, use it for column backgrounds
   return (
     <>
       <tr style={{ cursor: details ? "pointer" : "default" }} onClick={() => details && setOpen(!open)}>
         <td style={{ padding: "5px 10px", color: P.r, borderBottom: `1px solid ${P.bd}20` }}>
           {details ? <span style={{ display: "inline-block", width: 14, fontSize: 9, color: P.td, transition: "transform 0.15s", transform: open ? "rotate(90deg)" : "rotate(0)" }}>{"\u25b6"}</span> : null}{label}
         </td>
-        {vals.map((v, i) => <td key={i} style={{ padding: "5px 6px", textAlign: "right", color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{fmt(v)}</td>)}
+        {vals.map((v, i) => <td key={i} style={{ padding: "5px 6px", textAlign: "right", color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, background: win ? (win[i]?.isCurrent ? P.bB : "transparent") : "transparent" }}>{fmt(v)}</td>)}
         <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: P.r, borderBottom: `1px solid ${P.bd}20`, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{fmt(sm(vals))}</td>
       </tr>
       {open && details ? details.map((dd, di) => (
@@ -85,5 +86,25 @@ export function KPI({ label, value, sub, color = P.g, warn }) {
       <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
       {sub && <div style={{ fontSize: 9, color: P.td, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{sub}</div>}
     </div>
+  );
+}
+
+// V2: Toggle Switch component
+export function Toggle({ label, value, onChange, color = P.g }) {
+  return (
+    <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+      <div onClick={() => onChange(!value)} style={{
+        width: 36, height: 20, borderRadius: 10, position: "relative",
+        background: value ? `${color}40` : P.c2, border: `1px solid ${value ? color : P.bd}`,
+        transition: "all 0.2s"
+      }}>
+        <div style={{
+          width: 14, height: 14, borderRadius: 7, position: "absolute", top: 2,
+          left: value ? 19 : 2, background: value ? color : P.td,
+          transition: "left 0.2s"
+        }} />
+      </div>
+      <span style={{ fontSize: 11, color: value ? P.tx : P.tm, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{label}</span>
+    </label>
   );
 }

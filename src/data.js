@@ -94,3 +94,35 @@ export const fK = n => {
 };
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
+
+// --- V2: Rolling 13-month window ---
+// Returns array of 13 objects: { idx (0-11 index into current year arrays), month (0-11), year, label }
+// Window: last month, current month, +10 months ahead
+export function getRollingWindow() {
+  const now = new Date();
+  const curMonth = now.getMonth();
+  const curYear = now.getFullYear();
+  const startMonth = curMonth - 1; // last month
+  const win = [];
+  for (let i = 0; i < 13; i++) {
+    const totalMonth = startMonth + i;
+    const month = ((totalMonth % 12) + 12) % 12;
+    const yearOffset = Math.floor(totalMonth / 12);
+    const year = curYear + (totalMonth < 0 ? -1 : yearOffset);
+    const isNextYear = year > curYear || (year === curYear && totalMonth >= 12);
+    const label = isNextYear ? `${MO[month]}'${String(year).slice(-2)}` : MO[month];
+    // idx: index into 12-month arrays (0-11). For months in current year, it's just `month`.
+    // For months beyond Dec (next year), idx = month but data won't exist — use 0/projected.
+    const inCurrentYear = year === curYear;
+    win.push({ idx: month, month, year, label, isCurrent: month === curMonth && year === curYear, inCurrentYear });
+  }
+  return win;
+}
+
+// Get value from a 12-month array for a rolling window slot
+// For months outside current year, returns fallback (default 0)
+export function getWinVal(arr, slot, fallback = 0) {
+  if (!arr) return fallback;
+  if (slot.inCurrentYear) return arr[slot.idx] || 0;
+  return fallback;
+}
