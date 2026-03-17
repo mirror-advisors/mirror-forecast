@@ -44,6 +44,27 @@ export default function App() {
     }).sort((a, b) => b.totalValue - a.totalValue);
   }, [d]);
 
+  // V2: Client filtering/sorting for Clients tab (must be before early returns)
+  const filteredClients = useMemo(() => {
+    if (!d) return [];
+    let cls = [...d.cl].map((cl, origIdx) => {
+      const svcAnnual = cl.rt * 12;
+      const zhAnnual = (cl.zh || 0) * 12 + (cl.zha || 0);
+      return { ...cl, origIdx, svcAnnual, zhAnnual, totalValue: svcAnnual + zhAnnual };
+    });
+    if (clFilter) cls = cls.filter(cl => cl.tier === clFilter);
+    const dir = clSort.dir === "desc" ? -1 : 1;
+    const k = clSort.key;
+    cls.sort((a, b) => {
+      const av = k === "nm" ? a.nm.toLowerCase() : (a[k] || 0);
+      const bv = k === "nm" ? b.nm.toLowerCase() : (b[k] || 0);
+      if (av < bv) return dir;
+      if (av > bv) return -dir;
+      return 0;
+    });
+    return cls;
+  }, [d, clFilter, clSort]);
+
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
@@ -88,36 +109,18 @@ export default function App() {
   const setPt = (k, v) => save({ ...d, pt: { ...pt, [k]: v } });
   const setDh = (k, v) => save({ ...d, dh: { ...dh, [k]: v } });
 
+  const toggleSort = (key) => {
+    setClSort(prev => prev.key === key ? { key, dir: prev.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" });
+  };
+  const sortIcon = (key) => clSort.key === key ? (clSort.dir === "desc" ? " ↓" : " ↑") : "";
+
   // V2: Helper to get rolling window values from 12-month arrays
   const winVals = (arr) => win.map(s => getWinVal(arr, s, 0));
   // V2: Get balance for a window slot
   const winBl = (blArr) => win.map(s => s.inCurrentYear ? (blArr[s.idx] || 0) : 0);
 
   // V2: Client filtering/sorting for new Clients tab
-  const filteredClients = useMemo(() => {
-    let cls = [...d.cl].map((cl, origIdx) => {
-      const svcAnnual = cl.rt * 12;
-      const zhAnnual = (cl.zh || 0) * 12 + (cl.zha || 0);
-      return { ...cl, origIdx, svcAnnual, zhAnnual, totalValue: svcAnnual + zhAnnual };
-    });
-    if (clFilter) cls = cls.filter(cl => cl.tier === clFilter);
-    const dir = clSort.dir === "desc" ? -1 : 1;
-    const k = clSort.key;
-    cls.sort((a, b) => {
-      const av = k === "nm" ? a.nm.toLowerCase() : (a[k] || 0);
-      const bv = k === "nm" ? b.nm.toLowerCase() : (b[k] || 0);
-      if (av < bv) return dir;
-      if (av > bv) return -dir;
-      return 0;
-    });
-    return cls;
-  }, [d, clFilter, clSort]);
 
-  const toggleSort = (key) => {
-    setClSort(prev => prev.key === key ? { key, dir: prev.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" });
-  };
-
-  const sortIcon = (key) => clSort.key === key ? (clSort.dir === "desc" ? " ↓" : " ↑") : "";
 
   return (
     <div style={{ background:P.bg,minHeight:"100vh",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13 }}>
