@@ -13,30 +13,37 @@ export function compute(d) {
   const us = MO.map((_, i) => {
     let t = (d.et[i] || 0) + (d.af[i] || 0);
     at.filter(p => p.ct === "US").forEach(p => {
-      if (p.nm === "Paul") { if (i === 0) return; if (i === 1) { t -= 3917; return; } t -= p.co; }
-      else if (p.nm === "Sara") { if (i >= 6) return; t -= (i === 0 ? 824 : i === 1 ? 180 : p.co); }
-      else t -= p.co;
+      const sm = p.startMo ?? 0;
+      const em = p.endMo ?? 11;
+      if (i < sm || i > em) return;
+      // Paul: Jan=0 (no pay), Feb=special, then normal rate
+      if (p.nm === "Paul") { if (i === 0) return; if (i === 1) { t -= 3917; return; } t -= p.co; return; }
+      // Sara: Jan=824, Feb=180, then normal rate until her endMo
+      if (p.nm === "Sara") { t -= (i === 0 ? 824 : i === 1 ? 180 : p.co); return; }
+      t -= p.co;
     });
     return t;
   });
   const ph = MO.map((_, i) => {
     let t = 0;
     at.filter(p => p.ct === "PH").forEach(p => {
-      if (p.nm === "Mark" && (i < 1 || i > 4)) return;
-      // V2.2: Jeanna endMo — she stops after endMo (March = 2)
-      if (p.nm === "Jeanna") {
-        const endMo = p.endMo !== undefined ? p.endMo : 4;
-        if (i < 2 || i > endMo) return;
-      }
-      t -= (p.nm === "Janna" && i < 2 ? 800 : p.co);
+      const sm = p.startMo ?? 0;
+      const em = p.endMo ?? 11;
+      if (i < sm || i > em) return;
+      // Janna: Jan-Feb was $800 (temp increase), $550 from Mar onward
+      if (p.nm === "Janna") { t -= (i < 2 ? 800 : p.co); return; }
+      t -= p.co;
     });
     return t;
   });
   const ind = MO.map((_, i) => {
     let t = d.wf[i] || 0;
     at.filter(p => p.ct === "IN").forEach(p => {
+      const sm = p.startMo ?? 0;
+      const em = p.endMo ?? 11;
+      if (i < sm || i > em) return;
+      // Soorya: Jan was $2000 (one-time), then normal
       if (p.nm === "Soorya" && i === 0) { t -= 2000; return; }
-      if (p.nm.includes("New") && i < 3) return;
       t -= p.co;
     });
     return t;

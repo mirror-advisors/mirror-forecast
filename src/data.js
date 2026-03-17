@@ -53,15 +53,14 @@ export const D0 = {
   wf: [-1279,-1502,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100],
   tm: [
     { id:"p1",nm:"Paul",rl:"CEO",dp:"Leadership",ct:"US",co:8000,on:true },
-    { id:"p2",nm:"Sara",rl:"Intern",dp:"Operations",ct:"US",co:792,on:true },
+    { id:"p2",nm:"Sara",rl:"Intern",dp:"Operations",ct:"US",co:792,on:true,endMo:5 },
     { id:"p3",nm:"Janna",rl:"Mktg Lead",dp:"Marketing",ct:"PH",co:550,on:true },
-    { id:"p4",nm:"Mark",rl:"Marketing",dp:"Marketing",ct:"PH",co:273,on:true },
-    // V2.2: Jeanna ends after March (i <= 2), removed from April onward
-    { id:"p5",nm:"Jeanna",rl:"Support",dp:"Marketing",ct:"PH",co:276,on:true,endMo:2 },
+    { id:"p4",nm:"Mark",rl:"Marketing",dp:"Marketing",ct:"PH",co:273,on:true,startMo:1 },
+    { id:"p5",nm:"Jeanna",rl:"Support",dp:"Marketing",ct:"PH",co:276,on:false,startMo:2,endMo:2 },
     { id:"p6",nm:"Soorya",rl:"Lead Dev",dp:"Development",ct:"IN",co:1000,on:true },
     { id:"p7",nm:"Yuva",rl:"Developer",dp:"Development",ct:"IN",co:650,on:true },
     { id:"p8",nm:"Gowtham",rl:"Developer",dp:"Development",ct:"IN",co:288,on:true },
-    { id:"p9",nm:"New Dev",rl:"Developer",dp:"Development",ct:"IN",co:750,on:true },
+    { id:"p9",nm:"New Dev",rl:"Developer",dp:"Development",ct:"IN",co:750,on:true,startMo:3 },
   ],
   cl: [
     { id:"c1",nm:"Gomes Agency",rt:2000,tr:"12mo",vi:"Stripe",zh:155,zha:0,tier:"im",seats:0,st:["P","P","P","","","","","","","","",""],nt:{} },
