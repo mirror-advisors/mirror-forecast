@@ -70,103 +70,9 @@ export default function App() {
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
   if (!isAdmin && isPartner) {
-    // Partner view — only partnerships tab
-    const pt = d?.pt || D0.pt;
-    const setPt = (k, v) => save({ ...d, pt: { ...pt, [k]: v } });
-    const c = compute(d || D0);
-    const pm = computePartnership(pt);
-    const mg = preciseRunway(c.bl);
-    const win = getRollingWindow();
-    return (
-      <div style={{ background:P.bg,color:P.tx,minHeight:"100vh",fontFamily:"'DM Sans', sans-serif" }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",background:P.c1,borderBottom:`1px solid ${P.bd}` }}>
-          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <img src="/mirror-logo.png" alt="" style={{ height:32 }}/>
-            <span style={{ fontSize:16,fontWeight:700,color:P.g }}>Forecast</span>
-            <span style={{ fontSize:11,color:P.a,fontWeight:600,marginLeft:8 }}>PARTNERSHIP MODEL</span>
-          </div>
-          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <span style={{ fontSize:10,color:P.tm }}>{profile?.email}</span>
-            <button onClick={signOut} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:4,padding:"5px 10px",fontFamily:"'DM Sans', sans-serif",fontSize:10,cursor:"pointer" }}>Sign Out</button>
-          </div>
-        </div>
-        <div style={{ maxWidth:1400,margin:"0 auto",padding:20 }}>
-          <div style={{ display:"flex",gap:0,borderBottom:`1px solid ${P.bd}`,marginBottom:20 }}>{["packages","runway","config"].map(t=><button key={t} onClick={()=>setPtab(t)} style={{ padding:"10px 14px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:"transparent",color:ptab===t?P.g:P.tm,borderBottom:ptab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>)}</div>
-          {/* Render the same partnership content */}
-          <div style={{ fontSize:12,color:P.tm,marginBottom:16 }}>Welcome, {pt.nm}. Explore your partnership options below.</div>
-
-          {ptab==="packages"&&(<div>
-          {(()=>{
-            const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
-            const svcProfit = 2000 - 300 - 100;
-            const orgC = pt.pkgOrg || 3;
-            const resC = pt.pkgRes || 5;
-            const totalEx = orgC + resC;
-            const models = [
-              { name:"Entrepreneur", desc:"Zero salary. Maximum upside.", color:P.a, bs:0, orgSvc:30, orgLic:20, resSvc:30, resLic:45, equity:"Consideration after $450k/yr revenue" },
-              { name:"Balanced", desc:"Moderate base with solid commissions.", color:P.p, bs:2000, orgSvc:15, orgLic:10, resSvc:15, resLic:30, equity:"Consideration after $650k/yr revenue" },
-              { name:"Secure", desc:"Strong guaranteed salary. Limited commission.", color:P.b, bs:4000, orgSvc:5, orgLic:5, resSvc:5, resLic:15, equity:"No equity" },
-            ];
-            return <>
-              <div style={{ display:"flex",gap:12,marginBottom:16,alignItems:"center" }}>
-                <span style={{ fontSize:11,color:P.td }}>Model with:</span>
-                <div style={{ display:"flex",alignItems:"center",gap:4 }}><input type="number" value={orgC} onChange={e=>setPt("pkgOrg",Math.max(0,Math.min(20,parseInt(e.target.value)||0)))} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,padding:"4px 8px",color:P.t,fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:50,textAlign:"center" }}/><span style={{ fontSize:11,color:P.t }}>organic</span></div>
-                <span style={{ color:P.td }}>+</span>
-                <div style={{ display:"flex",alignItems:"center",gap:4 }}><input type="number" value={resC} onChange={e=>setPt("pkgRes",Math.max(0,Math.min(20,parseInt(e.target.value)||0)))} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,padding:"4px 8px",color:P.a,fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:50,textAlign:"center" }}/><span style={{ fontSize:11,color:P.a }}>restored Zoho</span></div>
-                <span style={{ fontSize:11,color:P.td }}>= {totalEx} clients</span>
-              </div>
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16 }}>
-                {models.map((m,mi)=>{
-                  const orgSvcPer = Math.round(svcProfit * m.orgSvc / 100);
-                  const orgLicPer = Math.round(zLic * m.orgLic / 100);
-                  const resSvcPer = Math.round(svcProfit * m.resSvc / 100);
-                  const resLicPer = Math.round(zLic * m.resLic / 100);
-                  const markTotal = m.bs + orgC*(orgSvcPer+orgLicPer) + resC*(resSvcPer+resLicPer);
-                  const pkgBurn = m.bs + pt.dch;
-                  const zBl = []; let zCm = 0;
-                  for (let i = 0; i < 12; i++) { const ma = i >= pt.sm ? i - pt.sm + 1 : 0; if (ma > 0) zCm += pkgBurn + (ma === 1 ? (pt.opc||0) : 0); zBl.push(c.bl[i] - zCm); }
-                  const pkgRun = preciseRunway(zBl);
-                  return <Card key={mi} style={{ padding:0,overflow:"hidden",border:`1px solid ${m.color}33` }}>
-                    <div style={{ padding:"12px 14px",background:`${m.color}10`,borderBottom:`1px solid ${m.color}22` }}>
-                      <div style={{ fontSize:14,fontWeight:700,color:m.color }}>{m.name}</div>
-                      <div style={{ fontSize:10,color:P.tm,marginTop:3 }}>{m.desc}</div>
-                    </div>
-                    <div style={{ padding:14,fontSize:11 }}>
-                      <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Base salary</span><span style={{ color:P.tx,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>${m.bs.toLocaleString()}/mo</span></div>
-                      <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:5,marginTop:5 }}>
-                        <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Organic ({orgC})</div>
-                        <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service / License</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgSvc}% / {m.orgLic}%</span></div>
-                      </div>
-                      <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:5,marginTop:5 }}>
-                        <div style={{ fontSize:9,color:P.a,textTransform:"uppercase",marginBottom:3 }}>Restored Zoho ({resC})</div>
-                        <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service / License</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resSvc}% / {m.resLic}%</span></div>
-                      </div>
-                      <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:5 }}>
-                        <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{pt.nm} monthly</span><span style={{ color:P.g,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>${markTotal.toLocaleString()}</span></div>
-                        <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Annual</span><span style={{ color:P.tx,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>${(markTotal*12).toLocaleString()}</span></div>
-                        <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Equity</span><span style={{ color:mi===2?P.r:P.p,fontSize:10 }}>{m.equity}</span></div>
-                        <div style={{ display:"flex",justifyContent:"space-between",marginTop:4 }}><span style={{ color:P.td }}>Runway (no deals)</span><span style={{ color:pkgRun>=9?P.g:pkgRun>=6?P.a:P.r,fontWeight:800,fontFamily:"'JetBrains Mono', monospace" }}>{pkgRun} mo</span></div>
-                      </div>
-                    </div>
-                  </Card>;
-                })}
-              </div>
-            </>;
-          })()}
-          </div>)}
-
-          {ptab==="runway"&&(<div style={{ fontSize:12,color:P.tm }}>
-            <Card style={{ padding:16 }}><Lbl>Runway details are managed by the admin.</Lbl><div style={{ marginTop:8 }}>Talk to Paul about how different deal volumes affect the company's runway and your compensation trajectory.</div></Card>
-          </div>)}
-
-          {ptab==="config"&&(<div style={{ fontSize:12,color:P.tm }}>
-            <Card style={{ padding:16 }}><Lbl>Configuration</Lbl><div style={{ marginTop:8 }}>Dev economics and license model settings are managed by the admin.</div></Card>
-          </div>)}
-        </div>
-      </div>
-    );
-  }
-  if (!isAdmin) return <InternView d={d} save={save} />;
+    // Partner gets full admin UI but locked to partnerships tab
+    if (tab !== "partnerships") setTab("partnerships");
+  } else if (!isAdmin) return <InternView d={d} save={save} />;
 
   const c = compute(d);
   const cm = new Date().getMonth();
@@ -203,7 +109,7 @@ export default function App() {
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
 
-  const tabs = ["dashboard","forecast","clients","payroll","partnerships","dev hire"];
+  const tabs = isPartner ? ["partnerships"] : ["dashboard","forecast","clients","payroll","partnerships","dev hire"];
   const setPt = (k, v) => save({ ...d, pt: { ...pt, [k]: v } });
   const setDh = (k, v) => save({ ...d, dh: { ...dh, [k]: v } });
 
