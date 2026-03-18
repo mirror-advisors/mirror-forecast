@@ -125,17 +125,28 @@ export const fK = n => {
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
 
+// Precise runway — extends beyond 12 months by projecting last month's net forward
 export function preciseRunway(bl) {
+  // Find first month that goes negative
   let lastPos = -1;
   for (let i = 0; i < bl.length; i++) {
     if (bl[i] > 0) lastPos = i; else break;
   }
   if (lastPos === -1) return 0;
-  if (lastPos === bl.length - 1) return 12;
-  const posV = bl[lastPos];
-  const negV = bl[lastPos + 1];
-  const frac = posV / (posV - negV);
-  return Math.round((lastPos + 1 + frac) * 4) / 4;
+  // If deficit within the 12-month window, interpolate
+  if (lastPos < bl.length - 1) {
+    const posV = bl[lastPos];
+    const negV = bl[lastPos + 1];
+    const frac = posV / (posV - negV);
+    return Math.round((lastPos + 1 + frac) * 4) / 4;
+  }
+  // All 12 months green — project forward using last month's net flow
+  // Net flow for last month = bl[11] - bl[10]
+  const lastNet = bl.length >= 2 ? bl[bl.length - 1] - bl[bl.length - 2] : 0;
+  if (lastNet >= 0) return 99; // growing or flat — effectively infinite
+  // Declining: how many more months until bl[11] burns to zero?
+  const monthsLeft = bl[bl.length - 1] / Math.abs(lastNet);
+  return Math.round((12 + monthsLeft) * 4) / 4;
 }
 
 // V2.2: 14-month rolling window — 2 months back + current + 11 ahead
