@@ -436,13 +436,21 @@ export default function App() {
             const totalBurnMo = fixedMo + devCostMo;
             const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
 
+            // ZERO DEALS: Mark's salary + 1 dev, no revenue. Cumulative subtraction from baseline.
+            const zeroBl = [];
+            let zeroCum = 0;
+            for (let i = 0; i < 12; i++) {
+              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
+              if (ma > 0) zeroCum += totalBurnMo + (ma === 1 ? setupCost : 0);
+              zeroBl.push(c.bl[i] - zeroCum);
+            }
+            const zeroRun = preciseRunway(zeroBl);
+
             // Find breakeven: minimum total clients where runway >= baseline (mg)
-            // Test Zoho-only path and mixed path
             let beClients = null;
             for (let test = 1; test <= 20; test++) {
               const testBl = [];
               let testRevCum = 0;
-              // Compute with 'test' Zoho clients (simplest path)
               const testDevs = Math.ceil(test / (pt.cpc || 2.5));
               const testDevCost = testDevs * pt.dch;
               const testOverhead = test * 100;
@@ -462,16 +470,6 @@ export default function App() {
               const testRun = preciseRunway(testBl);
               if (testRun >= mg) { beClients = test; break; }
             }
-
-            // ZERO DEALS: Mark's salary + 1 dev, no revenue. Cumulative subtraction from baseline.
-            const zeroBl = [];
-            let zeroCum = 0;
-            for (let i = 0; i < 12; i++) {
-              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              if (ma > 0) zeroCum += totalBurnMo + (ma === 1 ? setupCost : 0);
-              zeroBl.push(c.bl[i] - zeroCum);
-            }
-            const zeroRun = preciseRunway(zeroBl);
 
             // DEALS FLOWING: same zero-deals cost base, PLUS revenue from clients after delay
             // Revenue per month once active = pm.netMonthly (which is net of all costs including devs, overhead, Mark's cut)
