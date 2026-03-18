@@ -387,13 +387,21 @@ export default function App() {
               <div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:28,marginBottom:20,opacity:valid?1:0.4 }}>{[[pt.ops,P.a,pt.nm],[pt.ocs,P.b,"Co"],[pt.ips,P.g,"Paul"]].map(([pv,co,n],i)=><div key={i} style={{ width:`${pv}%`,background:co,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#000",transition:"width 0.3s" }}>{pv>8?`${n} ${pv}%`:""}</div>)}</div>
             </div>;
           })()}
-          <div style={{ fontSize:10,color:(pt.ops+pt.ocs+pt.ips)===100?P.g:P.r,marginBottom:8,fontFamily:"'JetBrains Mono', monospace" }}>Total: {pt.ops+pt.ocs+pt.ips}%</div>
-          <div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:28,marginBottom:20 }}>{[[pt.ops,P.a,pt.nm],[pt.ocs,P.b,"Co"],[pt.ips,P.g,"Paul"]].map(([pv,co,n],i)=><div key={i} style={{ width:`${pv}%`,background:co,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#000",transition:"width 0.3s" }}>{pv>8?`${n} ${pv}%`:""}</div>)}</div>
 
           <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:16 }}>
             <Lbl>New Zoho Service + License Commission</Lbl>
-            <div style={{ fontSize:11,color:P.tm,marginBottom:10 }}>Organic leads (website, partner site, referrals). {pt.nm} gets recurring % of service revenue + Zoho license commission.</div>
-            <Sld label={`${pt.nm}'s Commission`} value={pt.nzp||10} onChange={v=>{setPt("nzp",v);setPt("nzcs",100-v);}} min={3} max={40} suf={`% → Company keeps ${100-(pt.nzp||10)}%`} color={P.a}/>
+            <div style={{ fontSize:11,color:P.tm,marginBottom:10 }}>Organic leads (website, partner site, referrals). Must total 100%.</div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:8 }}>
+              <div>
+                <div style={{ fontSize:10,color:P.a,marginBottom:4,fontWeight:600 }}>{pt.nm}'s Commission</div>
+                <input type="number" value={pt.nzp||10} onChange={e=>{const v=Math.max(0,Math.min(100,parseInt(e.target.value)||0));setPt("nzp",v);setPt("nzcs",100-v);}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"10px 12px",color:P.a,fontSize:18,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:"100%",boxSizing:"border-box",textAlign:"center" }}/>
+              </div>
+              <div>
+                <div style={{ fontSize:10,color:P.b,marginBottom:4,fontWeight:600 }}>Company Keeps</div>
+                <input type="number" value={pt.nzcs||90} onChange={e=>{const v=Math.max(0,Math.min(100,parseInt(e.target.value)||0));setPt("nzcs",v);setPt("nzp",100-v);}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"10px 12px",color:P.b,fontSize:18,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:"100%",boxSizing:"border-box",textAlign:"center" }}/>
+              </div>
+            </div>
+            <div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:24,marginBottom:8 }}><div style={{ width:`${pt.nzp||10}%`,background:P.a,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#000" }}>{(pt.nzp||10)>8?`${pt.nm} ${pt.nzp||10}%`:""}</div><div style={{ width:`${pt.nzcs||90}%`,background:P.b,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#000" }}>{(pt.nzcs||90)>15?`Company ${pt.nzcs||90}%`:""}</div></div>
           </div>
 
           <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:16,marginTop:16 }}>
@@ -423,26 +431,36 @@ export default function App() {
           {(()=>{
             const zmBase = 984;
             const fixedMo = pt.bs + Math.round(zmBase * pt.ezp / 100);
-            const devCostMo = pt.dch;
+            const devCostMo = pt.dch; // 1 dev minimum
             const setupCost = pt.opc || 0;
             const totalBurnMo = fixedMo + devCostMo;
-            // Failure: Mark salary + 1 dev + setup, zero revenue
+
+            // Failure: Mark costs money, zero revenue. Simple subtraction from baseline.
             const failBl = c.bl.map((b, i) => {
-              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              const cost = ma > 0 ? totalBurnMo + (ma === 1 ? setupCost : 0) : 0;
+              let cost = 0;
+              for (let j = 0; j <= i; j++) {
+                const ma = j >= pt.sm ? j - pt.sm + 1 : 0;
+                if (ma > 0) cost += totalBurnMo + (ma === 1 ? setupCost : 0);
+              }
               return b - cost;
             });
-            const failRun = preciseRunway(failBl);
-            // Success: same costs as failure, but ADD the revenue from deals on top
-            // pm.months[i] has newRev (gross revenue from deals) — use that
-            const successBl = failBl.map((b, i) => {
-              if (i < pt.sm) return b;
-              const m = pm.months[i];
-              // Add back the revenue that deals bring (company share + paul share + zoho company share)
-              return b + (m.totalRev || 0);
-            });
+            // Wait — failBl should subtract cumulative cost, but c.bl[i] is already cumulative.
+            // Actually c.bl[i] is the balance at end of month i. We need to subtract the cumulative
+            // partnership cost through month i.
+            const failBl2 = [];
+            let failCum = 0;
+            for (let i = 0; i < 12; i++) {
+              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
+              if (ma > 0) failCum += totalBurnMo + (ma === 1 ? setupCost : 0);
+              failBl2.push(c.bl[i] - failCum);
+            }
+            const failRun = preciseRunway(failBl2);
+
+            // Success: use partnership model's cumulative impact (already includes costs AND revenue)
+            const successBl = c.bl.map((b, i) => b + pm.months[i].cum);
             const successRun = preciseRunway(successBl);
             const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
+
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
                 <Lbl>No Changes</Lbl>
@@ -459,7 +477,7 @@ export default function App() {
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
                 {hasDeals ? <>
                   <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
-                  <div style={{ fontSize:11,color:P.tm }}>months · with {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
+                  <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
                 </> : <>
                   <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
                   <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
