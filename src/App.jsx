@@ -464,19 +464,19 @@ export default function App() {
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
                 <Lbl>No Changes</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg>=99?"∞":mg}</div>
+                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mgmg}</div>
                 <div style={{ fontSize:11,color:P.tm }}>months runway</div>
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
                 <Lbl>{pt.nm} + Zero Deals</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRun>=99?"∞":failRun}</div>
+                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRunfailRun}</div>
                 <div style={{ fontSize:11,color:P.tm }}>months · burns ${totalBurnMo.toLocaleString()}/mo extra</div>
                 <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${pt.bs.toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
                 {hasDeals ? <>
-                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun>=99?"∞":successRun}</div>
+                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRunsuccessRun}</div>
                   <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
                 </> : <>
                   <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
@@ -495,9 +495,9 @@ export default function App() {
               <Sld label="Ramp-Up Delay" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf=" months before first revenue" color={P.a}/>
               <div style={{ height:12 }}/>
               <Lbl>Deal Flow (all clients $2,000/mo × 12mo retainer)</Lbl>
-              <div style={{ fontSize:11,color:P.tm,marginBottom:8 }}>Dev cost: $750/mo per dev, each handles 2.5 projects. Cost auto-calculated.</div>
-              <Sld label="New Zoho Clients / Quarter" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={6} suf=" clients"/>
-              <Sld label="New Odoo Clients / Quarter" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={6} suf=" clients"/>
+              <div style={{ fontSize:11,color:P.tm,marginBottom:8 }}>Total active clients Mark brings. Dev: $750/mo per dev, each handles 2.5 projects. Overhead: $100/client.</div>
+              <Sld label="Zoho Clients (active)" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={15} suf=" clients"/>
+              <Sld label="Odoo Clients (active)" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={15} suf=" clients"/>
               {pt.zLeadBonus && <div style={{ padding:10,borderRadius:6,background:`${P.a}10`,border:`1px solid ${P.a}22`,marginTop:8 }}>
                 <div style={{ fontSize:10,color:P.a,fontWeight:600 }}>Zoho Lead Funnel Active</div>
                 <div style={{ fontSize:11,color:P.tm }}>+6 retail + 3 mid-market leads/qtr overlaid on Zoho assumptions. Commission at {pt.zLeadMark||40}% for restored leads.</div>
@@ -508,19 +508,45 @@ export default function App() {
               <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div>
 
               <Card style={{ padding:14,marginBottom:12 }}>
-                <Lbl>At Full Ramp (December)</Lbl>
+                <Lbl>Steady State ({pm.nZ} Zoho + {pm.oC} Odoo)</Lbl>
                 <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}>
-                  <div><span style={{ color:P.td }}>Odoo clients:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].oC}</span></div>
-                  <div><span style={{ color:P.td }}>New Zoho:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].nZ}</span></div>
-                  <div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].dH} (${pm.months[11].totalDevCost.toLocaleString()}/mo)</span></div>
-                  <div><span style={{ color:P.td }}>{pt.nm} earns:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].mComp.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>Paul earns:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oPR.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oCR.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.totalDevs} (${pm.totalDevCost.toLocaleString()}/mo)</span></div>
+                  <div><span style={{ color:P.td }}>Overhead:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${pm.overhead.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>{pt.nm} earns:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.mComp.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>Paul earns:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.paulFromOdoo.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.compTotal.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>New MRR:</span> <span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>${pm.totalNewRev.toLocaleString()}/mo</span></div>
                   <div style={{ gridColumn:"1/-1",borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4 }}>
-                    <span style={{ color:P.td }}>Net monthly impact:</span> <span style={{ color:pm.months[11].net>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].net>=0?"+":""}${pm.months[11].net.toLocaleString()}/mo</span>
+                    <span style={{ color:P.td }}>Net monthly impact:</span> <span style={{ color:pm.netMonthly>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.netMonthly>=0?"+":""}${pm.netMonthly.toLocaleString()}/mo</span>
                   </div>
                 </div>
               </Card>
+
+              {/* Per-client breakdown */}
+              {(pm.oC > 0 || pm.nZ > 0) && <Card style={{ padding:12,marginBottom:12 }}>
+                <Lbl>Per Client Economics</Lbl>
+                <div style={{ fontSize:11,marginTop:6 }}>
+                  {pm.oC > 0 && <div style={{ marginBottom:6 }}><b style={{ color:P.b }}>Odoo</b>: $2,000 − ${pm.devPerClient} dev − $100 overhead = <b style={{ color:P.tx }}>${pm.odooProfit} profit</b> → {pt.nm} ${pm.odooMarkPer} · Paul ${pm.odooPaulPer} · Co ${pm.odooCompPer}</div>}
+                  {pm.nZ > 0 && <div><b style={{ color:P.t }}>Zoho</b>: $2,000 + ${pm.zLicPerClient} license − ${pm.devPerClient} dev − $100 overhead = <b style={{ color:P.tx }}>${pm.zohoProfit} profit</b> → {pt.nm} ${pm.zohoMarkPer} · Co ${pm.zohoCompPer}</div>}
+                </div>
+              </Card>}
+
+              {/* Scaling table */}
+              {(()=>{
+                const base = (pt.bs||0) + Math.round(984*(pt.ezp||0)/100);
+                const rows = [];
+                for (let t = 1; t <= 10; t++) {
+                  const m = base + t * pm.zohoMarkPer + t * pm.odooMarkPer;
+                  rows.push({ n:t, m });
+                }
+                return <div style={{ marginBottom:12 }}>
+                  <Lbl>{pt.nm}'s Earnings by Client Count (Zoho + Odoo each)</Lbl>
+                  <div style={{ overflowX:"auto",marginTop:6 }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}>
+                    <thead><tr>{["Clients Each","Monthly","Annual"].map(h=><th key={h} style={{ padding:"4px 8px",textAlign:"right",color:P.td,fontSize:9,borderBottom:`1px solid ${P.bd}`,textTransform:"uppercase" }}>{h}</th>)}</tr></thead>
+                    <tbody>{rows.map(r=><tr key={r.n}><td style={{ padding:"3px 8px",textAlign:"right",color:P.tx,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.n} Z + {r.n} O</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.a,fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${r.m.toLocaleString()}</td><td style={{ padding:"3px 8px",textAlign:"right",color:r.m*12>=100000?P.g:P.tm,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${(r.m*12).toLocaleString()}</td></tr>)}</tbody>
+                  </table></div>
+                </div>;
+              })()}
 
               {/* Brief */}
               <div style={{ padding:12,borderRadius:8,background:P.c2,border:`1px solid ${P.bd}`,fontSize:11,color:P.tm,lineHeight:1.7 }}>
@@ -529,7 +555,7 @@ export default function App() {
                   const firstRevIdx = pt.sm + (pt.dl || 0);
                   const delayCost = fixedCost * (pt.dl || 0) + (pt.opc || 0) + pt.dch * (pt.dl || 0);
                   return <>
-                    Investment: <b style={{ color:P.r }}>${delayCost.toLocaleString()}</b> before first revenue in <b style={{ color:P.g }}>{firstRevIdx<12?MO[firstRevIdx]:"2027"}</b>. {pt.nm} costs <b style={{ color:P.r }}>${(fixedCost+pt.dch).toLocaleString()}/mo</b> (salary + dev). Each Zoho client nets company <b style={{ color:P.t }}>${pm.netPerZoho?.toLocaleString()||"—"}/mo</b>. Each Odoo client nets <b style={{ color:P.b }}>${pm.netPerOdoo?.toLocaleString()||"—"}/mo</b> after dev cost split.
+                    Investment: <b style={{ color:P.r }}>${delayCost.toLocaleString()}</b> before first revenue in <b style={{ color:P.g }}>{firstRevIdx<12?MO[firstRevIdx]:"2027"}</b>. {pt.nm} costs <b style={{ color:P.r }}>${(fixedCost+pt.dch).toLocaleString()}/mo</b> (salary + dev). Per client: ${pm.devPerClient} dev + $100 overhead deducted before splits.
                     {pt.equityTrigger && <><br/><span style={{ color:P.p }}>Equity discussion at ${(pt.equityTrigger||500000).toLocaleString()}/yr revenue.</span></>}
                   </>;
                 })()}
@@ -540,7 +566,7 @@ export default function App() {
 
         {/* ============ PICK YOUR PACKAGE TAB ============ */}
         {ptab==="pick your package"&&(<div>
-          <div style={{ fontSize:12,color:P.tm,marginBottom:20,lineHeight:1.6 }}>Three packages, same opportunity. More risk = more reward. All models assume {pt.nm} closes <b style={{ color:P.tx }}>2 Zoho + 1 Odoo per quarter</b> at full ramp. Dev costs ($300/client/mo) are deducted before profit splits.</div>
+          <div style={{ fontSize:12,color:P.tm,marginBottom:20,lineHeight:1.6 }}>Three packages, same opportunity. More risk = more reward. Numbers shown at <b style={{ color:P.tx }}>5 Zoho + 3 Odoo active clients</b>. Dev costs ($300/client) + $100 overhead deducted before splits.</div>
           {(()=>{
             const zmBase = 984;
             const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);

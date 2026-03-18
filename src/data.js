@@ -101,8 +101,8 @@ export const D0 = {
     targetComp:100000, // Mark's target annual comp — app works backwards from this
     nzp:10, nzcs:90, // new Zoho: Mark 10%, Company 90% (service + license)
     ops:35, ocs:30, ips:35, // Odoo: Mark/Company/Paul (on PROFIT after dev cost)
-    opc:1000,ocq:2,oar:3000,dch:750,cpc:2.5,
-    sm:4,nzq:1,
+    opc:1000,ocq:0,oar:2000,dch:750,cpc:2.5, // ocq = total Odoo clients, oar = $2k/mo standard
+    sm:4,nzq:0, // nzq = total Zoho clients
     azr:2000, // avg Zoho service rate per client/mo
     zSeats:15, zSeatPrice:40, zCommPct:18, // license comm = seats × price × comm%
     svcCost:384, // avg dev cost to deliver a Zoho IM client/mo
