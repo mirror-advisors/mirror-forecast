@@ -547,15 +547,14 @@ export default function App() {
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:24 }}>
             <div>
               <Lbl>Partnership Parameters</Lbl>
-              <Sld label={`${pt.nm}'s Base Salary`} value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={4000} step={250} pre="$" suf="/mo" color={P.a}/>
-              <Sld label="Existing Zoho Comm" value={pt.ezp} onChange={v=>setPt("ezp",v)} min={0} max={15} suf={`% = $${Math.round(984*pt.ezp/100)}/mo`} color={P.td}/>
+              <Sld label={`${pt.nm}'s Base Salary`} value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={10000} step={250} pre="$" suf="/mo" color={P.a}/>
               <Sld label="Start Month" value={pt.sm} onChange={v=>setPt("sm",v)} min={0} max={11} suf={` (${MO[pt.sm]})`} color={P.p}/>
               <Sld label="Ramp-Up Delay" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf=" months before first revenue" color={P.a}/>
               <div style={{ height:12 }}/>
               <Lbl>Deal Flow (all clients $2,000/mo × 12mo retainer)</Lbl>
               <div style={{ fontSize:11,color:P.tm,marginBottom:8 }}>Total active clients Mark brings. Dev: $750/mo per dev, each handles 2.5 projects. Overhead: $100/client.</div>
-              <Sld label="Zoho Clients (active)" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={15} suf=" clients"/>
-              <Sld label="Odoo Clients (active)" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={15} suf=" clients"/>
+              <Sld label="Zoho Clients (active)" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={20} suf=" clients"/>
+              <Sld label="Odoo Clients (active)" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={20} suf=" clients"/>
               {pt.zLeadBonus && <div style={{ padding:10,borderRadius:6,background:`${P.a}10`,border:`1px solid ${P.a}22`,marginTop:8 }}>
                 <div style={{ fontSize:10,color:P.a,fontWeight:600 }}>Zoho Lead Funnel Active</div>
                 <div style={{ fontSize:11,color:P.tm }}>+6 retail + 3 mid-market leads/qtr overlaid on Zoho assumptions. Commission at {pt.zLeadMark||40}% for restored leads.</div>
@@ -591,7 +590,7 @@ export default function App() {
 
               {/* Scaling table */}
               {(()=>{
-                const base = (pt.bs||0) + Math.round(984*(pt.ezp||0)/100);
+                const base = (pt.bs||0);
                 const rows = [];
                 for (let t = 1; t <= 10; t++) {
                   const m = base + t * pm.zohoMarkPer + t * pm.odooMarkPer;
@@ -636,14 +635,14 @@ export default function App() {
             const zFull = 6, oFull = 3;
 
             const models = [
-              { name:"Entrepreneur", desc:"Maximum upside, deferred salary. For partners who believe in the vision.", color:P.a, bs:0, ezp:7, nzp:15, ops:45, ocs:20, ips:35, equity:"2yr accelerated" },
-              { name:"Balanced", desc:"Moderate base with solid commission. Best of both worlds.", color:P.p, bs:1500, ezp:5, nzp:10, ops:35, ocs:30, ips:35, equity:"Standard (3yr)" },
-              { name:"Secure", desc:"Higher guaranteed pay, lower commission. Less volatility.", color:P.b, bs:3000, ezp:3, nzp:5, ops:20, ocs:45, ips:35, equity:"Standard (3yr)" },
+              { name:"Entrepreneur", desc:"Maximum upside, deferred salary. For partners who believe in the vision.", color:P.a, bs:0, nzp:15, ops:45, ocs:20, ips:35, equity:"2yr accelerated" },
+              { name:"Balanced", desc:"Moderate base with solid commission. Best of both worlds.", color:P.p, bs:1500, nzp:10, ops:35, ocs:30, ips:35, equity:"Standard (3yr)" },
+              { name:"Secure", desc:"Higher guaranteed pay, lower commission. Less volatility.", color:P.b, bs:3000, nzp:5, ops:20, ocs:45, ips:35, equity:"Standard (3yr)" },
             ];
 
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16 }}>
               {models.map((m,mi)=>{
-                const guaranteed = m.bs + Math.round(zmBase * m.ezp / 100);
+                const guaranteed = m.bs;
                 const perZoho = Math.round(zohoTotal * m.nzp / 100);
                 const perOdoo = Math.round(clientProfit * m.ops / 100);
                 const atRamp = guaranteed + zFull * perZoho + oFull * perOdoo;
@@ -658,7 +657,6 @@ export default function App() {
                   <div style={{ padding:16 }}>
                     <div style={{ display:"grid",gap:8,fontSize:11 }}>
                       <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Base salary</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${m.bs.toLocaleString()}/mo</span></div>
-                      <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Existing Zoho</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>{m.ezp}% (${Math.round(zmBase*m.ezp/100)}/mo)</span></div>
                       <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>New Zoho comm</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.nzp}% → ${perZoho}/client</span></div>
                       <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Odoo profit share</span><span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>{m.ops}% → ${perOdoo}/client</span></div>
                       <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:8,marginTop:4 }}>
@@ -669,7 +667,7 @@ export default function App() {
                       <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Company earns</span><span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${companyAtRamp.toLocaleString()}/mo</span></div>
                       <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Equity path</span><span style={{ color:P.p,fontSize:10 }}>{m.equity}</span></div>
                     </div>
-                    <button onClick={()=>{setPt("bs",m.bs);setPt("ezp",m.ezp);setPt("nzp",m.nzp);setPt("nzcs",100-m.nzp);setPt("ops",m.ops);setPt("ocs",m.ocs);setPt("ips",m.ips);setPtab("assumptions");}} style={{ width:"100%",marginTop:14,padding:"10px",background:`${m.color}20`,color:m.color,border:`1px solid ${m.color}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply This Package →</button>
+                    <button onClick={()=>{setPt("bs",m.bs);setPt("nzp",m.nzp);setPt("nzcs",100-m.nzp);setPt("ops",m.ops);setPt("ocs",m.ocs);setPt("ips",m.ips);setPtab("assumptions");}} style={{ width:"100%",marginTop:14,padding:"10px",background:`${m.color}20`,color:m.color,border:`1px solid ${m.color}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply This Package →</button>
                   </div>
                 </Card>;
               })}

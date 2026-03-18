@@ -97,7 +97,7 @@ export const D0 = {
     { id:"c15",nm:"Regenics",rt:0,tr:"",vi:"",zh:0,zha:2078,tier:"zho",seats:0,zhType:"annual",st:["","","","","","","","","","","",""],nt:{} },
   ],
   sc: { nc:1,cs:5,or:3000,oc:1,oq:1,ol:6,op:0.3,oh:500 },
-  pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:5,
+  pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:0,
     targetComp:100000, // Mark's target annual comp — app works backwards from this
     nzp:10, nzcs:90, // new Zoho: Mark 10%, Company 90% (service + license)
     ops:35, ocs:30, ips:35, // Odoo: Mark/Company/Paul (on PROFIT after dev cost)
