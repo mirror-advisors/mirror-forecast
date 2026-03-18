@@ -464,20 +464,29 @@ export default function App() {
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
                 <Lbl>No Changes</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg}</div>
-                <div style={{ fontSize:11,color:P.tm }}>months runway</div>
+                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg>=12?"12+":mg}</div>
+                <div style={{ fontSize:11,color:P.tm }}>{mg>=12?"Green all year":"months runway"}</div>
+                {mg>=12 && <div style={{ fontSize:10,color:P.td,marginTop:4 }}>Dec: <b style={{ fontFamily:"'JetBrains Mono', monospace",color:P.g }}>${Math.round(c.bl[11]).toLocaleString()}</b></div>}
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
                 <Lbl>{pt.nm} + Zero Deals</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRun}</div>
-                <div style={{ fontSize:11,color:P.tm }}>months · burns ${totalBurnMo.toLocaleString()}/mo extra</div>
+                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRun>=12?"12+":failRun}</div>
+                <div style={{ fontSize:11,color:P.tm }}>{failRun>=12?"Green all year — barely":`months · burns $${totalBurnMo.toLocaleString()}/mo extra`}</div>
                 <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${pt.bs.toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
+                {failRun>=12 && <div style={{ fontSize:10,color:P.td,marginTop:2 }}>Dec: <b style={{ fontFamily:"'JetBrains Mono', monospace",color:failBl2[11]>0?P.g:P.r }}>${Math.round(failBl2[11]).toLocaleString()}</b></div>}
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
                 {hasDeals ? <>
-                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
-                  <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
+                  {successRun >= 12 ? <>
+                    <div style={{ fontSize:42,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>12+</div>
+                    <div style={{ fontSize:11,color:P.g }}>Green all year</div>
+                    <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Dec balance: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${Math.round(successBl[11]).toLocaleString()}</b></div>
+                    <div style={{ fontSize:10,color:P.td,marginTop:2 }}>+${Math.round(successBl[11] - c.bl[11]).toLocaleString()} vs baseline</div>
+                  </> : <>
+                    <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
+                    <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
+                  </>}
                 </> : <>
                   <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
                   <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
