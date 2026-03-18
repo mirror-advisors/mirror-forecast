@@ -361,10 +361,13 @@ export default function App() {
         {/* ============ SPLITS TAB ============ */}
         {ptab==="splits"&&(<div style={{ maxWidth:650 }}>
           <Lbl>Odoo Profit Split — after dev costs (must total 100%)</Lbl>
-          <div style={{ fontSize:11,color:P.tm,marginBottom:10 }}>Set Company first (fixed), then adjust Mark vs Paul. Revenue per client minus $300/mo dev cost = profit.</div>
-          <Sld label="Company Cut (anchor)" value={pt.ocs} onChange={v=>{const remain=100-v;const markNew=Math.min(pt.ops,remain);setPt("ocs",v);setPt("ops",markNew);setPt("ips",remain-markNew);}} min={10} max={60} suf="%" color={P.b}/>
-          <Sld label={`${pt.nm}'s Cut`} value={pt.ops} onChange={v=>{const maxMark=100-pt.ocs;const clamped=Math.min(v,maxMark);setPt("ops",clamped);setPt("ips",100-pt.ocs-clamped);}} min={0} max={100-pt.ocs} suf="%" color={P.a}/>
-          <Sld label="Paul's Cut" value={pt.ips} onChange={v=>{const maxPaul=100-pt.ocs;const clamped=Math.min(v,maxPaul);setPt("ips",clamped);setPt("ops",100-pt.ocs-clamped);}} min={0} max={100-pt.ocs} suf="%" color={P.g}/>
+          <div style={{ fontSize:11,color:P.tm,marginBottom:10 }}>Set Company first, then Mark. Paul gets the rest. Revenue minus $300/mo dev cost = profit.</div>
+          <Sld label="Company Cut (anchor)" value={pt.ocs} onChange={v=>{setPt("ocs",v);setPt("ops",Math.min(pt.ops,100-v));setPt("ips",100-v-Math.min(pt.ops,100-v));}} min={0} max={70} suf="%" color={P.b}/>
+          <Sld label={`${pt.nm}'s Cut`} value={Math.min(pt.ops,100-pt.ocs)} onChange={v=>{const mk=Math.min(v,100-pt.ocs);setPt("ops",mk);setPt("ips",100-pt.ocs-mk);}} min={0} max={70} suf={`% (max ${100-pt.ocs}%)`} color={P.a}/>
+          <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
+            <span style={{ fontSize:10,color:P.td,letterSpacing:"0.05em",textTransform:"uppercase",fontFamily:"'DM Sans', sans-serif" }}>Paul's Cut</span>
+            <span style={{ fontSize:12,color:P.g,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{100-pt.ocs-Math.min(pt.ops,100-pt.ocs)}%</span>
+          </div>
           <div style={{ fontSize:10,color:(pt.ops+pt.ocs+pt.ips)===100?P.g:P.r,marginBottom:8,fontFamily:"'JetBrains Mono', monospace" }}>Total: {pt.ops+pt.ocs+pt.ips}%</div>
           <div style={{ display:"flex",borderRadius:6,overflow:"hidden",height:28,marginBottom:20 }}>{[[pt.ops,P.a,pt.nm],[pt.ocs,P.b,"Co"],[pt.ips,P.g,"Paul"]].map(([pv,co,n],i)=><div key={i} style={{ width:`${pv}%`,background:co,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#000",transition:"width 0.3s" }}>{pv>8?`${n} ${pv}%`:""}</div>)}</div>
 
