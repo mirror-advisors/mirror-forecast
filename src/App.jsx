@@ -367,38 +367,40 @@ export default function App() {
             const devCPC = 300;
             const overhead = 100;
             const svcRate = 2000;
-            const svcProfit = svcRate - devCPC - overhead; // $1600
-            // Example: 3 organic + 5 restored = 8 total clients
-            const orgClients = 3, resClients = 5, totalEx = 8;
+            const svcProfit = svcRate - devCPC - overhead;
+            const orgC = pt.pkgOrg || 3;
+            const resC = pt.pkgRes || 5;
+            const totalEx = orgC + resC;
 
             const models = [
               { name:"Entrepreneur", desc:"Zero salary. Maximum upside. For partners who bet on themselves.", color:P.a,
-                bs:0, orgSvc:30, orgLic:20, resSvc:30, resLic:45, equity:"2yr accelerated path" },
+                bs:0, orgSvc:30, orgLic:20, resSvc:30, resLic:45, equity:"Consideration after $450k/yr revenue" },
               { name:"Balanced", desc:"Moderate base with solid commissions. Best of both worlds.", color:P.p,
-                bs:2000, orgSvc:15, orgLic:10, resSvc:15, resLic:30, equity:"Standard (3yr)" },
+                bs:2000, orgSvc:15, orgLic:10, resSvc:15, resLic:30, equity:"Consideration after $650k/yr revenue" },
               { name:"Secure", desc:"Strong guaranteed salary. Limited commission. Predictable income.", color:P.b,
-                bs:4000, orgSvc:5, orgLic:5, resSvc:5, resLic:15, equity:"Standard (3yr), milestone-based" },
+                bs:4000, orgSvc:5, orgLic:5, resSvc:5, resLic:15, equity:"No equity" },
             ];
 
             return <>
-              <div style={{ fontSize:12,color:P.tm,marginBottom:16,lineHeight:1.6 }}>
-                Three packages, same opportunity. Numbers shown with <b style={{ color:P.tx }}>3 organic clients + 5 restored Zoho lead funnel clients</b>.
-                All service commissions are on profit after dev cost ($300) + overhead ($100) = <b style={{ color:P.tx }}>${svcProfit}/client profit</b>.
+              <div style={{ fontSize:12,color:P.tm,marginBottom:12,lineHeight:1.6 }}>
+                Three packages, same opportunity. Service commissions on profit after dev ($300) + overhead ($100) = <b style={{ color:P.tx }}>${svcProfit}/client profit</b>.
+              </div>
+              <div style={{ display:"flex",gap:12,marginBottom:16,alignItems:"center" }}>
+                <span style={{ fontSize:11,color:P.td }}>Model with:</span>
+                <div style={{ display:"flex",alignItems:"center",gap:4 }}><input type="number" value={orgC} onChange={e=>setPt("pkgOrg",Math.max(0,Math.min(20,parseInt(e.target.value)||0)))} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,padding:"4px 8px",color:P.t,fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:50,textAlign:"center" }}/><span style={{ fontSize:11,color:P.t }}>organic</span></div>
+                <span style={{ color:P.td }}>+</span>
+                <div style={{ display:"flex",alignItems:"center",gap:4 }}><input type="number" value={resC} onChange={e=>setPt("pkgRes",Math.max(0,Math.min(20,parseInt(e.target.value)||0)))} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,padding:"4px 8px",color:P.a,fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:50,textAlign:"center" }}/><span style={{ fontSize:11,color:P.a }}>restored Zoho</span></div>
+                <span style={{ fontSize:11,color:P.td }}>= {totalEx} clients</span>
               </div>
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
                 {models.map((m,mi)=>{
-                  // Organic clients (3): lower commission
                   const orgSvcPer = Math.round(svcProfit * m.orgSvc / 100);
                   const orgLicPer = Math.round(zLic * m.orgLic / 100);
-                  const orgMarkMo = orgClients * (orgSvcPer + orgLicPer);
-                  // Restored lead clients (5): higher commission
+                  const orgMarkMo = orgC * (orgSvcPer + orgLicPer);
                   const resSvcPer = Math.round(svcProfit * m.resSvc / 100);
                   const resLicPer = Math.round(zLic * m.resLic / 100);
-                  const resMarkMo = resClients * (resSvcPer + resLicPer);
-                  // Totals
+                  const resMarkMo = resC * (resSvcPer + resLicPer);
                   const markTotal = m.bs + orgMarkMo + resMarkMo;
-                  const compSvc = totalEx * svcProfit - orgClients * orgSvcPer - resClients * resSvcPer;
-                  const compLic = totalEx * zLic - orgClients * orgLicPer - resClients * resLicPer;
 
                   return <Card key={mi} style={{ padding:0,overflow:"hidden",border:`1px solid ${m.color}33` }}>
                     <div style={{ padding:"12px 14px",background:`${m.color}10`,borderBottom:`1px solid ${m.color}22` }}>
@@ -406,26 +408,26 @@ export default function App() {
                       <div style={{ fontSize:10,color:P.tm,marginTop:3 }}>{m.desc}</div>
                     </div>
                     <div style={{ padding:14 }}>
-                      <div style={{ display:"grid",gap:6,fontSize:11 }}>
+                      <div style={{ display:"grid",gap:5,fontSize:11 }}>
                         <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Base salary</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${m.bs.toLocaleString()}/mo</span></div>
-                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:2 }}>
-                          <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:4 }}>Organic Leads (3 clients)</div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service comm</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgSvc}% → ${orgSvcPer}/client</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>License comm</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgLic}% → ${orgLicPer}/client</span></div>
+                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:5,marginTop:2 }}>
+                          <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Organic ({orgC} clients)</div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgSvc}% (${orgSvcPer}/cl)</span></div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>License</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgLic}% (${orgLicPer}/cl)</span></div>
                         </div>
-                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:2 }}>
-                          <div style={{ fontSize:9,color:P.a,textTransform:"uppercase",marginBottom:4 }}>Restored Zoho Leads (5 clients)</div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service comm</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resSvc}% → ${resSvcPer}/client</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>License comm</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resLic}% → ${resLicPer}/client</span></div>
+                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:5,marginTop:2 }}>
+                          <div style={{ fontSize:9,color:P.a,textTransform:"uppercase",marginBottom:3 }}>Restored Zoho ({resC} clients)</div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resSvc}% (${resSvcPer}/cl)</span></div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>License</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resLic}% (${resLicPer}/cl)</span></div>
                         </div>
-                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:8,marginTop:4 }}>
+                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4 }}>
                           <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Guaranteed</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${m.bs.toLocaleString()}/mo</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{pt.nm} total (8 clients)</span><span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${markTotal.toLocaleString()}/mo</span></div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{pt.nm} total ({totalEx} cl)</span><span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${markTotal.toLocaleString()}/mo</span></div>
                           <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Annual est.</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${(markTotal*12).toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Equity</span><span style={{ color:P.p,fontSize:10 }}>{m.equity}</span></div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Equity</span><span style={{ color:mi===2?P.r:P.p,fontSize:10 }}>{m.equity}</span></div>
                         </div>
                       </div>
-                      <button onClick={()=>{setPt("bs",m.bs);setPt("orgSvc",m.orgSvc);setPt("orgLic",m.orgLic);setPt("resSvc",m.resSvc);setPt("resLic",m.resLic);setPtab("assumptions");}} style={{ width:"100%",marginTop:12,padding:"10px",background:`${m.color}20`,color:m.color,border:`1px solid ${m.color}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply → See Runway Impact</button>
+                      <button onClick={()=>{setPt("bs",m.bs);setPt("orgSvc",m.orgSvc);setPt("orgLic",m.orgLic);setPt("resSvc",m.resSvc);setPt("resLic",m.resLic);setPt("nzq",totalEx);setPt("ocq",0);setPtab("assumptions");}} style={{ width:"100%",marginTop:12,padding:"10px",background:`${m.color}20`,color:m.color,border:`1px solid ${m.color}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply → See Runway Impact</button>
                     </div>
                   </Card>;
                 })}
@@ -434,7 +436,7 @@ export default function App() {
               {/* === CUSTOM PACKAGE BUILDER === */}
               <Card style={{ padding:16,border:`1px solid ${P.g}33` }}>
                 <Lbl>Build Your Own Package</Lbl>
-                <div style={{ fontSize:11,color:P.tm,marginBottom:12 }}>Set your ideal salary and commission rates. Changes apply to the Assumptions tab.</div>
+                <div style={{ fontSize:11,color:P.tm,marginBottom:12 }}>Set your ideal terms. Click "Apply" on any preset above to start from a template, then customize here.</div>
                 <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:16 }}>
                   <div>
                     <Sld label={`${pt.nm}'s Base Salary`} value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={10000} step={250} pre="$" suf="/mo" color={P.a}/>
@@ -449,27 +451,28 @@ export default function App() {
                       <Sld label="License Commission" value={pt.resLic||40} onChange={v=>setPt("resLic",v)} min={0} max={50} suf={`% → $${Math.round(zLic*(pt.resLic||40)/100)}/client`} color={P.a}/>
                     </div>
                     <div style={{ fontSize:10,color:P.tm,marginTop:8 }}>
-                      Success criteria for restored leads: 2 retail/mo + 1 mid-market/mo from Zoho direct referrals.
+                      Restored lead criteria: 2 retail/mo + 1 mid-market/mo from Zoho direct referrals. Falls below = reverts to organic rates.
                     </div>
                   </div>
                   <div>
                     <Card style={{ padding:14,background:P.c2 }}>
-                      <Lbl>Your Package (3 org + 5 restored)</Lbl>
+                      <Lbl>Your Custom Package ({orgC} org + {resC} restored)</Lbl>
                       {(()=>{
                         const orgS = Math.round(svcProfit*(pt.orgSvc||15)/100);
                         const orgL = Math.round(zLic*(pt.orgLic||10)/100);
                         const resS = Math.round(svcProfit*(pt.resSvc||15)/100);
                         const resL = Math.round(zLic*(pt.resLic||40)/100);
-                        const markMo = (pt.bs||0) + orgClients*(orgS+orgL) + resClients*(resS+resL);
+                        const markMo = (pt.bs||0) + orgC*(orgS+orgL) + resC*(resS+resL);
                         return <div style={{ display:"grid",gap:6,fontSize:11,marginTop:8 }}>
                           <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Base</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>${(pt.bs||0).toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>3 organic × ${orgS+orgL}</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>${(orgClients*(orgS+orgL)).toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>5 restored × ${resS+resL}</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${(resClients*(resS+resL)).toLocaleString()}</span></div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{orgC} organic × ${orgS+orgL}</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>${(orgC*(orgS+orgL)).toLocaleString()}</span></div>
+                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{resC} restored × ${resS+resL}</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${(resC*(resS+resL)).toLocaleString()}</span></div>
                           <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td,fontWeight:700 }}>Monthly</span><span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace",fontWeight:700,fontSize:14 }}>${markMo.toLocaleString()}</span></div>
                           <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Annual</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${(markMo*12).toLocaleString()}</span></div>
                         </div>;
                       })()}
                     </Card>
+                    <button onClick={()=>{setPt("nzq",totalEx);setPt("ocq",0);setPtab("assumptions");}} style={{ width:"100%",marginTop:10,padding:"10px",background:`${P.g}20`,color:P.g,border:`1px solid ${P.g}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply Custom → See Runway Impact</button>
                   </div>
                 </div>
               </Card>

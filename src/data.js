@@ -101,6 +101,7 @@ export const D0 = {
     targetComp:100000,
     orgSvc:15, orgLic:10, // organic leads: service profit %, license %
     resSvc:15, resLic:40, // restored Zoho leads: service profit %, license %
+    pkgOrg:3, pkgRes:5, // package example client counts
     nzp:10, nzcs:90, ops:35, ocs:30, ips:35,
     opc:1000,ocq:0,oar:2000,dch:750,cpc:2.5,
     sm:4,nzq:0, azr:2000,
