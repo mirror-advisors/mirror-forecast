@@ -85,25 +85,36 @@ export function computePartnership(pt) {
     const oC = revenueActive ? qIn * pt.ocq : 0; // Odoo clients
     const nZ = revenueActive ? qIn * pt.nzq : 0; // new Zoho clients
 
-    // Dev allocation: number of devs needed, cost spread per client
-    const devsNeeded = oC > 0 ? Math.ceil(oC / cpc) : 0;
-    const totalDevCost = devsNeeded * pt.dch;
-    const devCostPerClient = oC > 0 ? totalDevCost / oC : 0;
+    // Dev allocation for Odoo
+    const odooDevs = oC > 0 ? Math.ceil(oC / cpc) : 0;
+    const odooDevCost = odooDevs * pt.dch;
+    const odooDevPerClient = oC > 0 ? odooDevCost / oC : 0;
+    // Dev allocation for new Zoho (same 2.5 projects/dev, separate devs)
+    const zohoDevs = nZ > 0 ? Math.ceil(nZ / cpc) : 0;
+    const zohoDevCost = zohoDevs * pt.dch;
+    const zohoDevPerClient = nZ > 0 ? zohoDevCost / nZ : 0;
+    const totalDevCost = odooDevCost + zohoDevCost;
+    const devsNeeded = odooDevs + zohoDevs;
 
-    // === ODOO: split on PROFIT after dev cost ===
+    // Overhead: $100/client/mo for all new clients
+    const overhead = (oC + nZ) * 100;
+
+    // === ODOO: profit = revenue - dev cost - overhead, then split ===
     const oGross = oC * pt.oar;
-    const oProfit = oC * (pt.oar - devCostPerClient); // profit after dev cost spread
-    const oMR = oProfit * (pt.ops / 100);  // Mark's cut of profit
-    const oPR = oProfit * (pt.ips / 100);  // Paul's cut of profit
-    const oCR = oProfit * (pt.ocs / 100);  // Company's cut of profit
+    const oNetPerClient = pt.oar - odooDevPerClient - 100;
+    const oProfit = oC * oNetPerClient;
+    const oMR = oProfit > 0 ? oProfit * (pt.ops / 100) : 0;  // Mark
+    const oPR = oProfit > 0 ? oProfit * (pt.ips / 100) : 0;  // Paul
+    const oCR = oProfit > 0 ? oProfit * (pt.ocs / 100) : 0;  // Company
 
-    // === NEW ZOHO: 10/90 on service revenue + license commission ===
-    const nzServiceRev = nZ * pt.azr;       // e.g. 1 client × $2000/mo service
+    // === NEW ZOHO: profit = service + license - dev cost - overhead, then split ===
+    const nzServiceRev = nZ * pt.azr;
     const zLicPerClient = Math.round((pt.zSeats || 15) * (pt.zSeatPrice || 40) * (pt.zCommPct || 18) / 100);
-    const nzLicenseRev = nZ * zLicPerClient; // e.g. 1 client × 15 seats × $40 × 18% = $108/mo
-    const nzTotalRev = nzServiceRev + nzLicenseRev;
-    const nzMarkCut = nzTotalRev * (zMarkPct / 100);
-    const nzCoCut = nzTotalRev * (zCoPct / 100);
+    const nzLicenseRev = nZ * zLicPerClient;
+    const nzNetPerClient = pt.azr + zLicPerClient - zohoDevPerClient - 100;
+    const nzProfit = nZ * nzNetPerClient;
+    const nzMarkCut = nzProfit > 0 ? nzProfit * (zMarkPct / 100) : 0;
+    const nzCoCut = nzProfit > 0 ? nzProfit * (zCoPct / 100) : 0;
 
     // === MARK'S TOTAL COMP ===
     const base = active ? pt.bs : 0;
@@ -111,40 +122,37 @@ export function computePartnership(pt) {
     const mComp = base + ezC + (revenueActive ? nzMarkCut + oMR : 0);
 
     // === NET TO COMPANY (cash impact of partnership) ===
-    // Company gets: Odoo company share + Paul share + Zoho company share
-    // Company pays: Mark's base + existing Zoho comm + dev costs + setup
     const pCost = (active && monthsActive === 1) ? pt.opc : 0;
-    const net = active ? (oCR + oPR + nzCoCut - base - ezC - totalDevCost - pCost) : 0;
+    const net = active ? (oCR + oPR + nzCoCut - base - ezC - totalDevCost - overhead - pCost) : 0;
 
     cumCash += net;
     if (breakeven === -1 && cumCash > 0 && active && i > pt.sm) breakeven = i;
 
     months.push({
       oC, nZ, mComp: Math.round(mComp), dH: devsNeeded,
-      newRev: Math.round(oGross + nzTotalRev),
-      oProfit: Math.round(oProfit),
+      newRev: Math.round(oGross + nzServiceRev + nzLicenseRev),
+      oProfit: Math.round(oProfit), nzProfit: Math.round(nzProfit),
       net: Math.round(net), cum: Math.round(cumCash),
       oCR: Math.round(oCR), oPR: Math.round(oPR), oMR: Math.round(oMR),
       nzMarkCut: Math.round(nzMarkCut), nzCoCut: Math.round(nzCoCut),
-      base, ezC: Math.round(ezC), totalDevCost: Math.round(totalDevCost), pCost,
-      totalCost: Math.round(mComp + totalDevCost + pCost),
+      base, ezC: Math.round(ezC), totalDevCost: Math.round(totalDevCost), overhead: Math.round(overhead), pCost,
+      totalCost: Math.round(mComp + totalDevCost + overhead + pCost),
       totalRev: Math.round(oCR + oPR + nzCoCut),
       inDelay: active && !revenueActive,
-      devCostPerClient: Math.round(devCostPerClient),
+      odooDevPerClient: Math.round(odooDevPerClient), zohoDevPerClient: Math.round(zohoDevPerClient),
     });
   }
 
   const mFixed = pt.bs + zmBase * (pt.ezp / 100);
   const devPerClient = pt.dch / cpc;
-  const profitPerOdoo = pt.oar - devPerClient;
+  const profitPerOdoo = pt.oar - devPerClient - 100; // minus overhead
   const netPerOdoo = profitPerOdoo * ((pt.ocs + pt.ips) / 100);
   const zLicPC = Math.round((pt.zSeats || 15) * (pt.zSeatPrice || 40) * (pt.zCommPct || 18) / 100);
-  const zohoTotalPerClient = pt.azr + zLicPC;
-  const zohoProfit = pt.azr - (pt.svcCost || 384) + zLicPC; // service margin + license comm
-  const netPerZoho = zohoProfit * ((pt.nzcs || 90) / 100);
+  const profitPerZoho = pt.azr + zLicPC - devPerClient - 100; // minus dev and overhead
+  const netPerZoho = profitPerZoho * ((pt.nzcs || 90) / 100);
   const beC = netPerOdoo > 0 ? Math.ceil(mFixed / netPerOdoo) : Infinity;
   const worst = Math.min(...months.map(m => m.cum));
-  return { months, breakeven, beC, worst, ok: worst > -8000, tight: worst > -3000, mFixed, netPerOdoo: Math.round(netPerOdoo), netPerZoho: Math.round(netPerZoho), devPerClient: Math.round(devPerClient), zLicPerClient: zLicPC, zohoTotalPerClient, zohoProfit: Math.round(zohoProfit) };
+  return { months, breakeven, beC, worst, ok: worst > -8000, tight: worst > -3000, mFixed, netPerOdoo: Math.round(netPerOdoo), netPerZoho: Math.round(netPerZoho), devPerClient: Math.round(devPerClient), zLicPerClient: zLicPC, profitPerOdoo: Math.round(profitPerOdoo), profitPerZoho: Math.round(profitPerZoho) };
 }
 
 export function computeDevHire(dh) {

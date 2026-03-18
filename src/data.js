@@ -67,7 +67,7 @@ export const D0 = {
   // Jan: $4,847-$3,738=$1,109. Feb: $4,377-$3,037=$1,340. Mar+: ~$100 est.
   wf: [-1109,-1340,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100],
   tm: [
-    { id:"p1",nm:"Paul",rl:"CEO",dp:"Leadership",ct:"US",co:8000,on:true },
+    { id:"p1",nm:"Paul",rl:"CEO",dp:"Leadership",ct:"US",co:8333,on:true },
     { id:"p2",nm:"Sara",rl:"Intern",dp:"Operations",ct:"US",co:792,on:true,endMo:5 },
     { id:"p3",nm:"Janna",rl:"Mktg Lead",dp:"Marketing",ct:"PH",co:550,on:true },
     { id:"p4",nm:"Mark",rl:"Marketing",dp:"Marketing",ct:"PH",co:273,on:true,startMo:1 },
@@ -125,28 +125,38 @@ export const fK = n => {
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
 
-// Precise runway — extends beyond 12 months by projecting last month's net forward
+// Precise runway — extends beyond 12 months, caps at 36, applies 5%/quarter cost creep
 export function preciseRunway(bl) {
-  // Find first month that goes negative
+  // Find first month that goes negative within the 12-month window
   let lastPos = -1;
   for (let i = 0; i < bl.length; i++) {
     if (bl[i] > 0) lastPos = i; else break;
   }
   if (lastPos === -1) return 0;
-  // If deficit within the 12-month window, interpolate
+  // Deficit within 12 months — interpolate
   if (lastPos < bl.length - 1) {
     const posV = bl[lastPos];
     const negV = bl[lastPos + 1];
     const frac = posV / (posV - negV);
     return Math.round((lastPos + 1 + frac) * 4) / 4;
   }
-  // All 12 months green — project forward using last month's net flow
-  // Net flow for last month = bl[11] - bl[10]
-  const lastNet = bl.length >= 2 ? bl[bl.length - 1] - bl[bl.length - 2] : 0;
-  if (lastNet >= 0) return 99; // growing or flat — effectively infinite
-  // Declining: how many more months until bl[11] burns to zero?
-  const monthsLeft = bl[bl.length - 1] / Math.abs(lastNet);
-  return Math.round((12 + monthsLeft) * 4) / 4;
+  // All 12 months green — project forward from Dec balance
+  // Use avg of last 3 months as base net, then apply 5% quarterly cost creep
+  const n3 = bl.length >= 3 ? (bl[bl.length-1] - bl[bl.length-3]) / 2 : bl[bl.length-1] - bl[bl.length-2];
+  let balance = bl[bl.length - 1];
+  let monthlyNet = n3;
+  for (let m = 13; m <= 36; m++) {
+    // Every 3 months, expenses creep up 5% (net gets worse)
+    if ((m - 12) % 3 === 0) monthlyNet = monthlyNet - Math.abs(monthlyNet) * 0.05;
+    balance += monthlyNet;
+    if (balance <= 0) {
+      // Interpolate the fraction
+      const prev = balance - monthlyNet;
+      const frac = prev / (prev - balance);
+      return Math.round((m - 1 + frac) * 4) / 4;
+    }
+  }
+  return 36; // cap
 }
 
 // V2.2: 14-month rolling window — 2 months back + current + 11 ahead
