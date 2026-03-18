@@ -469,7 +469,7 @@ export default function App() {
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
                 <Lbl>{pt.nm} + Zero Deals</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRunfailRun}</div>
+                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRun}</div>
                 <div style={{ fontSize:11,color:P.tm }}>months · burns ${totalBurnMo.toLocaleString()}/mo extra</div>
                 <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${pt.bs.toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
               </Card>
