@@ -464,7 +464,7 @@ export default function App() {
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
                 <Lbl>No Changes</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mgmg}</div>
+                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg}</div>
                 <div style={{ fontSize:11,color:P.tm }}>months runway</div>
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
