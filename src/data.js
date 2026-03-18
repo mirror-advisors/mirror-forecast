@@ -125,38 +125,32 @@ export const fK = n => {
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
 
-// Precise runway — extends beyond 12 months, caps at 36, applies 5%/quarter cost creep
+// Precise runway — extends beyond 12 months, caps at 24, applies 5%/quarter cost creep
 export function preciseRunway(bl) {
-  // Find first month that goes negative within the 12-month window
   let lastPos = -1;
   for (let i = 0; i < bl.length; i++) {
     if (bl[i] > 0) lastPos = i; else break;
   }
   if (lastPos === -1) return 0;
-  // Deficit within 12 months — interpolate
   if (lastPos < bl.length - 1) {
     const posV = bl[lastPos];
     const negV = bl[lastPos + 1];
     const frac = posV / (posV - negV);
     return Math.round((lastPos + 1 + frac) * 4) / 4;
   }
-  // All 12 months green — project forward from Dec balance
-  // Use avg of last 3 months as base net, then apply 5% quarterly cost creep
   const n3 = bl.length >= 3 ? (bl[bl.length-1] - bl[bl.length-3]) / 2 : bl[bl.length-1] - bl[bl.length-2];
   let balance = bl[bl.length - 1];
   let monthlyNet = n3;
-  for (let m = 13; m <= 36; m++) {
-    // Every 3 months, expenses creep up 5% (net gets worse)
+  for (let m = 13; m <= 24; m++) {
     if ((m - 12) % 3 === 0) monthlyNet = monthlyNet - Math.abs(monthlyNet) * 0.05;
     balance += monthlyNet;
     if (balance <= 0) {
-      // Interpolate the fraction
       const prev = balance - monthlyNet;
       const frac = prev / (prev - balance);
       return Math.round((m - 1 + frac) * 4) / 4;
     }
   }
-  return 36; // cap
+  return 24; // cap
 }
 
 // V2.2: 14-month rolling window — 2 months back + current + 11 ahead

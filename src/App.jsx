@@ -436,6 +436,33 @@ export default function App() {
             const totalBurnMo = fixedMo + devCostMo;
             const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
 
+            // Find breakeven: minimum total clients where runway >= baseline (mg)
+            // Test Zoho-only path and mixed path
+            let beClients = null;
+            for (let test = 1; test <= 20; test++) {
+              const testBl = [];
+              let testRevCum = 0;
+              // Compute with 'test' Zoho clients (simplest path)
+              const testDevs = Math.ceil(test / (pt.cpc || 2.5));
+              const testDevCost = testDevs * pt.dch;
+              const testOverhead = test * 100;
+              const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
+              const zProfit = Math.max(0, pt.azr + zLic - (testDevs * pt.dch / test) - 100);
+              const zCoPct = pt.zLeadBonus ? (pt.zLeadCo||60) : (pt.nzcs||90);
+              const zCompShare = Math.round(zProfit * zCoPct / 100);
+              const revenuePerMo = test * zCompShare;
+              const extraDevCost = Math.max(0, testDevCost - pt.dch);
+              const netRevPerMo = revenuePerMo - extraDevCost - testOverhead;
+              for (let i = 0; i < 12; i++) {
+                const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
+                const revActive = ma > (pt.dl || 0);
+                if (revActive) testRevCum += netRevPerMo;
+                testBl.push(zeroBl[i] + testRevCum);
+              }
+              const testRun = preciseRunway(testBl);
+              if (testRun >= mg) { beClients = test; break; }
+            }
+
             // ZERO DEALS: Mark's salary + 1 dev, no revenue. Cumulative subtraction from baseline.
             const zeroBl = [];
             let zeroCum = 0;
@@ -483,7 +510,7 @@ export default function App() {
               <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
                 {hasDeals ? <>
-                  <div style={{ fontSize:42,fontWeight:800,color:dealsRun>=9?P.g:dealsRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{dealsRun}</div>
+                  <div style={{ fontSize:42,fontWeight:800,color:dealsRun>=9?P.g:dealsRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{dealsRun>=24?"24+":dealsRun}</div>
                   <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo active</div>
                   <div style={{ fontSize:10,color:P.g,marginTop:4 }}>+${pm.netMonthly>=0?pm.netMonthly.toLocaleString():"0"}/mo net after ramp</div>
                 </> : <>
@@ -491,6 +518,31 @@ export default function App() {
                   <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
                 </>}
               </Card>
+            </div>;
+          })()}
+
+          {/* Breakeven callout */}
+          {(()=>{
+            const zLic2 = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
+            const zCoPct2 = pt.zLeadBonus ? (pt.zLeadCo||60) : (pt.nzcs||90);
+            const devPer = pt.dch / (pt.cpc||2.5);
+            const profitPer = pt.azr + zLic2 - devPer - 100;
+            const netPer = Math.round(profitPer * zCoPct2 / 100);
+            const markFixed = (pt.bs||0) + Math.round(984 * (pt.ezp||0) / 100) + pt.dch;
+            let be = null;
+            for (let n = 1; n <= 20; n++) {
+              const devs = Math.ceil(n / (pt.cpc||2.5));
+              const extraDev = Math.max(0, (devs - 1) * pt.dch);
+              const monthlyGain = n * netPer - extraDev;
+              if (monthlyGain >= markFixed) { be = n; break; }
+            }
+            if (!be) return null;
+            return <div style={{ padding:14,borderRadius:8,background:P.gB,border:`1px solid ${P.gM}`,marginBottom:20,display:"flex",alignItems:"center",gap:16 }}>
+              <div style={{ fontSize:42,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{be}</div>
+              <div>
+                <div style={{ fontSize:14,color:P.g,fontWeight:700 }}>clients to break even</div>
+                <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>At {be} active clients, {pt.nm}'s partnership pays for itself — the company stops losing money on the deal. Every client beyond {be} is pure profit for everyone.</div>
+              </div>
             </div>;
           })()}
 
