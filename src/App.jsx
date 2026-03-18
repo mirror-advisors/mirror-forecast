@@ -431,35 +431,42 @@ export default function App() {
           {(()=>{
             const zmBase = 984;
             const fixedMo = pt.bs + Math.round(zmBase * pt.ezp / 100);
-            const devCostMo = pt.dch; // 1 dev minimum
+            const devCostMo = pt.dch; // 1 dev minimum even with no deals
             const setupCost = pt.opc || 0;
             const totalBurnMo = fixedMo + devCostMo;
+            const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
 
-            // Failure: Mark costs money, zero revenue. Simple subtraction from baseline.
-            const failBl = c.bl.map((b, i) => {
-              let cost = 0;
-              for (let j = 0; j <= i; j++) {
-                const ma = j >= pt.sm ? j - pt.sm + 1 : 0;
-                if (ma > 0) cost += totalBurnMo + (ma === 1 ? setupCost : 0);
-              }
-              return b - cost;
-            });
-            // Wait — failBl should subtract cumulative cost, but c.bl[i] is already cumulative.
-            // Actually c.bl[i] is the balance at end of month i. We need to subtract the cumulative
-            // partnership cost through month i.
-            const failBl2 = [];
-            let failCum = 0;
+            // ZERO DEALS: Mark's salary + 1 dev, no revenue. Cumulative subtraction from baseline.
+            const zeroBl = [];
+            let zeroCum = 0;
             for (let i = 0; i < 12; i++) {
               const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              if (ma > 0) failCum += totalBurnMo + (ma === 1 ? setupCost : 0);
-              failBl2.push(c.bl[i] - failCum);
+              if (ma > 0) zeroCum += totalBurnMo + (ma === 1 ? setupCost : 0);
+              zeroBl.push(c.bl[i] - zeroCum);
             }
-            const failRun = preciseRunway(failBl2);
+            const zeroRun = preciseRunway(zeroBl);
 
-            // Success: use partnership model's cumulative impact (already includes costs AND revenue)
-            const successBl = c.bl.map((b, i) => b + pm.months[i].cum);
-            const successRun = preciseRunway(successBl);
-            const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
+            // DEALS FLOWING: same zero-deals cost base, PLUS revenue from clients after delay
+            // Revenue per month once active = pm.netMonthly (which is net of all costs including devs, overhead, Mark's cut)
+            // But we need it month by month because of the delay period
+            const dealsBl = [];
+            let revCum = 0;
+            for (let i = 0; i < 12; i++) {
+              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
+              const revenueActive = ma > (pt.dl || 0);
+              // When revenue starts, add the NET positive impact (revenue to company after all splits and costs)
+              // pm.netMonthly already accounts for: company share + paul share - mark comp - dev costs - overhead
+              // But we need to ADD BACK the base costs we already subtracted in zeroBl
+              if (revenueActive && hasDeals) {
+                // Total revenue impact = everything the deals bring in minus the EXTRA costs beyond 1 dev
+                // Extra devs beyond the 1 already in zeroBl
+                const extraDevCost = Math.max(0, pm.totalDevCost - pt.dch);
+                const revenueImpact = pm.compTotal + pm.paulFromOdoo - extraDevCost - pm.overhead;
+                revCum += revenueImpact;
+              }
+              dealsBl.push(zeroBl[i] + revCum);
+            }
+            const dealsRun = preciseRunway(dealsBl);
 
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
@@ -469,15 +476,16 @@ export default function App() {
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
                 <Lbl>{pt.nm} + Zero Deals</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRun}</div>
+                <div style={{ fontSize:42,fontWeight:800,color:zeroRun>=9?P.g:zeroRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{zeroRun}</div>
                 <div style={{ fontSize:11,color:P.tm }}>months · burns ${totalBurnMo.toLocaleString()}/mo extra</div>
                 <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${pt.bs.toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
               </Card>
               <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
                 {hasDeals ? <>
-                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
-                  <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
+                  <div style={{ fontSize:42,fontWeight:800,color:dealsRun>=9?P.g:dealsRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{dealsRun}</div>
+                  <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo active</div>
+                  <div style={{ fontSize:10,color:P.g,marginTop:4 }}>+${pm.netMonthly>=0?pm.netMonthly.toLocaleString():"0"}/mo net after ramp</div>
                 </> : <>
                   <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
                   <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
