@@ -22,7 +22,8 @@ export default function App() {
   const [clFilter, setClFilter] = useState("service"); // V2.1: default to service clients
   const [clSort, setClSort] = useState({ key: "totalValue", dir: "desc" });
 
-  const isPartner = user?.email === "mark@mirroradvisors.com";
+  const partnerEmail = "mark@mirroradvisors.com";
+  const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
 
   useEffect(() => { loadData(D0).then(setD); }, []);
   const save = useCallback((nd) => { setD(nd); saveData(nd); }, []);
