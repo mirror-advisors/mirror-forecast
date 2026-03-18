@@ -100,11 +100,13 @@ export const D0 = {
   // V2.2: Partnership now has separate Zoho split (nzps = new zoho partner split, nzcs = new zoho company split)
   // Also: zLeadBonus — if Mark re-establishes Zoho lead flow, he gets 40/60 instead of 10/90
   pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:5,
-    nzp:10, // new zoho service: Mark's %
-    nzcs:90, // new zoho service: Company's %
-    ops:35, ocs:30, ips:35, // Odoo: Mark/Company/Paul
-    opc:1000,ocq:2,oar:3000,dch:750,den:3,sm:4,nzq:1,azr:2000,dl:3,
-    zLeadBonus:false, zLeadMark:40, zLeadCo:60 },
+    nzp:10, nzcs:90, // new Zoho: Mark 10%, Company 90% (service + license)
+    ops:35, ocs:30, ips:35, // Odoo: Mark/Company/Paul (on PROFIT after dev cost)
+    opc:1000,ocq:2,oar:3000,dch:750,cpc:2.5, // dev: $750/mo, 2.5 clients per dev
+    sm:4,nzq:1,azr:2000,zlr:100, // zlr = avg Zoho license commission per client/mo
+    dl:3,
+    zLeadBonus:false, zLeadMark:40, zLeadCo:60, // restored Zoho lead bonus toggle
+    equityTrigger:500000 }, // annual revenue trigger for equity discussion
   dh: { cnt:1,avg:750,sm:3,cpc:1.5,rpc:2000,mode:"capacity" },
 };
 
