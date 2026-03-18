@@ -497,8 +497,8 @@ export default function App() {
                     setPt("nzp", Math.min(Math.round(10 * factor), 25));
                     setPt("ops", Math.min(Math.round(35 * factor), 60));
                   }} min={0} max={4000} step={250} pre="$" suf="/mo" color={P.a}/>
-                  <Sld label="Zoho Commission %" value={pt.nzp||10} onChange={v=>{setPt("nzp",v);setPt("nzcs",100-v);}} min={3} max={25} suf={`% → $${Math.round(zohoPerClient*v/100)}/client/mo`} color={P.t}/>
-                  <Sld label="Odoo Profit Share %" value={pt.ops||35} onChange={v=>{const r=100-v;const pCut=Math.round(r*pt.ips/(pt.ips+pt.ocs||1));setPt("ops",v);setTimeout(()=>{setPt("ips",pCut);setPt("ocs",r-pCut);},0);}} min={10} max={60} suf={`% → $${Math.round(odooProfit*v/100)}/client/mo`} color={P.b}/>
+                  <Sld label="Zoho Commission %" value={pt.nzp||10} onChange={v=>{setPt("nzp",v);setPt("nzcs",100-v);}} min={3} max={25} suf={`% → $${Math.round(zohoPerClient*(pt.nzp||10)/100)}/client/mo`} color={P.t}/>
+                  <Sld label="Odoo Profit Share %" value={pt.ops||35} onChange={v=>{const r=100-v;const pCut=Math.round(r*pt.ips/(pt.ips+pt.ocs||1));setPt("ops",v);setTimeout(()=>{setPt("ips",pCut);setPt("ocs",r-pCut);},0);}} min={10} max={60} suf={`% → $${Math.round(odooProfit*(pt.ops||35)/100)}/client/mo`} color={P.b}/>
                   <Sld label="Existing Zoho Comm" value={pt.ezp} onChange={v=>setPt("ezp",v)} min={0} max={15} suf={`% = $${Math.round(zmBase*pt.ezp/100)}/mo`} color={P.td}/>
                 </div>
                 <div>
