@@ -403,16 +403,24 @@ export default function App() {
             const fixedMo = pt.bs + Math.round(zmBase * pt.ezp / 100);
             const devCostMo = pt.dch;
             const setupCost = pt.opc || 0;
+            const totalBurnMo = fixedMo + devCostMo;
             // Failure: Mark salary + 1 dev + setup, zero revenue
             const failBl = c.bl.map((b, i) => {
               const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              const cost = ma > 0 ? fixedMo + devCostMo + (ma === 1 ? setupCost : 0) : 0;
+              const cost = ma > 0 ? totalBurnMo + (ma === 1 ? setupCost : 0) : 0;
               return b - cost;
             });
             const failRun = preciseRunway(failBl);
-            // Success: with projected deal flow
-            const oBl = c.bl.map((b,i) => b + pm.months[i].cum);
-            const successRun = preciseRunway(oBl);
+            // Success: same costs as failure, but ADD the revenue from deals on top
+            // pm.months[i] has newRev (gross revenue from deals) — use that
+            const successBl = failBl.map((b, i) => {
+              if (i < pt.sm) return b;
+              const m = pm.months[i];
+              // Add back the revenue that deals bring (company share + paul share + zoho company share)
+              return b + (m.totalRev || 0);
+            });
+            const successRun = preciseRunway(successBl);
+            const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
                 <Lbl>No Changes</Lbl>
@@ -422,13 +430,18 @@ export default function App() {
               <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
                 <Lbl>{pt.nm} + Zero Deals</Lbl>
                 <div style={{ fontSize:42,fontWeight:800,color:failRun>=9?P.g:failRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{failRun}</div>
-                <div style={{ fontSize:11,color:P.tm }}>months · burns ${(fixedMo+devCostMo).toLocaleString()}/mo extra</div>
+                <div style={{ fontSize:11,color:P.tm }}>months · burns ${totalBurnMo.toLocaleString()}/mo extra</div>
                 <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${pt.bs.toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
               </Card>
-              <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
+              <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
-                <div style={{ fontSize:11,color:P.tm }}>months · with growth below</div>
+                {hasDeals ? <>
+                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
+                  <div style={{ fontSize:11,color:P.tm }}>months · with {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
+                </> : <>
+                  <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
+                  <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
+                </>}
               </Card>
             </div>;
           })()}
