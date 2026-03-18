@@ -98,15 +98,14 @@ export const D0 = {
   ],
   sc: { nc:1,cs:5,or:3000,oc:1,oq:1,ol:6,op:0.3,oh:500 },
   pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:0,
-    targetComp:100000, // Mark's target annual comp — app works backwards from this
-    nzp:10, nzcs:90, // new Zoho: Mark 10%, Company 90% (service + license)
-    ops:35, ocs:30, ips:35, // Odoo: Mark/Company/Paul (on PROFIT after dev cost)
-    opc:1000,ocq:0,oar:2000,dch:750,cpc:2.5, // ocq = total Odoo clients, oar = $2k/mo standard
-    sm:4,nzq:0, // nzq = total Zoho clients
-    azr:2000, // avg Zoho service rate per client/mo
-    zSeats:15, zSeatPrice:40, zCommPct:18, // license comm = seats × price × comm%
-    svcCost:384, // avg dev cost to deliver a Zoho IM client/mo
-    dl:3,
+    targetComp:100000,
+    orgSvc:15, orgLic:10, // organic leads: service profit %, license %
+    resSvc:15, resLic:40, // restored Zoho leads: service profit %, license %
+    nzp:10, nzcs:90, ops:35, ocs:30, ips:35,
+    opc:1000,ocq:0,oar:2000,dch:750,cpc:2.5,
+    sm:4,nzq:0, azr:2000,
+    zSeats:15, zSeatPrice:40, zCommPct:18,
+    svcCost:384, dl:3,
     zLeadBonus:false, zLeadMark:40, zLeadCo:60,
     equityTrigger:500000 },
   dh: { cnt:1,avg:750,sm:3,cpc:1.5,rpc:2000,mode:"capacity" },
