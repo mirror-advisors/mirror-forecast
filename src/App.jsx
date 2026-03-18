@@ -477,6 +477,145 @@ export default function App() {
           })()}
         </div>)}
 
+        {/* ============ ASSUMPTIONS TAB ============ */}
+        {ptab==="assumptions"&&(<>
+          {/* Three runway cards */}
+          {(()=>{
+            const fixedMo = (pt.bs||0) + pt.dch;
+            const setupCost = pt.opc || 0;
+            const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
+
+            // ZERO DEALS: salary + 1 dev, no revenue
+            const zeroBl = [];
+            let zeroCum = 0;
+            for (let i = 0; i < 12; i++) {
+              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
+              if (ma > 0) zeroCum += fixedMo + (ma === 1 ? setupCost : 0);
+              zeroBl.push(c.bl[i] - zeroCum);
+            }
+            const zeroRun = preciseRunway(zeroBl);
+
+            // DEALS FLOWING: uses pm.months which has 3/mo client ramp
+            const dealsBl = c.bl.map((b, i) => b + pm.months[i].cum);
+            const dealsRun = preciseRunway(dealsBl);
+
+            // Breakeven
+            const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
+            const svcProfit = 2000 - 300 - 100;
+            const markSvcPer = Math.round(svcProfit * (pt.orgSvc||15) / 100);
+            const compSvcPer = svcProfit - markSvcPer;
+            const compLicPer = Math.round(zLic * 40 / 100);
+            const paulLicPer = Math.round(zLic * 50 / 100);
+            let beClients = null;
+            for (let n = 1; n <= 20; n++) {
+              const devs = Math.ceil(n / (pt.cpc||2.5));
+              const revToCompany = n * (compSvcPer + compLicPer + paulLicPer);
+              const costs = (pt.bs||0) + devs * pt.dch + n * 100;
+              if (revToCompany >= costs) { beClients = n; break; }
+            }
+
+            return <><div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
+              <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
+                <Lbl>No Changes</Lbl>
+                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg}</div>
+                <div style={{ fontSize:11,color:P.tm }}>months runway</div>
+              </Card>
+              <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
+                <Lbl>{pt.nm} + Zero Deals</Lbl>
+                <div style={{ fontSize:42,fontWeight:800,color:zeroRun>=9?P.g:zeroRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{zeroRun}</div>
+                <div style={{ fontSize:11,color:P.tm }}>months · burns ${fixedMo.toLocaleString()}/mo extra</div>
+                <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${(pt.bs||0).toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
+              </Card>
+              <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
+                <Lbl>{pt.nm} + Deals Flowing</Lbl>
+                {hasDeals ? <>
+                  <div style={{ fontSize:42,fontWeight:800,color:dealsRun>=9?P.g:dealsRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{dealsRun>=24?"24+":dealsRun}</div>
+                  <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo active</div>
+                  <div style={{ fontSize:10,color:pm.netMonthly>=0?P.g:P.r,marginTop:4 }}>{pm.netMonthly>=0?"+":""}${pm.netMonthly.toLocaleString()}/mo net at steady state</div>
+                </> : <>
+                  <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
+                  <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
+                </>}
+              </Card>
+            </div>
+            {beClients && <div style={{ padding:14,borderRadius:8,background:P.gB,border:`1px solid ${P.gM}`,marginBottom:20,display:"flex",alignItems:"center",gap:16 }}>
+              <div style={{ fontSize:42,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{beClients}</div>
+              <div>
+                <div style={{ fontSize:14,color:P.g,fontWeight:700 }}>clients to break even</div>
+                <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>At {beClients} active clients, {pt.nm}'s partnership pays for itself. Every client beyond {beClients} is pure profit.</div>
+              </div>
+            </div>}
+            </>;
+          })()}
+
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:24 }}>
+            <div>
+              <Lbl>Partnership Parameters</Lbl>
+              <Sld label={`${pt.nm}'s Base Salary`} value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={10000} step={250} pre="$" suf="/mo" color={P.a}/>
+              <Sld label="Start Month" value={pt.sm} onChange={v=>setPt("sm",v)} min={0} max={11} suf={` (${MO[pt.sm]})`} color={P.p}/>
+              <Sld label="Ramp-Up Delay" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf=" months before first revenue" color={P.a}/>
+              <div style={{ height:12 }}/>
+              <Lbl>Deal Flow (all clients $2,000/mo × 12mo retainer)</Lbl>
+              <div style={{ fontSize:11,color:P.tm,marginBottom:8 }}>Total active clients Mark brings. Max 3 new/month. Dev: $750/mo per dev (2.5 clients each). Overhead: $100/client.</div>
+              <Sld label="Zoho Clients (active)" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={20} suf=" clients"/>
+              <Sld label="Odoo Clients (active)" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={20} suf=" clients"/>
+            </div>
+            <div>
+              <Lbl>Cumulative Cash Impact</Lbl>
+              <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div>
+
+              <Card style={{ padding:14,marginBottom:12 }}>
+                <Lbl>Steady State ({pm.totalClients} clients)</Lbl>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}>
+                  <div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.totalDevs} (${pm.totalDevCost.toLocaleString()}/mo)</span></div>
+                  <div><span style={{ color:P.td }}>Overhead:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${pm.overhead.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>{pt.nm} earns:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.mComp.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>Paul earns:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.paulLicTotal.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.compTotal.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>New MRR:</span> <span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>${pm.totalNewRev.toLocaleString()}/mo</span></div>
+                  <div style={{ gridColumn:"1/-1",borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4 }}>
+                    <span style={{ color:P.td }}>Net monthly:</span> <span style={{ color:pm.netMonthly>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.netMonthly>=0?"+":""}${pm.netMonthly.toLocaleString()}/mo</span>
+                  </div>
+                </div>
+              </Card>
+
+              {pm.totalClients > 0 && <Card style={{ padding:12,marginBottom:12 }}>
+                <Lbl>Per Client Economics</Lbl>
+                <div style={{ fontSize:11,marginTop:6,lineHeight:1.7 }}>
+                  <div><b style={{ color:P.tx }}>Service:</b> $2,000 − ${pm.devPerClient} dev − $100 overhead = <b>${pm.svcProfit} profit</b> → {pt.nm} 15% (${pm.markSvcPer}) · Co 85% (${pm.companySvcPer})</div>
+                  <div><b style={{ color:P.t }}>License:</b> ${pm.zLicPerClient}/mo → {pt.nm} {pm.licMarkPct}% (${pm.markLicPer}) · Co {pm.licCoPct}% (${pm.compLicPer}) · Paul {pm.licPaulPct}% (${pm.paulLicPer})</div>
+                </div>
+              </Card>}
+
+              {(()=>{
+                const perClient = pm.markSvcPer + pm.markLicPer;
+                const rows = [];
+                for (let t = 1; t <= 15; t++) {
+                  const m = (pt.bs||0) + t * perClient;
+                  rows.push({ n:t, m, ramp: Math.ceil(t/3) });
+                }
+                return <div style={{ marginBottom:12 }}>
+                  <Lbl>{pt.nm}'s Earnings by Client Count</Lbl>
+                  <div style={{ fontSize:10,color:P.tm,marginBottom:4 }}>15% service profit + {pm.licMarkPct}% license. Max 3 new/month.</div>
+                  <div style={{ overflowX:"auto",marginTop:6 }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}>
+                    <thead><tr>{["Clients","Ramp","Monthly","Annual"].map(h=><th key={h} style={{ padding:"4px 8px",textAlign:"right",color:P.td,fontSize:9,borderBottom:`1px solid ${P.bd}`,textTransform:"uppercase" }}>{h}</th>)}</tr></thead>
+                    <tbody>{rows.map(r=><tr key={r.n}><td style={{ padding:"3px 8px",textAlign:"right",color:P.tx,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.n}</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.td,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.ramp} mo</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.a,fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${r.m.toLocaleString()}</td><td style={{ padding:"3px 8px",textAlign:"right",color:r.m*12>=100000?P.g:P.tm,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${(r.m*12).toLocaleString()}</td></tr>)}</tbody>
+                  </table></div>
+                </div>;
+              })()}
+
+              <div style={{ padding:12,borderRadius:8,background:P.c2,border:`1px solid ${P.bd}`,fontSize:11,color:P.tm,lineHeight:1.7 }}>
+                {(()=>{
+                  const firstRevIdx = pt.sm + (pt.dl || 0);
+                  const delayCost = (pt.bs||0) * (pt.dl || 0) + (pt.opc || 0) + pt.dch * (pt.dl || 0);
+                  return <>Investment: <b style={{ color:P.r }}>${delayCost.toLocaleString()}</b> before first revenue in <b style={{ color:P.g }}>{firstRevIdx<12?MO[firstRevIdx]:"2027"}</b>. {pt.nm} costs <b style={{ color:P.r }}>${((pt.bs||0)+pt.dch).toLocaleString()}/mo</b> during ramp. Max 3 clients/mo after ramp.
+                    {pt.equityTrigger && <><br/><span style={{ color:P.p }}>Equity at ${(pt.equityTrigger||500000).toLocaleString()}/yr revenue.</span></>}
+                  </>;
+                })()}
+              </div>
+            </div>
+          </div>
+        </>)}
 
         {/* ============ CONFIG TAB ============ */}
         {ptab==="config"&&(<div style={{ maxWidth:500 }}>
