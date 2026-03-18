@@ -269,45 +269,54 @@ export default function App() {
         )}
 
         <div style={{ overflowX:"auto" }}>
-          {/* SERVICE CLIENTS VIEW — payment tracker */}
-          {clFilter === "service" && <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
+          {/* SERVICE CLIENTS VIEW — Sara-style clean payment tracker */}
+          {clFilter === "service" && <>
+            <div style={{ fontSize:11,color:P.tm,marginBottom:12,padding:"10px 14px",background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,display:"flex",gap:16,alignItems:"center" }}>
+              <span>Click to cycle:</span>
+              <span><span style={{ color:P.a,fontWeight:700 }}>U</span> unpaid</span>
+              <span>→ <span style={{ color:P.g,fontWeight:700 }}>P</span> paid</span>
+              <span>→ <span style={{ color:P.r,fontWeight:700 }}>L</span> late</span>
+              <span>→ <span style={{ color:P.a,fontWeight:700 }}>U</span></span>
+              <span style={{ marginLeft:"auto",color:P.td }}>▶ Click name to edit details</span>
+            </div>
+            <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
             <thead><tr>
-              <th style={{ ...th,textAlign:"left",width:200,cursor:"pointer" }} onClick={()=>toggleSort("nm")}>Client{sortIcon("nm")}</th>
-              <th style={{ ...th,textAlign:"left",width:70 }}>Tier</th>
-              <th style={{ ...th,textAlign:"right",width:90,cursor:"pointer" }} onClick={()=>toggleSort("rt")}>Rate{sortIcon("rt")}</th>
-              <th style={{ ...th,textAlign:"right",width:100 }}>Zoho</th>
-              {win.map((s,i)=><th key={i} style={{ ...th,textAlign:"center",width:34,background:s.isCurrent?P.bB:"transparent",color:s.isCurrent?P.b:P.td,fontWeight:s.isCurrent?700:500 }}>{s.label}</th>)}
+              <th style={{ ...th,textAlign:"left",width:180 }}>Client</th>
+              <th style={{ ...th,textAlign:"left",width:90 }}>Rate</th>
+              <th style={{ ...th,textAlign:"left",width:50 }}>Term</th>
+              {win.map((s,i)=><th key={i} style={{ ...th,textAlign:"center",width:36,background:s.isCurrent?P.bB:"transparent",color:s.isCurrent?P.b:P.td,fontWeight:s.isCurrent?700:500 }}>{s.label}</th>)}
               <th style={th}>YTD</th>
-              <th style={{ width:24 }}></th>
             </tr></thead>
             <tbody>{filteredClients.map((cl)=>{
               const ci = cl.origIdx;
               const isExp = clExpanded === ci;
-              const tier = TIERS[cl.tier]||TIERS.ot;
               const ytd = cl.st.filter(s=>s==="P").length*cl.rt;
-              const zhM = cl.zh||0; const zhA = cl.zha||0;
-              let zhD = zhM > 0 ? `$${zhM}/mo` : zhA > 0 ? `$${zhA.toLocaleString()}/yr` : null;
+              const termLabel = cl.tr || "\u2014";
               return(<React.Fragment key={cl.id}>
-                <tr style={{ cursor:"pointer" }} onClick={()=>setClExpanded(isExp?null:ci)}>
-                  <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}><div style={{ display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:9,color:P.td,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"rotate(0)",display:"inline-block" }}>▶</span><span style={{ fontWeight:600 }}>{cl.nm}</span></div></td>
-                  <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}><span style={{ fontSize:9,padding:"2px 6px",borderRadius:3,background:`${tier.c}15`,color:tier.c,fontWeight:600 }}>{tier.l}</span></td>
-                  <td style={{ padding:"6px 8px",textAlign:"right",color:cl.rt?P.g:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{cl.rt?`${fmt(cl.rt)}/mo`:"\u2014"}</td>
-                  <td style={{ padding:"6px 8px",textAlign:"right",color:zhD?P.t:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{zhD||"\u2014"}</td>
-                  {win.map((s,wi)=>{const mi=s.idx;const stVal=s.inCurrentYear?(cl.st[mi]||""):"";return<td key={wi} style={{ padding:"2px 1px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,background:s.isCurrent?P.bB:"transparent" }} onClick={e=>{e.stopPropagation();if(s.inCurrentYear&&cl.rt>0)cyc(ci,mi);}}><div style={sSty(stVal)}>{stVal||"·"}</div></td>})}
+                <tr>
+                  <td style={{ padding:"6px 8px",borderBottom:`1px solid ${P.bd}10` }}>
+                    <div onClick={()=>setClExpanded(isExp?null:ci)} style={{ cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:6 }}>
+                      <span style={{ fontSize:9,color:P.td,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"rotate(0)",display:"inline-block" }}>▶</span>
+                      {cl.nm}
+                    </div>
+                    {isExp && <div style={{ marginTop:10,padding:12,background:P.c2,borderRadius:8,border:`1px solid ${P.bd}`,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+                      <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Monthly Rate</div><input type="number" value={cl.rt} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,rt:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
+                      <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Term</div><input value={cl.tr||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tr:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
+                      <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Via</div><input value={cl.vi||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,vi:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
+                      <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Tier</div><select value={cl.tier} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tier:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}>{Object.entries(TIERS).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select></div>
+                      <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Monthly Comm</div><input type="number" value={cl.zh||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zh:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
+                      <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Annual Comm</div><input type="number" value={cl.zha||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zha:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
+                      <div style={{ gridColumn:"1/-1",display:"flex",justifyContent:"flex-end" }}><button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:"4px 12px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Delete Client</button></div>
+                    </div>}
+                  </td>
+                  <td style={{ padding:"6px 8px",color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(cl.rt)}/mo</td>
+                  <td style={{ padding:"6px 8px",color:P.tm,fontSize:11,borderBottom:`1px solid ${P.bd}10` }}>{termLabel}</td>
+                  {win.map((s,wi)=>{const mi=s.idx;const active=s.inCurrentYear;const stVal=active?(cl.st[mi]||"U"):"";return<td key={wi} style={{ padding:"2px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,background:s.isCurrent?P.bB:"transparent" }}><div onClick={()=>active&&cyc(ci,mi)} style={sSty(stVal)}>{active?(stVal||"U"):""}</div></td>})}
                   <td style={{ padding:"6px 8px",textAlign:"right",color:P.g,fontWeight:600,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</td>
-                  <td style={{ borderBottom:`1px solid ${P.bd}10` }} onClick={e=>e.stopPropagation()}><button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:"transparent",border:"none",color:P.rM,cursor:"pointer",fontSize:13 }}>×</button></td>
                 </tr>
-                {isExp && <tr><td colSpan={99} style={{ padding:"0 8px 12px 28px",borderBottom:`1px solid ${P.bd}20` }}>
-                  <div style={{ marginTop:8,padding:14,background:P.c2,borderRadius:8,border:`1px solid ${P.bd}`,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10 }}>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Monthly Rate</div><input type="number" value={cl.rt} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,rt:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Term</div><input value={cl.tr||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tr:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Via</div><input value={cl.vi||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,vi:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
-                    <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Tier</div><select value={cl.tier} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tier:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}>{Object.entries(TIERS).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select></div>
-                  </div>
-                </td></tr>}
               </React.Fragment>);
             })}</tbody>
-          </table>}
+          </table></>}
 
           {/* COMMISSION VIEW — all clients with Zoho commission details */}
           {clFilter === "commission" && <>
