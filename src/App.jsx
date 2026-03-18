@@ -471,25 +471,21 @@ export default function App() {
               if (testRun >= mg) { beClients = test; break; }
             }
 
-            // DEALS FLOWING: same zero-deals cost base, PLUS revenue from clients after delay
-            // Revenue per month once active = pm.netMonthly (which is net of all costs including devs, overhead, Mark's cut)
-            // But we need it month by month because of the delay period
+            // DEALS FLOWING: start from BASELINE (no Mark at all), add pm.netMonthly after delay
+            // pm.netMonthly already includes ALL costs (salary, devs, overhead) and ALL revenue
             const dealsBl = [];
-            let revCum = 0;
+            let dealsCum = 0;
             for (let i = 0; i < 12; i++) {
               const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              const revenueActive = ma > (pt.dl || 0);
-              // When revenue starts, add the NET positive impact (revenue to company after all splits and costs)
-              // pm.netMonthly already accounts for: company share + paul share - mark comp - dev costs - overhead
-              // But we need to ADD BACK the base costs we already subtracted in zeroBl
-              if (revenueActive && hasDeals) {
-                // Total revenue impact = everything the deals bring in minus the EXTRA costs beyond 1 dev
-                // Extra devs beyond the 1 already in zeroBl
-                const extraDevCost = Math.max(0, pm.totalDevCost - pt.dch);
-                const revenueImpact = pm.compTotal + pm.paulFromOdoo - extraDevCost - pm.overhead;
-                revCum += revenueImpact;
+              if (ma === 1) dealsCum -= setupCost; // setup cost first month
+              if (ma > 0 && ma <= (pt.dl||0)) {
+                // During delay: pay salary + 1 dev, no revenue
+                dealsCum -= totalBurnMo;
+              } else if (ma > (pt.dl||0) && ma > 0) {
+                // After delay: full net monthly (already includes salary, all devs, overhead, revenue)
+                dealsCum += pm.netMonthly;
               }
-              dealsBl.push(zeroBl[i] + revCum);
+              dealsBl.push(c.bl[i] + dealsCum);
             }
             const dealsRun = preciseRunway(dealsBl);
 
@@ -521,25 +517,26 @@ export default function App() {
 
           {/* Breakeven callout */}
           {(()=>{
-            const zLic2 = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
-            const zCoPct2 = pt.zLeadBonus ? (pt.zLeadCo||60) : (pt.nzcs||90);
-            const devPer = pt.dch / (pt.cpc||2.5);
-            const profitPer = pt.azr + zLic2 - devPer - 100;
-            const netPer = Math.round(profitPer * zCoPct2 / 100);
-            const markFixed = (pt.bs||0) + Math.round(984 * (pt.ezp||0) / 100) + pt.dch;
+            const zLicBe = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
+            const zCoPctBe = pt.zLeadBonus ? (pt.zLeadCo||60) : (pt.nzcs||90);
+            const zMarkPctBe = pt.zLeadBonus ? (pt.zLeadMark||40) : (pt.nzp||10);
             let be = null;
             for (let n = 1; n <= 20; n++) {
               const devs = Math.ceil(n / (pt.cpc||2.5));
-              const extraDev = Math.max(0, (devs - 1) * pt.dch);
-              const monthlyGain = n * netPer - extraDev;
-              if (monthlyGain >= markFixed) { be = n; break; }
+              const devPC = (devs * pt.dch) / n;
+              const profit = Math.max(0, pt.azr + zLicBe - devPC - 100);
+              const coShare = Math.round(profit * zCoPctBe / 100);
+              const markShare = Math.round(profit * zMarkPctBe / 100);
+              const totalCompanyRev = n * coShare;
+              const totalCost = (pt.bs||0) + devs * pt.dch + n * 100 + n * markShare;
+              if (totalCompanyRev >= totalCost) { be = n; break; }
             }
             if (!be) return null;
             return <div style={{ padding:14,borderRadius:8,background:P.gB,border:`1px solid ${P.gM}`,marginBottom:20,display:"flex",alignItems:"center",gap:16 }}>
               <div style={{ fontSize:42,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{be}</div>
               <div>
                 <div style={{ fontSize:14,color:P.g,fontWeight:700 }}>clients to break even</div>
-                <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>At {be} active clients, {pt.nm}'s partnership pays for itself — the company stops losing money on the deal. Every client beyond {be} is pure profit for everyone.</div>
+                <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>At {be} active clients, {pt.nm}'s partnership pays for itself. Every client beyond {be} is pure profit for everyone.</div>
               </div>
             </div>;
           })()}
