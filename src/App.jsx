@@ -471,22 +471,8 @@ export default function App() {
               if (testRun >= mg) { beClients = test; break; }
             }
 
-            // DEALS FLOWING: start from BASELINE (no Mark at all), add pm.netMonthly after delay
-            // pm.netMonthly already includes ALL costs (salary, devs, overhead) and ALL revenue
-            const dealsBl = [];
-            let dealsCum = 0;
-            for (let i = 0; i < 12; i++) {
-              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              if (ma === 1) dealsCum -= setupCost; // setup cost first month
-              if (ma > 0 && ma <= (pt.dl||0)) {
-                // During delay: pay salary + 1 dev, no revenue
-                dealsCum -= totalBurnMo;
-              } else if (ma > (pt.dl||0) && ma > 0) {
-                // After delay: full net monthly (already includes salary, all devs, overhead, revenue)
-                dealsCum += pm.netMonthly;
-              }
-              dealsBl.push(c.bl[i] + dealsCum);
-            }
+            // DEALS FLOWING: use pm.months which now has 3/mo client ramp built in
+            const dealsBl = c.bl.map((b, i) => b + pm.months[i].cum);
             const dealsRun = preciseRunway(dealsBl);
 
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
@@ -518,18 +504,21 @@ export default function App() {
           {/* Breakeven callout */}
           {(()=>{
             const zLicBe = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
-            const zCoPctBe = pt.zLeadBonus ? (pt.zLeadCo||60) : (pt.nzcs||90);
-            const zMarkPctBe = pt.zLeadBonus ? (pt.zLeadMark||40) : (pt.nzp||10);
+            const licCo = 40;
+            const licPaul = pt.zLeadBonus ? 20 : 50;
             let be = null;
             for (let n = 1; n <= 20; n++) {
               const devs = Math.ceil(n / (pt.cpc||2.5));
-              const devPC = (devs * pt.dch) / n;
-              const profit = Math.max(0, pt.azr + zLicBe - devPC - 100);
-              const coShare = Math.round(profit * zCoPctBe / 100);
-              const markShare = Math.round(profit * zMarkPctBe / 100);
-              const totalCompanyRev = n * coShare;
-              const totalCost = (pt.bs||0) + devs * pt.dch + n * 100 + n * markShare;
-              if (totalCompanyRev >= totalCost) { be = n; break; }
+              const devPC = (devs * (pt.dch||750)) / n;
+              const svcProfit = Math.max(0, (pt.azr||2000) - devPC - 100);
+              const markSvc = Math.round(svcProfit * 0.15);
+              const compSvc = svcProfit - markSvc;
+              const compLic = Math.round(zLicBe * licCo / 100);
+              const paulLic = Math.round(zLicBe * licPaul / 100);
+              const markLic = Math.round(zLicBe * (pt.zLeadBonus ? 40 : 10) / 100);
+              const totalRevToCompany = n * (compSvc + compLic + paulLic);
+              const totalCost = (pt.bs||0) + devs * (pt.dch||750) + n * 100;
+              if (totalRevToCompany >= totalCost) { be = n; break; }
             }
             if (!be) return null;
             return <div style={{ padding:14,borderRadius:8,background:P.gB,border:`1px solid ${P.gM}`,marginBottom:20,display:"flex",alignItems:"center",gap:16 }}>
@@ -562,12 +551,12 @@ export default function App() {
               <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div>
 
               <Card style={{ padding:14,marginBottom:12 }}>
-                <Lbl>Steady State ({pm.nZ} Zoho + {pm.oC} Odoo)</Lbl>
+                <Lbl>Steady State ({pm.nZ} Zoho + {pm.oC} Odoo = {pm.totalClients} clients)</Lbl>
                 <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}>
                   <div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.totalDevs} (${pm.totalDevCost.toLocaleString()}/mo)</span></div>
                   <div><span style={{ color:P.td }}>Overhead:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${pm.overhead.toLocaleString()}/mo</span></div>
                   <div><span style={{ color:P.td }}>{pt.nm} earns:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.mComp.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>Paul earns:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.paulFromOdoo.toLocaleString()}/mo</span></div>
+                  <div><span style={{ color:P.td }}>Paul earns:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.paulLicTotal.toLocaleString()}/mo</span></div>
                   <div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.compTotal.toLocaleString()}/mo</span></div>
                   <div><span style={{ color:P.td }}>New MRR:</span> <span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>${pm.totalNewRev.toLocaleString()}/mo</span></div>
                   <div style={{ gridColumn:"1/-1",borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4 }}>
@@ -577,27 +566,30 @@ export default function App() {
               </Card>
 
               {/* Per-client breakdown */}
-              {(pm.oC > 0 || pm.nZ > 0) && <Card style={{ padding:12,marginBottom:12 }}>
+              {pm.totalClients > 0 && <Card style={{ padding:12,marginBottom:12 }}>
                 <Lbl>Per Client Economics</Lbl>
-                <div style={{ fontSize:11,marginTop:6 }}>
-                  {pm.oC > 0 && <div style={{ marginBottom:6 }}><b style={{ color:P.b }}>Odoo</b>: $2,000 − ${pm.devPerClient} dev − $100 overhead = <b style={{ color:P.tx }}>${pm.odooProfit} profit</b> → {pt.nm} ${pm.odooMarkPer} · Paul ${pm.odooPaulPer} · Co ${pm.odooCompPer}</div>}
-                  {pm.nZ > 0 && <div><b style={{ color:P.t }}>Zoho</b>: $2,000 + ${pm.zLicPerClient} license − ${pm.devPerClient} dev − $100 overhead = <b style={{ color:P.tx }}>${pm.zohoProfit} profit</b> → {pt.nm} ${pm.zohoMarkPer} · Co ${pm.zohoCompPer}</div>}
+                <div style={{ fontSize:11,marginTop:6,lineHeight:1.7 }}>
+                  <div><b style={{ color:P.tx }}>Service:</b> $2,000 − ${pm.devPerClient} dev − $100 overhead = <b>${pm.svcProfit} profit</b> → {pt.nm} 15% (${pm.markSvcPer}) · Co 85% (${pm.companySvcPer})</div>
+                  <div><b style={{ color:P.t }}>License:</b> ${pm.zLicPerClient}/mo comm → {pt.nm} {pm.licMarkPct}% (${pm.markLicPer}) · Co {pm.licCoPct}% (${pm.compLicPer}) · Paul {pm.licPaulPct}% (${pm.paulLicPer})</div>
+                  <div style={{ color:P.td,marginTop:4 }}>Total per client to {pt.nm}: <b style={{ color:P.a }}>${pm.markSvcPer + pm.markLicPer}/mo</b></div>
                 </div>
               </Card>}
 
               {/* Scaling table */}
               {(()=>{
-                const base = (pt.bs||0);
+                const perClient = pm.markSvcPer + pm.markLicPer;
                 const rows = [];
-                for (let t = 1; t <= 10; t++) {
-                  const m = base + t * pm.zohoMarkPer + t * pm.odooMarkPer;
-                  rows.push({ n:t, m });
+                for (let t = 1; t <= 15; t++) {
+                  const m = (pt.bs||0) + t * perClient;
+                  const rampMonths = Math.ceil(t / 3); // 3 clients/mo cap
+                  rows.push({ n:t, m, ramp: rampMonths });
                 }
                 return <div style={{ marginBottom:12 }}>
-                  <Lbl>{pt.nm}'s Earnings by Client Count (Zoho + Odoo each)</Lbl>
+                  <Lbl>{pt.nm}'s Earnings by Client Count</Lbl>
+                  <div style={{ fontSize:10,color:P.tm,marginBottom:4 }}>15% service profit + {pm.licMarkPct}% license per client. Max 3 new clients/month.</div>
                   <div style={{ overflowX:"auto",marginTop:6 }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}>
-                    <thead><tr>{["Clients Each","Monthly","Annual"].map(h=><th key={h} style={{ padding:"4px 8px",textAlign:"right",color:P.td,fontSize:9,borderBottom:`1px solid ${P.bd}`,textTransform:"uppercase" }}>{h}</th>)}</tr></thead>
-                    <tbody>{rows.map(r=><tr key={r.n}><td style={{ padding:"3px 8px",textAlign:"right",color:P.tx,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.n} Z + {r.n} O</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.a,fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${r.m.toLocaleString()}</td><td style={{ padding:"3px 8px",textAlign:"right",color:r.m*12>=100000?P.g:P.tm,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${(r.m*12).toLocaleString()}</td></tr>)}</tbody>
+                    <thead><tr>{["Clients","Ramp Time","Monthly","Annual"].map(h=><th key={h} style={{ padding:"4px 8px",textAlign:"right",color:P.td,fontSize:9,borderBottom:`1px solid ${P.bd}`,textTransform:"uppercase" }}>{h}</th>)}</tr></thead>
+                    <tbody>{rows.map(r=><tr key={r.n}><td style={{ padding:"3px 8px",textAlign:"right",color:P.tx,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.n}</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.td,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.ramp} mo</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.a,fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${r.m.toLocaleString()}</td><td style={{ padding:"3px 8px",textAlign:"right",color:r.m*12>=100000?P.g:P.tm,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${(r.m*12).toLocaleString()}</td></tr>)}</tbody>
                   </table></div>
                 </div>;
               })()}
