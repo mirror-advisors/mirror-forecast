@@ -24,33 +24,48 @@ export const TIERS = {
 export const PIE_COLORS = { za:"#6bbfb0", zm:"#60a5fa", im:"#e4b44e", mk:"#b8a9e8", ot:"#e08888" };
 
 export const D0 = {
-  openBal: 1318.81, cashNow: 27899, savings: 50, sLoan: -1060, ccOwe: -2800,
+  // openBal calibrated so Jan+Feb actuals cascade to Mar 1 opening of $23,231
+  openBal: 1309, cashNow: 34571, savings: 0, sLoan: 0, ccOwe: -2800,
+  // openBal = actual March 1, 2026 checking balance. Jan+Feb are history.
+  // Revenue: Jan+Feb ACTUALS, Mar+ projections
   rv: {
-    za: [0, 22274, 747, 511, 0, 320, 1439, 0, 0, 3706, 0, 240],
-    zm: [0, 515, 1057, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
-    im: [6500, 8493, 10500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
-    mk: [0, 450, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
+    za: [4581, 17703, 747, 511, 0, 320, 1439, 0, 0, 3706, 0, 240],
+    zm: [0, 0, 1057, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
+    im: [5453, 4886, 10500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
+    mk: [0, 0, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
     ot: [7000, 0, 6000, 0, 3000, 3000, 3000, 3000, 0, 0, 0, 0],
   },
+  // Subscriptions are on the CREDIT CARD, not checking.
+  // They affect cash only through CC Paydown. Listed here for tracking/visibility.
+  // The CC Paydown in db[] is what actually hits checking.
   sb: [
     { n: "Canva", a: 15 },{ n: "Microsoft", a: 24 },{ n: "Wix", a: 26 },
-    { n: "Regus", a: 114 },{ n: "Claude", a: 100, s: 2 },{ n: "Verizon", a: 141 },
-    { n: "Google WS", a: 121, s: 2 },{ n: "Zoom", a: 36, e: 1 },{ n: "Proton", a: 18, e: 1 },
+    { n: "Regus", a: 114 },{ n: "Claude", a: 200, s: 2 },{ n: "Verizon (CC)", a: 0 },
+    { n: "Google WS", a: 121, s: 2 },{ n: "Zoom", a: 53, e: 1 },{ n: "Proton", a: 18, e: 1 },
   ],
+  // Other costs — CHECKING ACCOUNT ONLY
   oc: [
     { n: "Chase Fee", v: [-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15] },
-    { n: "CC Interest", v: [-27,-31,-128,-50,-25,0,0,0,0,0,0,0] },
     { n: "Wire Fees", v: [0,-15,-15,-15,0,-15,0,-15,0,-15,-15,-15] },
-    { n: "LearnAll", v: [0,-500,-2500,-2500,0,0,0,0,0,0,0,0] },
-    { n: "RSK CPA", v: [0,-4944,0,0,0,0,0,0,0,0,0,0] },
+    { n: "Verizon (checking)", v: [-136,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141] },
+    { n: "Old Acct Transfer", v: [-398,0,0,0,0,0,0,0,0,0,0,0] },
   ],
+  // Debt / CC — these hit the CHECKING account
   db: [
-    { n: "CC Paydown", v: [-77,-800,-2500,-2500,0,0,0,0,0,0,0,0] },
-    { n: "Stripe Loan", v: [-926,-259,-1700,0,0,0,0,0,0,0,0,0] },
+    // CC Paydown = actual checking → CC payments. This is the cash impact of all CC charges.
+    { n: "CC Paydown", v: [-77,-800,-2500,-600,-600,-600,-600,-600,-600,-600,-600,-600] },
+    // Stripe loan is deducted from Stripe payouts before they hit checking — NOT a separate debit.
+    // Revenue numbers already reflect net-of-loan Stripe deposits. So no separate line needed.
+    // LearnAll: paying $2500 in Mar, then TBD
+    { n: "LearnAll", v: [0,0,-2500,0,0,0,0,0,0,0,0,0] },
   ],
+  // ADP employment taxes — hits checking directly
   et: [-523,-1188,-1177,-1177,-1177,-1177,-1177,-1000,-1000,-1000,-1000,-1000],
-  af: [-82,-192,-170,-170,-170,-170,-170,-170,-170,-170,-170,-170],
-  wf: [-1279,-1502,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100],
+  // ADP processing fees — hits checking directly
+  af: [-82,-192,-85,-170,-170,-170,-170,-170,-170,-170,-170,-170],
+  // Wise wire FEES only (total Wise payments minus contractor salaries)
+  // Jan: $4,847-$3,738=$1,109. Feb: $4,377-$3,037=$1,340. Mar+: ~$100 est.
+  wf: [-1109,-1340,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100],
   tm: [
     { id:"p1",nm:"Paul",rl:"CEO",dp:"Leadership",ct:"US",co:8000,on:true },
     { id:"p2",nm:"Sara",rl:"Intern",dp:"Operations",ct:"US",co:792,on:true,endMo:5 },
@@ -65,7 +80,7 @@ export const D0 = {
   cl: [
     { id:"c1",nm:"Gomes Agency",rt:2000,tr:"12mo",vi:"Stripe",zh:155,zha:0,tier:"im",seats:0,st:["P","P","P","","","","","","","","",""],nt:{} },
     { id:"c2",nm:"Supreme E-Com",rt:2000,tr:"12mo",vi:"ACH",zh:38,zha:0,tier:"im",seats:30,st:["P","P","P","","","","","","","","",""],nt:{} },
-    { id:"c3",nm:"FMB / Nathan Brown",rt:2000,tr:"6mo",vi:"Check",zh:0,zha:0,tier:"im",seats:3,st:["P","U","U","","","","","","","","",""],nt:{1:"15-day credit"} },
+    { id:"c3",nm:"380 Guide",rt:2000,tr:"6mo",vi:"Check",zh:0,zha:0,tier:"im",seats:3,st:["","P","U","","","","","","","","",""],nt:{1:"2x $1k checks deposited 2/3"} },
     { id:"c4",nm:"Van Boxel",rt:2000,tr:"12mo",vi:"Stripe",zh:11,zha:0,tier:"im",seats:0,st:["","P","","","","","","","","","",""],nt:{} },
     { id:"c5",nm:"Calco CRM Zen",rt:500,tr:"M2M",vi:"Stripe",zh:0,zha:0,tier:"zen",seats:0,st:["P","P","","","","","","","","","",""],nt:{} },
     { id:"c6",nm:"Next Fab",rt:2000,tr:"6mo",vi:"Stripe",zh:65,zha:0,tier:"im",seats:0,st:["","U","U","","","","","","","","",""],nt:{1:"$1,148 first inv"} },

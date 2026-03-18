@@ -48,7 +48,9 @@ export function compute(d) {
     });
     return t;
   });
-  const ex = MO.map((_, i) => us[i] + ph[i] + ind[i] + sb[i] + oc[i] + db[i]);
+  // sb excluded from cash flow — subs are on CC, cash impact is through CC Paydown in db[]
+  // sb is still computed for display/tracking purposes
+  const ex = MO.map((_, i) => us[i] + ph[i] + ind[i] + oc[i] + db[i]);
   const nt = MO.map((_, i) => rv[i] + ex[i]);
   const bl = [];
   nt.forEach((n, i) => bl.push(i === 0 ? d.openBal + n : bl[i - 1] + n));
