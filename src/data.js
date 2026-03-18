@@ -97,16 +97,18 @@ export const D0 = {
     { id:"c15",nm:"Regenics",rt:0,tr:"",vi:"",zh:0,zha:2078,tier:"zho",seats:0,zhType:"annual",st:["","","","","","","","","","","",""],nt:{} },
   ],
   sc: { nc:1,cs:5,or:3000,oc:1,oq:1,ol:6,op:0.3,oh:500 },
-  // V2.2: Partnership now has separate Zoho split (nzps = new zoho partner split, nzcs = new zoho company split)
-  // Also: zLeadBonus — if Mark re-establishes Zoho lead flow, he gets 40/60 instead of 10/90
   pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:5,
+    targetComp:100000, // Mark's target annual comp — app works backwards from this
     nzp:10, nzcs:90, // new Zoho: Mark 10%, Company 90% (service + license)
     ops:35, ocs:30, ips:35, // Odoo: Mark/Company/Paul (on PROFIT after dev cost)
-    opc:1000,ocq:2,oar:3000,dch:750,cpc:2.5, // dev: $750/mo, 2.5 clients per dev
-    sm:4,nzq:1,azr:2000,zlr:100, // zlr = avg Zoho license commission per client/mo
+    opc:1000,ocq:2,oar:3000,dch:750,cpc:2.5,
+    sm:4,nzq:1,
+    azr:2000, // avg Zoho service rate per client/mo
+    zSeats:15, zSeatPrice:40, zCommPct:18, // license comm = seats × price × comm%
+    svcCost:384, // avg dev cost to deliver a Zoho IM client/mo
     dl:3,
-    zLeadBonus:false, zLeadMark:40, zLeadCo:60, // restored Zoho lead bonus toggle
-    equityTrigger:500000 }, // annual revenue trigger for equity discussion
+    zLeadBonus:false, zLeadMark:40, zLeadCo:60,
+    equityTrigger:500000 },
   dh: { cnt:1,avg:750,sm:3,cpc:1.5,rpc:2000,mode:"capacity" },
 };
 

@@ -380,16 +380,16 @@ export default function App() {
           </div>
         </Card>
 
-        <div style={{ display:"flex",gap:0,borderBottom:`1px solid ${P.bd}`,marginBottom:16 }}>{["model","monthly","splits","config"].map(t=><button key={t} onClick={()=>setPtab(t)} style={{ padding:"10px 14px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:"transparent",color:ptab===t?P.g:P.tm,borderBottom:ptab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>)}</div>
+        <div style={{ display:"flex",gap:0,borderBottom:`1px solid ${P.bd}`,marginBottom:16 }}>{["model","scenarios","monthly","splits","config"].map(t=><button key={t} onClick={()=>setPtab(t)} style={{ padding:"10px 14px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:"transparent",color:ptab===t?P.g:P.tm,borderBottom:ptab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>)}</div>
         <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:16 }}>
-          <KPI label={`${pt.nm}'s Goal MRR`} value={`$${(pt.bs + Math.round(984 * pt.ezp / 100)).toLocaleString()}`} color={P.g} sub="min revenue to break even"/>
-          <KPI label={`${pt.nm}'s Steady Comp`} value={`$${pm.months[11].mComp.toLocaleString()}/mo`} color={P.a}/>
+          <KPI label={`${pt.nm}'s Target`} value={`$${((pt.targetComp||100000)/1000).toFixed(0)}k/yr`} color={P.g} sub={`$${Math.round((pt.targetComp||100000)/12).toLocaleString()}/mo`}/>
+          <KPI label={`${pt.nm}'s Steady Comp`} value={`$${pm.months[11].mComp.toLocaleString()}/mo`} color={pm.months[11].mComp >= (pt.targetComp||100000)/12 ? P.g : P.a} sub={`${Math.round(pm.months[11].mComp*12/1000)}k/yr — ${pm.months[11].mComp >= (pt.targetComp||100000)/12 ? "✓ on target" : `${Math.round((1-pm.months[11].mComp/((pt.targetComp||100000)/12))*100)}% short`}`}/>
           <KPI label="Can I Afford This?" value={pm.ok?(pm.tight?"YES":"TIGHT"):"NO"} color={pm.ok?(pm.tight?P.g:P.a):P.r} sub={`Worst: ${pm.worst>=0?"+":""}$${pm.worst.toLocaleString()}`} warn={!pm.tight}/>
           <KPI label="Breakeven Clients" value={pm.beC===Infinity?"N/A":`${pm.beC} Odoo`} color={P.b} sub="to cover fixed costs"/>
           <KPI label="Breakeven Month" value={pm.breakeven>=0?MO[pm.breakeven]:"Not in 2026"} color={pm.breakeven>=0?P.g:P.r}/>
           <KPI label="Dec Net Impact" value={`${pm.months[11].cum>=0?"+":""}$${pm.months[11].cum.toLocaleString()}`} color={pm.months[11].cum>=0?P.g:P.r}/>
         </div>
-        {ptab==="model"&&(<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20 }}><div><Lbl>Compensation Levers</Lbl><Sld label="Base Salary" value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={3000} step={50} pre="$" suf="/mo"/><Sld label="Existing Zoho Comm %" value={pt.ezp} onChange={v=>setPt("ezp",v)} min={0} max={25} suf={`% = $${Math.round(984*pt.ezp/100)}/mo`} color={P.a}/><Sld label="New Zoho Service Rev %" value={pt.nzp} onChange={v=>setPt("nzp",v)} min={0} max={30} suf="%" color={P.b}/><Sld label="Start Month" value={pt.sm} onChange={v=>setPt("sm",v)} min={0} max={11} suf={` (${MO[pt.sm]})`} color={P.p}/>{/* V2.1: Revenue delay slider */}<Sld label="Revenue Delay (Ramp-Up)" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf={` months (cost starts, revenue waits)`} color={P.a}/><div style={{ height:12 }}/><Lbl>Growth Assumptions</Lbl><Sld label="Odoo Clients / Quarter" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={8} suf=" clients"/><Sld label="Avg Odoo Client Rev" value={pt.oar} onChange={v=>setPt("oar",v)} min={1000} max={6000} step={250} pre="$" suf="/mo"/><Sld label="New Zoho Clients / Qtr" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={4} suf=" clients"/><Sld label="Avg Zoho Service Rev" value={pt.azr} onChange={v=>setPt("azr",v)} min={500} max={4000} step={250} pre="$" suf="/mo"/><Sld label="Avg Zoho License Comm" value={pt.zlr||100} onChange={v=>setPt("zlr",v)} min={0} max={500} step={25} pre="$" suf="/mo per client" color={P.t}/></div><div><Lbl>Cumulative Cash Impact</Lbl><div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div><Card style={{ padding:14,marginBottom:12 }}><Lbl>At Full Ramp (December)</Lbl><div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}><div><span style={{ color:P.td }}>Odoo clients:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].oC}</span></div><div><span style={{ color:P.td }}>New Zoho:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].nZ}</span></div><div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].dH} (${pm.months[11].totalDevCost.toLocaleString()}/mo)</span></div><div><span style={{ color:P.td }}>Dev cost/client:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].devCostPerClient.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>{pt.nm} gets:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].mComp.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Paul gets:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oPR.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oCR.toLocaleString()}/mo</span></div><div style={{ gridColumn:"1/-1" }}><span style={{ color:P.td }}>Net monthly:</span> <span style={{ color:pm.months[11].net>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].net>=0?"+":""}${pm.months[11].net.toLocaleString()}/mo</span></div></div></Card><div style={{ padding:14,borderRadius:8,background:P.c1,border:`1px solid ${P.bd}` }}><div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>Partnership Brief</div>{(()=>{
+        {ptab==="model"&&(<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20 }}><div><Lbl>Compensation Levers</Lbl><Sld label="Base Salary" value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={3000} step={50} pre="$" suf="/mo"/><Sld label="Existing Zoho Comm %" value={pt.ezp} onChange={v=>setPt("ezp",v)} min={0} max={25} suf={`% = $${Math.round(984*pt.ezp/100)}/mo`} color={P.a}/><Sld label="New Zoho Service Rev %" value={pt.nzp} onChange={v=>setPt("nzp",v)} min={0} max={30} suf="%" color={P.b}/><Sld label="Start Month" value={pt.sm} onChange={v=>setPt("sm",v)} min={0} max={11} suf={` (${MO[pt.sm]})`} color={P.p}/>{/* V2.1: Revenue delay slider */}<Sld label="Revenue Delay (Ramp-Up)" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf={` months (cost starts, revenue waits)`} color={P.a}/><div style={{ height:12 }}/><Lbl>Growth Assumptions</Lbl><Sld label="Odoo Clients / Quarter" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={8} suf=" clients"/><Sld label="Avg Odoo Client Rev" value={pt.oar} onChange={v=>setPt("oar",v)} min={1000} max={6000} step={250} pre="$" suf="/mo"/><Sld label="New Zoho Clients / Qtr" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={4} suf=" clients"/><Sld label="Avg Zoho Service Rev" value={pt.azr} onChange={v=>setPt("azr",v)} min={500} max={4000} step={250} pre="$" suf="/mo"/><Sld label="Avg Seats Per Client" value={pt.zSeats||15} onChange={v=>setPt("zSeats",v)} min={5} max={50} suf={` seats × $${pt.zSeatPrice||40} × ${pt.zCommPct||18}% = $${Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100)}/mo comm`} color={P.t}/><Sld label="Service Delivery Cost" value={pt.svcCost||384} onChange={v=>setPt("svcCost",v)} min={200} max={1000} step={50} pre="$" suf="/mo per client" color={P.r}/></div><div><Lbl>Cumulative Cash Impact</Lbl><div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div><Card style={{ padding:14,marginBottom:12 }}><Lbl>At Full Ramp (December)</Lbl><div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}><div><span style={{ color:P.td }}>Odoo clients:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].oC}</span></div><div><span style={{ color:P.td }}>New Zoho:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].nZ}</span></div><div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].dH} (${pm.months[11].totalDevCost.toLocaleString()}/mo)</span></div><div><span style={{ color:P.td }}>Dev cost/client:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].devCostPerClient.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>{pt.nm} gets:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].mComp.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Paul gets:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oPR.toLocaleString()}/mo</span></div><div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.months[11].oCR.toLocaleString()}/mo</span></div><div style={{ gridColumn:"1/-1" }}><span style={{ color:P.td }}>Net monthly:</span> <span style={{ color:pm.months[11].net>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.months[11].net>=0?"+":""}${pm.months[11].net.toLocaleString()}/mo</span></div></div></Card><div style={{ padding:14,borderRadius:8,background:P.c1,border:`1px solid ${P.bd}` }}><div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>Partnership Brief</div>{(()=>{
               const zmBase = 984;
               const fixedCost = pt.bs + Math.round(zmBase * pt.ezp / 100);
               const delayCost = fixedCost * (pt.dl || 0) + (pt.opc || 0);
@@ -397,8 +397,10 @@ export default function App() {
               const devPerClient = Math.round(pt.dch / cpc);
               const odooProfit = pt.oar - devPerClient;
               const netPerOdooClient = Math.round(odooProfit * ((pt.ocs + pt.ips) / 100));
-              const zohoTotal = pt.azr + (pt.zlr || 100);
-              const netPerZohoClient = Math.round(zohoTotal * ((pt.nzcs || 90) / 100));
+              const zLicPC = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
+              const zohoTotal = pt.azr + zLicPC;
+              const zohoProfit = pt.azr - (pt.svcCost || 384) + zLicPC;
+              const netPerZohoClient = Math.round(zohoProfit * ((pt.nzcs || 90) / 100));
               const zohoNeeded = Math.ceil(fixedCost / Math.max(netPerZohoClient, 1));
               const odooNeeded = Math.ceil(fixedCost / Math.max(netPerOdooClient, 1));
               const firstRevIdx = pt.sm + (pt.dl || 0);
@@ -408,7 +410,7 @@ export default function App() {
               return <div style={{ fontSize:12,color:P.tm,lineHeight:1.8 }}>
                 For <b style={{ color:P.a }}>{pt.nm}</b> to earn <b style={{ color:P.a }}>${pm.months[11].mComp.toLocaleString()}/mo</b> at full ramp, he needs to generate enough new business to cover his fixed cost of <b style={{ color:P.r }}>${fixedCost.toLocaleString()}/mo</b> (base + existing Zoho comm).
                 <br/><br/>
-                <b style={{ color:P.tx }}>Path 1 — New Zoho clients:</b> Each new Zoho client @ ${pt.azr.toLocaleString()}/mo service + ${(pt.zlr||100)}/mo license = ${zohoTotal.toLocaleString()}/mo. Company keeps ${pt.nzcs||90}% = <b style={{ color:P.g }}>${netPerZohoClient.toLocaleString()}/mo</b>. Need <b>{zohoNeeded} client{zohoNeeded>1?"s":""}</b> to break even.
+                <b style={{ color:P.tx }}>Path 1 — New Zoho clients:</b> Each new client @ ${pt.azr.toLocaleString()}/mo service + ${zLicPC}/mo license comm ({pt.zSeats||15} seats × ${pt.zSeatPrice||40} × {pt.zCommPct||18}%). After ${pt.svcCost||384}/mo delivery cost, profit = ${zohoProfit.toLocaleString()}/mo. Company keeps {pt.nzcs||90}% = <b style={{ color:P.g }}>${netPerZohoClient.toLocaleString()}/mo</b>. Need <b>{zohoNeeded} client{zohoNeeded>1?"s":""}</b> to cover {pt.nm}'s fixed cost.
                 <br/>
                 <b style={{ color:P.tx }}>Path 2 — Odoo clients:</b> Each Odoo client @ ${pt.oar.toLocaleString()}/mo gross, minus ${devPerClient}/mo dev cost = ${odooProfit.toLocaleString()}/mo profit. Company+Paul keep {pt.ocs+pt.ips}% = <b style={{ color:P.g }}>${netPerOdooClient.toLocaleString()}/mo</b>. Need <b>{odooNeeded} client{odooNeeded>1?"s":""}</b> to break even.
                 <br/><br/>
@@ -418,6 +420,79 @@ export default function App() {
                 {pt.equityTrigger && <><br/><span style={{ color:P.p,fontSize:11 }}>Equity trigger: if annual revenue reaches ${(pt.equityTrigger||500000).toLocaleString()}, ownership discussion opens.</span></>}
               </div>;
             })()}</div></div></div>)}
+        {ptab==="scenarios"&&(<div>
+          <Sld label={`${pt.nm}'s Target Annual Comp`} value={pt.targetComp||100000} onChange={v=>setPt("targetComp",v)} min={40000} max={200000} step={5000} pre="$" suf={`/yr ($${Math.round((pt.targetComp||100000)/12).toLocaleString()}/mo)`} color={P.a}/>
+          <div style={{ marginTop:16 }}>
+          {(()=>{
+            const targetMo = Math.round((pt.targetComp||100000)/12);
+            const baseMo = pt.bs + Math.round(984 * pt.ezp / 100);
+            const needed = targetMo - baseMo;
+            const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
+            const zohoPerClient = pt.azr + zLic; // total Zoho revenue per client
+            const markPerZoho = Math.round(zohoPerClient * (pt.nzp||10) / 100);
+            const markPerOdoo = Math.round((pt.oar - pt.dch/(pt.cpc||2.5)) * (pt.ops||35) / 100);
+            // Generate scenarios
+            const scenarios = [];
+            for (let z = 0; z <= 10; z++) {
+              for (let o = 0; o <= 8; o++) {
+                const markIncome = baseMo + z * markPerZoho + o * markPerOdoo;
+                if (markIncome >= targetMo * 0.9 && markIncome <= targetMo * 1.2) {
+                  const totalRev = z * zohoPerClient + o * pt.oar;
+                  const totalDevs = Math.ceil(o / (pt.cpc||2.5));
+                  scenarios.push({ z, o, markIncome, totalRev, totalDevs });
+                }
+              }
+            }
+            // Also add pure-zoho and pure-odoo paths
+            const pureZoho = Math.ceil(needed / Math.max(markPerZoho, 1));
+            const pureOdoo = Math.ceil(needed / Math.max(markPerOdoo, 1));
+
+            return <div>
+              <Card style={{ padding:16,marginBottom:16 }}>
+                <Lbl>How {pt.nm} Reaches ${(pt.targetComp||100000).toLocaleString()}/yr</Lbl>
+                <div style={{ fontSize:12,color:P.tm,lineHeight:1.7,marginTop:8 }}>
+                  Base + existing Zoho comm = <b style={{ color:P.tx }}>${baseMo.toLocaleString()}/mo</b> guaranteed. Needs <b style={{ color:P.a }}>${needed.toLocaleString()}/mo</b> more from deals.
+                  <br/><br/>
+                  Each new Zoho client earns {pt.nm} <b style={{ color:P.t }}>${markPerZoho.toLocaleString()}/mo</b> (10% of ${zohoPerClient.toLocaleString()} service + license).
+                  <br/>
+                  Each Odoo client earns {pt.nm} <b style={{ color:P.b }}>${markPerOdoo.toLocaleString()}/mo</b> (35% of profit after dev cost).
+                </div>
+              </Card>
+              <Lbl>Paths to Target</Lbl>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginTop:8,marginBottom:16 }}>
+                <Card style={{ padding:14,borderLeft:`3px solid ${P.t}` }}>
+                  <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",marginBottom:6 }}>Pure Zoho</div>
+                  <div style={{ fontSize:28,fontWeight:800,color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{pureZoho}</div>
+                  <div style={{ fontSize:11,color:P.tm }}>Zoho clients needed</div>
+                  <div style={{ fontSize:10,color:P.td,marginTop:4 }}>${(pureZoho*zohoPerClient).toLocaleString()}/mo new MRR</div>
+                </Card>
+                <Card style={{ padding:14,borderLeft:`3px solid ${P.b}` }}>
+                  <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",marginBottom:6 }}>Pure Odoo</div>
+                  <div style={{ fontSize:28,fontWeight:800,color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>{pureOdoo}</div>
+                  <div style={{ fontSize:11,color:P.tm }}>Odoo clients needed</div>
+                  <div style={{ fontSize:10,color:P.td,marginTop:4 }}>{Math.ceil(pureOdoo/(pt.cpc||2.5))} dev{Math.ceil(pureOdoo/(pt.cpc||2.5))>1?"s":""} required</div>
+                </Card>
+                <Card style={{ padding:14,borderLeft:`3px solid ${P.a}` }}>
+                  <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",marginBottom:6 }}>Blended (fastest)</div>
+                  <div style={{ fontSize:28,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{scenarios.length > 0 ? scenarios[0].z + "+" + scenarios[0].o : pureZoho}</div>
+                  <div style={{ fontSize:11,color:P.tm }}>{scenarios.length>0?`${scenarios[0].z} Zoho + ${scenarios[0].o} Odoo`:`${pureZoho} Zoho`}</div>
+                  <div style={{ fontSize:10,color:P.td,marginTop:4 }}>{scenarios.length>0?`${scenarios[0].totalDevs} dev${scenarios[0].totalDevs>1?"s":""} · $${scenarios[0].totalRev.toLocaleString()}/mo`:""}</div>
+                </Card>
+              </div>
+
+              {scenarios.length > 0 && <>
+                <Lbl>All Viable Combos (within 90-120% of target)</Lbl>
+                <div style={{ overflowX:"auto",marginTop:8 }}>
+                  <table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}>
+                    <thead><tr>{["Zoho Clients","Odoo Clients","Devs Needed",`${pt.nm}'s Monthly`,"Annual","vs Target"].map(h=><th key={h} style={{ padding:"5px 8px",textAlign:"right",color:P.td,fontSize:9,borderBottom:`1px solid ${P.bd}`,fontFamily:"'DM Sans', sans-serif",fontWeight:500,textTransform:"uppercase" }}>{h}</th>)}</tr></thead>
+                    <tbody>{scenarios.slice(0,12).map((s,i)=>{const ann=s.markIncome*12;const pct=Math.round(ann/(pt.targetComp||100000)*100);return<tr key={i}><td style={{ padding:"4px 8px",textAlign:"right",color:P.t,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{s.z}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.b,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{s.o}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.a,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{s.totalDevs}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.tx,fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${s.markIncome.toLocaleString()}</td><td style={{ padding:"4px 8px",textAlign:"right",fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10`,color:P.tm }}>${ann.toLocaleString()}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10`,color:pct>=100?P.g:P.a }}>{pct}%</td></tr>})}</tbody>
+                  </table>
+                </div>
+              </>}
+            </div>;
+          })()}
+          </div>
+        </div>)}
         {ptab==="monthly"&&(<div style={{ overflowX:"auto" }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}><thead><tr>{["Month","","Odoo","Zoho","Comp","Devs","New Rev","Net","Cumul."].map(h=><th key={h} style={{ ...th,fontSize:9 }}>{h}</th>)}</tr></thead><tbody>{pm.months.map((m,i)=>(<tr key={i} style={{ opacity:i>=pt.sm?1:.3 }}><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10` }}>{MO[i]}</td><td style={{ padding:"4px 8px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,fontSize:9,color:P.a }}>{m.inDelay?"⏳":""}</td><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.oC}</td><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.nZ}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.mComp)}</td><td style={{ padding:"4px 8px",textAlign:"right",color:m.dH?P.a:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.dH}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.newRev)}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,color:m.net>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.net>=0?"+":""}{fmt(m.net)}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,color:m.cum>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.cum)}</td></tr>))}</tbody></table></div>)}
         {ptab==="splits"&&(<div style={{ maxWidth:600 }}>
           <Lbl>Odoo Revenue Split (must total 100%)</Lbl>

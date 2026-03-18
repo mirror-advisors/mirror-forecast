@@ -98,8 +98,9 @@ export function computePartnership(pt) {
     const oCR = oProfit * (pt.ocs / 100);  // Company's cut of profit
 
     // === NEW ZOHO: 10/90 on service revenue + license commission ===
-    const nzServiceRev = nZ * pt.azr;       // e.g. 1 client × $2000/mo
-    const nzLicenseRev = nZ * (pt.zlr || 100); // e.g. 1 client × $100/mo license comm
+    const nzServiceRev = nZ * pt.azr;       // e.g. 1 client × $2000/mo service
+    const zLicPerClient = Math.round((pt.zSeats || 15) * (pt.zSeatPrice || 40) * (pt.zCommPct || 18) / 100);
+    const nzLicenseRev = nZ * zLicPerClient; // e.g. 1 client × 15 seats × $40 × 18% = $108/mo
     const nzTotalRev = nzServiceRev + nzLicenseRev;
     const nzMarkCut = nzTotalRev * (zMarkPct / 100);
     const nzCoCut = nzTotalRev * (zCoPct / 100);
@@ -137,10 +138,13 @@ export function computePartnership(pt) {
   const devPerClient = pt.dch / cpc;
   const profitPerOdoo = pt.oar - devPerClient;
   const netPerOdoo = profitPerOdoo * ((pt.ocs + pt.ips) / 100);
-  const netPerZoho = (pt.azr + (pt.zlr || 100)) * ((pt.nzcs || 90) / 100);
+  const zLicPC = Math.round((pt.zSeats || 15) * (pt.zSeatPrice || 40) * (pt.zCommPct || 18) / 100);
+  const zohoTotalPerClient = pt.azr + zLicPC;
+  const zohoProfit = pt.azr - (pt.svcCost || 384) + zLicPC; // service margin + license comm
+  const netPerZoho = zohoProfit * ((pt.nzcs || 90) / 100);
   const beC = netPerOdoo > 0 ? Math.ceil(mFixed / netPerOdoo) : Infinity;
   const worst = Math.min(...months.map(m => m.cum));
-  return { months, breakeven, beC, worst, ok: worst > -8000, tight: worst > -3000, mFixed, netPerOdoo: Math.round(netPerOdoo), netPerZoho: Math.round(netPerZoho), devPerClient: Math.round(devPerClient) };
+  return { months, breakeven, beC, worst, ok: worst > -8000, tight: worst > -3000, mFixed, netPerOdoo: Math.round(netPerOdoo), netPerZoho: Math.round(netPerZoho), devPerClient: Math.round(devPerClient), zLicPerClient: zLicPC, zohoTotalPerClient, zohoProfit: Math.round(zohoProfit) };
 }
 
 export function computeDevHire(dh) {
