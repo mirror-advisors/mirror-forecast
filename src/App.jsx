@@ -476,7 +476,7 @@ export default function App() {
               <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
                 <Lbl>{pt.nm} + Deals Flowing</Lbl>
                 {hasDeals ? <>
-                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRunsuccessRun}</div>
+                  <div style={{ fontSize:42,fontWeight:800,color:successRun>=9?P.g:successRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{successRun}</div>
                   <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo/qtr</div>
                 </> : <>
                   <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
