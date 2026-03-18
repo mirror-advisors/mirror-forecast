@@ -125,32 +125,47 @@ export const fK = n => {
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
 
-// Precise runway — extends beyond 12 months, caps at 24, applies 5%/quarter cost creep
+// Precise runway — finds when balance goes permanently negative (ignores temporary dips that recover)
 export function preciseRunway(bl) {
-  let lastPos = -1;
-  for (let i = 0; i < bl.length; i++) {
-    if (bl[i] > 0) lastPos = i; else break;
+  // Find the last month that's positive — this handles temporary dips during ramp delays
+  let lastPermanentPos = -1;
+  for (let i = bl.length - 1; i >= 0; i--) {
+    if (bl[i] > 0) { lastPermanentPos = i; break; }
   }
-  if (lastPos === -1) return 0;
-  if (lastPos < bl.length - 1) {
-    const posV = bl[lastPos];
-    const negV = bl[lastPos + 1];
-    const frac = posV / (posV - negV);
-    return Math.round((lastPos + 1 + frac) * 4) / 4;
-  }
-  const n3 = bl.length >= 3 ? (bl[bl.length-1] - bl[bl.length-3]) / 2 : bl[bl.length-1] - bl[bl.length-2];
-  let balance = bl[bl.length - 1];
-  let monthlyNet = n3;
-  for (let m = 13; m <= 24; m++) {
-    if ((m - 12) % 3 === 0) monthlyNet = monthlyNet - Math.abs(monthlyNet) * 0.05;
-    balance += monthlyNet;
-    if (balance <= 0) {
-      const prev = balance - monthlyNet;
-      const frac = prev / (prev - balance);
-      return Math.round((m - 1 + frac) * 4) / 4;
+  if (lastPermanentPos === -1) {
+    // All negative — find first month that goes negative
+    for (let i = 0; i < bl.length; i++) {
+      if (bl[i] <= 0) {
+        if (i === 0) return 0;
+        const posV = bl[i-1];
+        const negV = bl[i];
+        const frac = posV / (posV - negV);
+        return Math.round((i - 1 + 1 + frac - 1) * 4) / 4 || 0.25;
+      }
     }
+    return 0;
   }
-  return 24; // cap
+  // If last positive month is the final month, project forward
+  if (lastPermanentPos === bl.length - 1) {
+    const n3 = bl.length >= 3 ? (bl[bl.length-1] - bl[bl.length-3]) / 2 : bl[bl.length-1] - bl[bl.length-2];
+    let balance = bl[bl.length - 1];
+    let monthlyNet = n3;
+    for (let m = 13; m <= 24; m++) {
+      if ((m - 12) % 3 === 0) monthlyNet = monthlyNet - Math.abs(monthlyNet) * 0.05;
+      balance += monthlyNet;
+      if (balance <= 0) {
+        const prev = balance - monthlyNet;
+        const frac = prev / (prev - balance);
+        return Math.round((m - 1 + frac) * 4) / 4;
+      }
+    }
+    return 24;
+  }
+  // Balance goes permanently negative after lastPermanentPos
+  const posV = bl[lastPermanentPos];
+  const negV = bl[lastPermanentPos + 1];
+  const frac = posV / (posV - negV);
+  return Math.round((lastPermanentPos + 1 + frac) * 4) / 4;
 }
 
 // V2.2: 14-month rolling window — 2 months back + current + 11 ahead
