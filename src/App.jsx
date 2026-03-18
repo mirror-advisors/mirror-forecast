@@ -356,7 +356,7 @@ export default function App() {
       {tab==="partnerships"&&(<>
 
         {/* === TABS === */}
-        <div style={{ display:"flex",gap:0,borderBottom:`1px solid ${P.bd}`,marginBottom:20 }}>{["packages","assumptions","config"].map(t=><button key={t} onClick={()=>setPtab(t)} style={{ padding:"10px 14px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:"transparent",color:ptab===t?P.g:P.tm,borderBottom:ptab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>)}</div>
+        <div style={{ display:"flex",gap:0,borderBottom:`1px solid ${P.bd}`,marginBottom:20 }}>{["packages","runway","config"].map(t=><button key={t} onClick={()=>setPtab(t)} style={{ padding:"10px 14px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:"transparent",color:ptab===t?P.g:P.tm,borderBottom:ptab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>)}</div>
 
         {/* ============ SPLITS TAB ============ */}
 
@@ -427,7 +427,24 @@ export default function App() {
                           <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Equity</span><span style={{ color:mi===2?P.r:P.p,fontSize:10 }}>{m.equity}</span></div>
                         </div>
                       </div>
-                      <button onClick={()=>{setPt("bs",m.bs);setPt("orgSvc",m.orgSvc);setPt("orgLic",m.orgLic);setPt("resSvc",m.resSvc);setPt("resLic",m.resLic);setPt("nzq",totalEx);setPt("ocq",0);setPtab("assumptions");}} style={{ width:"100%",marginTop:12,padding:"10px",background:`${m.color}20`,color:m.color,border:`1px solid ${m.color}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply → See Runway Impact</button>
+                      {(()=>{
+                        // Calculate runway for this package
+                        const pkgFixedMo = m.bs + pt.dch;
+                        const pkgSetup = pt.opc || 0;
+                        // Zero deals runway
+                        const zBl = [];
+                        let zCum = 0;
+                        for (let i = 0; i < 12; i++) {
+                          const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
+                          if (ma > 0) zCum += pkgFixedMo + (ma === 1 ? pkgSetup : 0);
+                          zBl.push(c.bl[i] - zCum);
+                        }
+                        const pkgRun = preciseRunway(zBl);
+                        return <div style={{ marginTop:8,padding:"8px 0",borderTop:`1px solid ${P.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                          <span style={{ fontSize:10,color:P.td }}>Runway (no deals)</span>
+                          <span style={{ fontSize:18,fontWeight:800,color:pkgRun>=9?P.g:pkgRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{pkgRun} mo</span>
+                        </div>;
+                      })()}
                     </div>
                   </Card>;
                 })}
@@ -472,7 +489,7 @@ export default function App() {
                         </div>;
                       })()}
                     </Card>
-                    <button onClick={()=>{setPt("nzq",totalEx);setPt("ocq",0);setPtab("assumptions");}} style={{ width:"100%",marginTop:10,padding:"10px",background:`${P.g}20`,color:P.g,border:`1px solid ${P.g}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply Custom → See Runway Impact</button>
+                    <button onClick={()=>{setPt("nzq",totalEx);setPt("ocq",0);setPtab("runway");}} style={{ width:"100%",marginTop:10,padding:"10px",background:`${P.g}20`,color:P.g,border:`1px solid ${P.g}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply Custom → See Runway Impact</button>
                   </div>
                 </div>
               </Card>
@@ -481,7 +498,7 @@ export default function App() {
         </div>)}
 
         {/* ============ ASSUMPTIONS TAB ============ */}
-        {ptab==="assumptions"&&(<>
+        {ptab==="runway"&&(<>
           {/* Three runway cards */}
           {(()=>{
             const fixedMo = (pt.bs||0) + pt.dch;
