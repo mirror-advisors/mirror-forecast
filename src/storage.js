@@ -18,9 +18,11 @@ function migrateData(parsed, defaultData) {
 }
 
 export async function loadData(defaultData) {
+  // Supabase is the source of truth — always try it first
   try {
     const { data, error } = await supabase.from('forecast_data').select('data').eq('id', 1).single();
-    if (!error && data && data.data && Object.keys(data.data).length > 0) {
+    if (!error && data?.data && Object.keys(data.data).length > 0) {
+      // Keep localStorage in sync with what's in Supabase
       localStorage.setItem(LOCAL_KEY, JSON.stringify(data.data));
       return migrateData(data.data, defaultData);
     }
@@ -28,6 +30,7 @@ export async function loadData(defaultData) {
     console.error('Supabase load error:', e);
   }
 
+  // Supabase unavailable — fall back to localStorage
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (raw) return migrateData(JSON.parse(raw), defaultData);
@@ -39,10 +42,23 @@ export async function loadData(defaultData) {
 }
 
 export async function saveData(data) {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  // Write to Supabase first — this is the authoritative store
   try {
-    await supabase.from('forecast_data').upsert({ id: 1, data: data, updated_at: new Date().toISOString() });
+    const { error } = await supabase
+      .from('forecast_data')
+      .upsert({ id: 1, data: data, updated_at: new Date().toISOString() });
+    if (error) {
+      console.error('Supabase save error:', error);
+      // Fall back: at least keep localStorage up to date
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+      return { ok: false, error };
+    }
+    // Mirror to localStorage so offline fallback stays fresh
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    return { ok: true };
   } catch (e) {
     console.error('Save error:', e);
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    return { ok: false, error: e };
   }
 }
