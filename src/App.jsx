@@ -26,6 +26,7 @@ export default function App() {
   const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
 
   useEffect(() => { loadData(D0).then(setD); }, []);
+  useEffect(() => { if (!isAdmin && isPartner) setTab("partnerships"); }, [isAdmin, isPartner]);
   const save = useCallback(async (nd) => { setD(nd); return await saveData(nd); }, []);
 
   const pt = d?.pt || D0.pt;
@@ -69,10 +70,7 @@ export default function App() {
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
-  if (!isAdmin && isPartner) {
-    // Partner gets full admin UI but locked to partnerships tab
-    if (tab !== "partnerships") setTab("partnerships");
-  } else if (!isAdmin) return <InternView d={d} save={save} />;
+  if (!isAdmin && !isPartner) return <InternView d={d} save={save} />;
 
   const c = compute(d);
   const cm = new Date().getMonth();
