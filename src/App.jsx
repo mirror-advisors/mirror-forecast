@@ -26,7 +26,7 @@ export default function App() {
   const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
 
   useEffect(() => { loadData(D0).then(setD); }, []);
-  const save = useCallback((nd) => { setD(nd); saveData(nd); }, []);
+  const save = useCallback(async (nd) => { setD(nd); return await saveData(nd); }, []);
 
   const pt = d?.pt || D0.pt;
   const dh = d?.dh || D0.dh;
