@@ -24,84 +24,99 @@ export const TIERS = {
 export const PIE_COLORS = { za:"#6bbfb0", zm:"#60a5fa", im:"#e4b44e", mk:"#b8a9e8", ot:"#e08888" };
 
 export const D0 = {
-  // openBal calibrated so Jan+Feb actuals cascade to Mar 1 opening of $23,231
-  openBal: 1309, cashNow: 34571, savings: 0, sLoan: 0, ccOwe: -2800,
-  // openBal = actual March 1, 2026 checking balance. Jan+Feb are history.
-  // Revenue: Jan+Feb ACTUALS, Mar+ projections
+  // Mar 31 ending balance per Chase6692 statement
+  openBal: 1309, cashNow: 27776, savings: 0, sLoan: 0, ccOwe: -901,
+
+  // Revenue: Jan+Feb+Mar ACTUALS, Apr+ projections
+  // Mar actuals: IM $6,500 | Zoho commissions $7,693.85 (both wires) | Patson Doors OT $6,000
   rv: {
-    za: [4581, 17703, 747, 511, 0, 320, 1439, 0, 0, 3706, 0, 240],
-    zm: [0, 0, 1057, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
-    im: [5453, 4886, 10500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
+    za: [4581, 17703, 7694, 511, 0, 320, 1439, 0, 0, 3706, 0, 240],
+    zm: [0, 0, 0, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
+    im: [5453, 4886, 6500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
     mk: [0, 0, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
     ot: [7000, 0, 6000, 0, 3000, 3000, 3000, 3000, 0, 0, 0, 0],
   },
-  // Subscriptions are on the CREDIT CARD, not checking.
-  // They affect cash only through CC Paydown. Listed here for tracking/visibility.
-  // The CC Paydown in db[] is what actually hits checking.
+
+  // Subscriptions on CC — tracked for visibility, cash impact is CC Paydown in db[]
   sb: [
-    { n: "Canva", a: 15 },{ n: "Microsoft", a: 24 },{ n: "Wix", a: 26 },
-    { n: "Regus", a: 114 },{ n: "Claude", a: 200, s: 2 },{ n: "Verizon (CC)", a: 0 },
-    { n: "Google WS", a: 121, s: 2 },{ n: "Zoom", a: 53, e: 1 },{ n: "Proton", a: 18, e: 1 },
+    { n: "Canva", a: 15 },
+    { n: "Microsoft", a: 24 },
+    { n: "Wix", a: 26 },
+    { n: "Regus", a: 114 },
+    { n: "Claude (Team)", a: 224, s: 2 },
+    { n: "Verizon (CC)", a: 0 },
+    { n: "Google WS", a: 121, s: 2 },
+    { n: "Zoho Corp", a: 49, s: 2 },
   ],
-  // Other costs — CHECKING ACCOUNT ONLY
+
+  // Other costs — checking account only
   oc: [
-    { n: "Chase Fee", v: [-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15] },
-    { n: "Wire Fees", v: [0,-15,-15,-15,0,-15,0,-15,0,-15,-15,-15] },
-    { n: "Verizon (checking)", v: [-136,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141] },
-    { n: "Old Acct Transfer", v: [-398,0,0,0,0,0,0,0,0,0,0,0] },
+    { n: "Chase Fee",           v: [-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15] },
+    { n: "Wire Fees",           v: [0,-15,-30,-15,0,-15,0,-15,0,-15,-15,-15] },
+    { n: "Verizon (checking)",  v: [-136,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141] },
+    { n: "Old Acct Transfer",   v: [-398,0,0,0,0,0,0,0,0,0,0,0] },
+    // Mark Alberto one-time COO payment via ADP April 15
+    { n: "Mark Alberto (COO)",  v: [0,0,0,-5000,0,0,0,0,0,0,0,0] },
+    // LearnAll contractor — not paid in Mar, forecasting $3k Apr
+    { n: "LearnAll",            v: [0,0,0,-3000,0,0,0,0,0,0,0,0] },
   ],
-  // Debt / CC — these hit the CHECKING account
+
+  // Debt / CC — hits checking account
   db: [
-    // CC Paydown = actual checking → CC payments. This is the cash impact of all CC charges.
+    // CC Paydown: Jan $77 actual, Feb $800 actual, Mar $2,500 actual, Apr+ $600 projected
     { n: "CC Paydown", v: [-77,-800,-2500,-600,-600,-600,-600,-600,-600,-600,-600,-600] },
-    // Stripe loan is deducted from Stripe payouts before they hit checking — NOT a separate debit.
-    // Revenue numbers already reflect net-of-loan Stripe deposits. So no separate line needed.
-    // LearnAll: paying $2500 in Mar, then TBD
-    { n: "LearnAll", v: [0,0,-2500,0,0,0,0,0,0,0,0,0] },
   ],
-  // ADP employment taxes — hits checking directly
-  et: [-523,-1188,-1177,-1177,-1177,-1177,-1177,-1000,-1000,-1000,-1000,-1000],
-  // ADP processing fees — hits checking directly
-  af: [-82,-192,-85,-170,-170,-170,-170,-170,-170,-170,-170,-170],
-  // Wise wire FEES only (total Wise payments minus contractor salaries)
-  // Jan: $4,847-$3,738=$1,109. Feb: $4,377-$3,037=$1,340. Mar+: ~$100 est.
-  wf: [-1109,-1340,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100],
+
+  // ADP employment taxes — Mar actual: $1,723.57 gross - $223.62 refund = $1,499.95
+  et: [-523,-1188,-1500,-1177,-1177,-1177,-1177,-1000,-1000,-1000,-1000,-1000],
+
+  // ADP processing fees — Mar actual: $85.48 x2 = $170.96
+  // Apr: extra run for Mark Alberto one-time ~$85 additional
+  af: [-82,-192,-171,-255,-170,-170,-170,-170,-170,-170,-170,-170],
+
+  // Wise wire FEES only (total Wise debits minus contractor salaries)
+  // Mar actual: $3,294.73 total Wise - ~$2,272 salaries = ~$1,023 fees (FX + transfer fees)
+  wf: [-1109,-1340,-1023,-100,-100,-100,-100,-100,-100,-100,-100,-100],
+
   tm: [
-    { id:"p1",nm:"Paul",rl:"CEO",dp:"Leadership",ct:"US",co:8333,on:true },
-    { id:"p2",nm:"Sara",rl:"Intern",dp:"Operations",ct:"US",co:792,on:true,endMo:5 },
-    { id:"p3",nm:"Janna",rl:"Mktg Lead",dp:"Marketing",ct:"PH",co:550,on:true },
-    { id:"p4",nm:"Mark",rl:"Marketing",dp:"Marketing",ct:"PH",co:273,on:true,startMo:1 },
-    { id:"p5",nm:"Jeanna",rl:"Support",dp:"Marketing",ct:"PH",co:276,on:false,startMo:2,endMo:2 },
-    { id:"p6",nm:"Soorya",rl:"Lead Dev",dp:"Development",ct:"IN",co:1000,on:true },
-    { id:"p7",nm:"Yuva",rl:"Developer",dp:"Development",ct:"IN",co:650,on:true },
-    { id:"p8",nm:"Gowtham",rl:"Developer",dp:"Development",ct:"IN",co:288,on:true },
-    { id:"p9",nm:"New Dev",rl:"Developer",dp:"Development",ct:"IN",co:750,on:true,startMo:3 },
+    { id:"p1", nm:"Paul",         rl:"CEO",              dp:"Leadership",  ct:"US", co:8333, on:true },
+    { id:"p2", nm:"Sara",         rl:"Intern",           dp:"Operations",  ct:"US", co:792,  on:true, endMo:5 },
+    { id:"p3", nm:"Janna",        rl:"Mktg Lead",        dp:"Marketing",   ct:"PH", co:550,  on:true },
+    { id:"p4", nm:"Mark Atienza", rl:"Marketing",        dp:"Marketing",   ct:"PH", co:273,  on:true, startMo:1 },
+    { id:"p5", nm:"Jeanna",       rl:"Support",          dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
+    { id:"p6", nm:"Soorya",       rl:"Lead Dev",         dp:"Development", ct:"IN", co:1000, on:true },
+    { id:"p7", nm:"Yuva",         rl:"Developer",        dp:"Development", ct:"IN", co:650,  on:true },
+    { id:"p8", nm:"Gowtham",      rl:"Developer",        dp:"Development", ct:"IN", co:288,  on:true },
+    { id:"p9", nm:"New Dev",      rl:"Developer",        dp:"Development", ct:"IN", co:750,  on:true, startMo:3 },
   ],
+
   cl: [
-    { id:"c1",nm:"Gomes Agency",rt:2000,tr:"12mo",vi:"Stripe",zh:155,zha:0,tier:"im",seats:0,st:["P","P","P","","","","","","","","",""],nt:{} },
-    { id:"c2",nm:"Supreme E-Com",rt:2000,tr:"12mo",vi:"ACH",zh:38,zha:0,tier:"im",seats:30,st:["P","P","P","","","","","","","","",""],nt:{} },
-    { id:"c3",nm:"380 Guide",rt:2000,tr:"6mo",vi:"Check",zh:0,zha:0,tier:"im",seats:3,st:["","P","U","","","","","","","","",""],nt:{1:"2x $1k checks deposited 2/3"} },
-    { id:"c4",nm:"Van Boxel",rt:2000,tr:"12mo",vi:"Stripe",zh:11,zha:0,tier:"im",seats:0,st:["","P","","","","","","","","","",""],nt:{} },
-    { id:"c5",nm:"Calco CRM Zen",rt:500,tr:"M2M",vi:"Stripe",zh:0,zha:0,tier:"zen",seats:0,st:["P","P","","","","","","","","","",""],nt:{} },
-    { id:"c6",nm:"Next Fab",rt:2000,tr:"6mo",vi:"Stripe",zh:65,zha:0,tier:"im",seats:0,st:["","U","U","","","","","","","","",""],nt:{1:"$1,148 first inv"} },
-    // V2.2: Option One — Feb paid, Mar due 3/25, Apr due 4/25. No gaps.
-    { id:"c7",nm:"Jose F / Option One",rt:450,tr:"3mo",vi:"Stripe",zh:0,zha:0,tier:"mktg",seats:0,st:["","P","","","","","","","","","",""],nt:{1:"Paid 2/11, 15-day credit. Next: 3/25, 4/25"} },
-    // Zoho commission clients with renewal info
-    { id:"c8",nm:"HV Health",rt:0,tr:"",vi:"",zh:582,zha:0,tier:"zho",seats:0,zhType:"monthly",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c9",nm:"Michael Grusell",rt:0,tr:"",vi:"",zh:181,zha:0,tier:"zho",seats:0,zhType:"monthly",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c10",nm:"Gomes (Zoho Only)",rt:0,tr:"",vi:"",zh:155,zha:0,tier:"zho",seats:0,zhType:"monthly",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c11",nm:"CloverLeaf",rt:0,tr:"",vi:"",zh:40,zha:0,tier:"zho",seats:0,zhType:"monthly",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c12",nm:"Jeanes",rt:0,tr:"",vi:"",zh:26,zha:0,tier:"zho",seats:0,zhType:"monthly",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c13",nm:"Revele",rt:0,tr:"",vi:"",zh:0,zha:16826,tier:"zho",seats:0,zhType:"annual",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c14",nm:"United Weld",rt:0,tr:"",vi:"",zh:0,zha:3370,tier:"zho",seats:0,zhType:"annual",st:["","","","","","","","","","","",""],nt:{} },
-    { id:"c15",nm:"Regenics",rt:0,tr:"",vi:"",zh:0,zha:2078,tier:"zho",seats:0,zhType:"annual",st:["","","","","","","","","","","",""],nt:{} },
+    { id:"c1",  nm:"Gomes Agency",       rt:2000, tr:"12mo", vi:"Stripe", zh:155, zha:0,   tier:"im",  seats:0,  st:["P","P","P","","","","","","","","",""], nt:{} },
+    { id:"c2",  nm:"Supreme E-Com",      rt:2000, tr:"12mo", vi:"ACH",    zh:38,  zha:0,   tier:"im",  seats:30, st:["P","P","P","","","","","","","","",""], nt:{} },
+    { id:"c3",  nm:"380 Guide",          rt:2000, tr:"6mo",  vi:"Check",  zh:0,   zha:0,   tier:"im",  seats:3,  st:["","P","P","","","","","","","","",""], nt:{1:"2x $1k checks deposited 2/3", 2:"ACH $2,000 Mar 17 — credit applied Feb2-Mar2, paid Mar2-Apr2"} },
+    { id:"c4",  nm:"Van Boxel",          rt:2000, tr:"12mo", vi:"Stripe", zh:11,  zha:0,   tier:"im",  seats:0,  st:["","P","","","","","","","","","",""], nt:{} },
+    { id:"c5",  nm:"Calco CRM Zen",      rt:500,  tr:"M2M",  vi:"Stripe", zh:0,   zha:0,   tier:"zen", seats:0,  st:["P","P","P","","","","","","","","",""], nt:{} },
+    { id:"c6",  nm:"Next Fab",           rt:2000, tr:"6mo",  vi:"Stripe", zh:65,  zha:0,   tier:"im",  seats:0,  st:["","U","U","","","","","","","","",""], nt:{1:"$1,148 first inv"} },
+    { id:"c7",  nm:"Jose F / Option One",rt:450,  tr:"3mo",  vi:"Stripe", zh:0,   zha:0,   tier:"mktg",seats:0,  st:["","P","","","","","","","","","",""], nt:{1:"Paid 2/11. Next: 3/25, 4/25"} },
+    { id:"c8",  nm:"Patson Doors",       rt:0,    tr:"",     vi:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{2:"$6,000 one-time Mar 3"} },
+    // Zoho commission clients
+    { id:"c9",  nm:"HV Health",          rt:0, tr:"", vi:"", zh:582, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c10", nm:"Michael Grusell",    rt:0, tr:"", vi:"", zh:181, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c11", nm:"Gomes (Zoho Only)",  rt:0, tr:"", vi:"", zh:155, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c12", nm:"CloverLeaf",         rt:0, tr:"", vi:"", zh:40,  zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c13", nm:"Jeanes",             rt:0, tr:"", vi:"", zh:26,  zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c14", nm:"Revele",             rt:0, tr:"", vi:"", zh:0,   zha:16826,tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c15", nm:"United Weld",        rt:0, tr:"", vi:"", zh:0,   zha:3370, tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","",""], nt:{} },
+    { id:"c16", nm:"Regenics",           rt:0, tr:"", vi:"", zh:0,   zha:2078, tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","",""], nt:{} },
   ],
+
   sc: { nc:1,cs:5,or:3000,oc:1,oq:1,ol:6,op:0.3,oh:500 },
+
   pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:0,
     targetComp:100000,
-    orgSvc:15, orgLic:10, // organic leads: service profit %, license %
-    resSvc:15, resLic:40, // restored Zoho leads: service profit %, license %
-    pkgOrg:3, pkgRes:5, // package example client counts
+    orgSvc:15, orgLic:10,
+    resSvc:15, resLic:40,
+    pkgOrg:3, pkgRes:5,
     nzp:10, nzcs:90, ops:35, ocs:30, ips:35,
     opc:1000,ocq:0,oar:2000,dch:750,cpc:2.5,
     sm:4,nzq:0, azr:2000,
@@ -109,6 +124,7 @@ export const D0 = {
     svcCost:384, dl:3,
     zLeadBonus:false, zLeadMark:40, zLeadCo:60,
     equityTrigger:500000 },
+
   dh: { cnt:1,avg:750,sm:3,cpc:1.5,rpc:2000,mode:"capacity" },
 };
 
@@ -125,15 +141,13 @@ export const fK = n => {
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
 
-// Precise runway — finds when balance goes permanently negative (ignores temporary dips that recover)
+// Precise runway — finds when balance goes permanently negative
 export function preciseRunway(bl) {
-  // Find the last month that's positive — this handles temporary dips during ramp delays
   let lastPermanentPos = -1;
   for (let i = bl.length - 1; i >= 0; i--) {
     if (bl[i] > 0) { lastPermanentPos = i; break; }
   }
   if (lastPermanentPos === -1) {
-    // All negative — find first month that goes negative
     for (let i = 0; i < bl.length; i++) {
       if (bl[i] <= 0) {
         if (i === 0) return 0;
@@ -145,7 +159,6 @@ export function preciseRunway(bl) {
     }
     return 0;
   }
-  // If last positive month is the final month, project forward
   if (lastPermanentPos === bl.length - 1) {
     const n3 = bl.length >= 3 ? (bl[bl.length-1] - bl[bl.length-3]) / 2 : bl[bl.length-1] - bl[bl.length-2];
     let balance = bl[bl.length - 1];
@@ -161,7 +174,6 @@ export function preciseRunway(bl) {
     }
     return 24;
   }
-  // Balance goes permanently negative after lastPermanentPos
   const posV = bl[lastPermanentPos];
   const negV = bl[lastPermanentPos + 1];
   const frac = posV / (posV - negV);
@@ -173,7 +185,7 @@ export function getRollingWindow() {
   const now = new Date();
   const curMonth = now.getMonth();
   const curYear = now.getFullYear();
-  const startMonth = curMonth - 2; // 2 months back
+  const startMonth = curMonth - 2;
   const win = [];
   for (let i = 0; i < 14; i++) {
     const totalMonth = startMonth + i;
