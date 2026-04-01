@@ -133,6 +133,10 @@ export const D0 = {
     equityTrigger:500000 },
 
   dh: { cnt:1,avg:750,sm:3,cpc:1.5,rpc:2000,mode:"capacity" },
+
+  // Scenario rows — speculative revenue/expense items for what-if modeling
+  // Each: { id, name, type:"revenue"|"expense", amount (positive), startMo (0-11), duration (months, 0=ongoing), on:true }
+  scenarios: [],
 };
 
 export const fmt = n => {

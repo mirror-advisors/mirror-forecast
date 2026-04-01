@@ -21,6 +21,7 @@ export default function App() {
   const [clExpanded, setClExpanded] = useState(null);
   const [clFilter, setClFilter] = useState("service"); // V2.1: default to service clients
   const [clSort, setClSort] = useState({ key: "totalValue", dir: "desc" });
+  const [scForm, setScForm] = useState(null); // null = closed, object = editing
 
   const partnerEmail = "mark@mirroradvisors.com";
   const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
@@ -143,6 +144,12 @@ export default function App() {
               <span style={{ fontSize:16,color:P.tm }}>months green</span>
             </div>
             <div style={{ marginTop:6,color:P.tm,fontSize:12 }}>{fd>=0?<>Deficit: <b style={{ color:P.r }}>{MO[fd]}</b></>:<span style={{ color:P.g }}>Green all year</span>}{" · Dec: "}<b style={{ color:c.bl[11]>0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(c.bl[11])}</b></div>
+            {(d.scenarios||[]).filter(s=>s.on).length > 0 && (
+              <div style={{ marginTop:6,fontSize:11,color:P.a }}>
+                Includes {(d.scenarios||[]).filter(s=>s.on).length} scenario{(d.scenarios||[]).filter(s=>s.on).length>1?"s":""}:
+                {" "}{(d.scenarios||[]).filter(s=>s.on).map(s=>`${s.type==="revenue"?"+":"−"}$${s.amount.toLocaleString()} ${s.name}`).join(", ")}
+              </div>
+            )}
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:16 }}>
               <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
               <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
@@ -180,11 +187,86 @@ export default function App() {
 
       {/* ===================== FORECAST ===================== */}
       {tab==="forecast"&&(<>
-        <div style={{ display:"flex",gap:20,marginBottom:16,padding:"10px 14px",background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,alignItems:"center" }}>
-          <span style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600 }}>Scenario Overlays</span>
+        <div style={{ display:"flex",gap:12,marginBottom:16,padding:"10px 14px",background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,alignItems:"center",flexWrap:"wrap" }}>
+          <span style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600 }}>Overlays</span>
           <Toggle label="Partnership Impact" value={showPartnership} onChange={setShowPartnership} color={P.p} />
           <Toggle label="Dev Hire Impact" value={showDevHire} onChange={setShowDevHire} color={P.b} />
+          <div style={{ marginLeft:"auto" }}>
+            <button onClick={()=>setScForm({ name:"",type:"revenue",amount:2000,startMo:cm,duration:0 })} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Scenario</button>
+          </div>
         </div>
+
+        {/* Scenario Add Form */}
+        {scForm && (
+          <Card style={{ padding:16,marginBottom:16,border:`1px solid ${P.a}44`,background:`${P.aB}` }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <span style={{ fontSize:12,fontWeight:700,color:P.a }}>New Scenario</span>
+              <button onClick={()=>setScForm(null)} style={{ background:"transparent",border:"none",color:P.td,cursor:"pointer",fontSize:14 }}>✕</button>
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr auto auto auto auto",gap:10,alignItems:"end" }}>
+              <div>
+                <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Name</div>
+                <input value={scForm.name} onChange={e=>setScForm({...scForm,name:e.target.value})} placeholder="e.g. Acme Corp deal" style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 10px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",width:"100%",boxSizing:"border-box" }}/>
+              </div>
+              <div>
+                <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Type</div>
+                <div style={{ display:"flex",gap:4 }}>
+                  {["revenue","expense"].map(t=><button key={t} onClick={()=>setScForm({...scForm,type:t})} style={{ padding:"8px 12px",borderRadius:6,border:`1px solid ${scForm.type===t?(t==="revenue"?P.g:P.r):P.bd}`,background:scForm.type===t?(t==="revenue"?P.gB:P.rB):"transparent",color:scForm.type===t?(t==="revenue"?P.g:P.r):P.tm,cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:"'DM Sans', sans-serif" }}>{t==="revenue"?"Revenue":"Expense"}</button>)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>$/Month</div>
+                <input type="number" value={scForm.amount} onChange={e=>setScForm({...scForm,amount:Math.max(0,+e.target.value)})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 10px",color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",width:90,textAlign:"right" }}/>
+              </div>
+              <div>
+                <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Start</div>
+                <select value={scForm.startMo} onChange={e=>setScForm({...scForm,startMo:+e.target.value})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 10px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif" }}>
+                  {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Duration</div>
+                <select value={scForm.duration} onChange={e=>setScForm({...scForm,duration:+e.target.value})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 10px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif" }}>
+                  <option value={0}>Ongoing</option>
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n=><option key={n} value={n}>{n} mo</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display:"flex",justifyContent:"flex-end",marginTop:12 }}>
+              <button disabled={!scForm.name.trim()||!scForm.amount} onClick={()=>{
+                const ns = { id:"sc"+Date.now(), name:scForm.name.trim(), type:scForm.type, amount:scForm.amount, startMo:scForm.startMo, duration:scForm.duration, on:true };
+                save({...d, scenarios:[...(d.scenarios||[]), ns]});
+                setScForm(null);
+              }} style={{ background:(!scForm.name.trim()||!scForm.amount)?P.c2:P.a,color:(!scForm.name.trim()||!scForm.amount)?P.td:P.bg,border:"none",borderRadius:6,padding:"8px 18px",fontFamily:"'DM Sans', sans-serif",fontSize:12,fontWeight:700,cursor:(!scForm.name.trim()||!scForm.amount)?"default":"pointer" }}>Add Scenario</button>
+            </div>
+          </Card>
+        )}
+
+        {/* Active Scenarios List */}
+        {(d.scenarios||[]).length > 0 && (
+          <div style={{ marginBottom:16 }}>
+            <Lbl>Active Scenarios</Lbl>
+            <div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:6 }}>
+              {(d.scenarios||[]).map((sc,si)=>{
+                const start = sc.startMo||0;
+                const dur = sc.duration||0;
+                const end = dur > 0 ? Math.min(start + dur - 1, 11) : 11;
+                const totalImpact = sc.amount * (end - start + 1);
+                const isRev = sc.type === "revenue";
+                return (
+                  <div key={sc.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:P.c1,borderRadius:8,border:`1px dashed ${isRev?P.g:P.r}44`,opacity:sc.on?1:0.4 }}>
+                    <span style={{ fontSize:9,fontWeight:700,color:isRev?P.g:P.r,textTransform:"uppercase",padding:"2px 6px",borderRadius:4,background:isRev?P.gB:P.rB,whiteSpace:"nowrap" }}>{isRev?"REV":"EXP"}</span>
+                    <span style={{ fontSize:12,fontWeight:600,color:P.tx,flex:1 }}>{sc.name}</span>
+                    <span style={{ fontSize:12,fontWeight:700,color:isRev?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{isRev?"+":"−"}{fmt(sc.amount)}/mo</span>
+                    <span style={{ fontSize:10,color:P.tm }}>{MO[start]}{dur>0?`–${MO[end]}`:"+"}  ·  {fmt(totalImpact)} total</span>
+                    <button onClick={()=>save({...d,scenarios:d.scenarios.map((s,i)=>i===si?{...s,on:!s.on}:s)})} style={{ background:sc.on?P.gB:P.c2,color:sc.on?P.g:P.td,border:`1px solid ${sc.on?P.g+"44":P.bd}`,borderRadius:4,padding:"3px 8px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",fontWeight:600 }}>{sc.on?"ON":"OFF"}</button>
+                    <button onClick={()=>save({...d,scenarios:d.scenarios.filter((_,i)=>i!==si)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:"3px 8px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <Lbl>Cash Flow (Rolling 13-Month)</Lbl>
         <div style={{ overflowX:"auto",marginBottom:20 }}>
@@ -223,6 +305,8 @@ export default function App() {
             <thead><tr><th style={{ ...th,textAlign:"left",width:160 }}></th>{win.map((s,i)=><th key={i} style={thCm(s)}>{s.label}</th>)}<th style={th}>Year</th></tr></thead>
             <tbody>
               {[["Zoho Annual",d.rv.za],["Zoho Monthly",d.rv.zm],["Infinity Mirror",d.rv.im],["Marketing",d.rv.mk],["One-Time",d.rv.ot]].map(([l,v])=><tr key={l}><td style={{ padding:"5px 10px",color:P.tm,borderBottom:`1px solid ${P.bd}10` }}>{l}</td>{win.map((s,i)=>{const x=getWinVal(v,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.tm:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(v))}</td></tr>)}
+              {/* Scenario revenue rows */}
+              {(d.scenarios||[]).filter(s=>s.on&&s.type==="revenue").map(sc=>{const start=sc.startMo||0;const dur=sc.duration||0;const end=dur>0?Math.min(start+dur-1,11):11;const vals=MO.map((_,i)=>i>=start&&i<=end?sc.amount:0);return<tr key={sc.id}><td style={{ padding:"5px 10px",color:P.a,borderBottom:`1px solid ${P.bd}10`,fontStyle:"italic" }}><span style={{ fontSize:8,fontWeight:700,background:P.aB,color:P.a,padding:"1px 4px",borderRadius:3,marginRight:5 }}>SC</span>{sc.name}</td>{win.map((s,i)=>{const x=getWinVal(vals,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.a:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.a,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(vals))}</td></tr>})}
               <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",color:P.g,borderTop:`2px solid ${P.gM}` }}>TOTAL</td>{win.map((s,i)=>{const v=getWinVal(c.rv,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:P.g,borderTop:`2px solid ${P.gM}`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?fmt(v):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",color:P.g,borderTop:`2px solid ${P.gM}`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(c.rv))}</td></tr>
             </tbody>
           </table>
@@ -239,7 +323,8 @@ export default function App() {
               <XRow label="Subscriptions" vals={winVals(c.sb)} win={win} details={d.sb.map(s=>({n:s.n,v:winVals(MO.map((_,i)=>{if(s.s&&i<s.s)return 0;if(s.e!==undefined&&i>s.e)return 0;return -s.a;}))}))}/>
               <XRow label="Other Costs" vals={winVals(c.oc)} win={win} details={d.oc.map(x=>({n:x.n,v:winVals(x.v)}))}/>
               <XRow label="Debt" vals={winVals(c.db)} win={win} details={d.db.map(x=>({n:x.n,v:winVals(x.v)}))}/>
-              <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",color:P.r,borderTop:`2px solid ${P.rM}` }}>TOTAL</td>{winVals(c.ex).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:P.r,borderTop:`2px solid ${P.rM}`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(win[i]) }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:P.r,borderTop:`2px solid ${P.rM}`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(c.ex))}</td></tr>
+              {/* Scenario expense rows */}
+              {(d.scenarios||[]).filter(s=>s.on&&s.type==="expense").map(sc=>{const start=sc.startMo||0;const dur=sc.duration||0;const end=dur>0?Math.min(start+dur-1,11):11;const vals=MO.map((_,i)=>i>=start&&i<=end?-sc.amount:0);return<tr key={sc.id}><td style={{ padding:"5px 10px",color:P.a,borderBottom:`1px solid ${P.bd}20`,fontStyle:"italic" }}><span style={{ fontSize:8,fontWeight:700,background:P.aB,color:P.a,padding:"1px 4px",borderRadius:3,marginRight:5 }}>SC</span>{sc.name}</td>{win.map((s,i)=>{const x=getWinVal(vals,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x?P.a:P.td,borderBottom:`1px solid ${P.bd}20`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.a,borderBottom:`1px solid ${P.bd}20`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(vals))}</td></tr>})}              <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",color:P.r,borderTop:`2px solid ${P.rM}` }}>TOTAL</td>{winVals(c.ex).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:P.r,borderTop:`2px solid ${P.rM}`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(win[i]) }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:P.r,borderTop:`2px solid ${P.rM}`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(c.ex))}</td></tr>
             </tbody>
           </table>
         </div>

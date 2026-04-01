@@ -4,6 +4,7 @@ const LOCAL_KEY = "mirror_forecast_v1";
 function migrateData(parsed, defaultData) {
   if (!parsed.pt) parsed.pt = defaultData.pt;
   if (!parsed.dh) parsed.dh = defaultData.dh;
+  if (!parsed.scenarios) parsed.scenarios = [];
   parsed.cl = parsed.cl.map(c => ({
     tier: c.rt >= 2000 ? 'im' : c.rt === 500 ? 'zen' : c.rt > 0 ? 'mktg' : 'zho',
     seats: 0, zha: 0, signed: '', subStart: '', payDay: 1, renewal: '', termMo: 0, startMo: 0, endMo: 11, ...c

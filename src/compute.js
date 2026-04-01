@@ -51,10 +51,27 @@ export function compute(d) {
   // sb excluded from cash flow — subs are on CC, cash impact is through CC Paydown in db[]
   // sb is still computed for display/tracking purposes
   const ex = MO.map((_, i) => us[i] + ph[i] + ind[i] + oc[i] + db[i]);
-  const nt = MO.map((_, i) => rv[i] + ex[i]);
+
+  // Scenario rows — fold active scenarios into revenue/expense
+  const scRv = new Array(12).fill(0); // scenario revenue per month
+  const scEx = new Array(12).fill(0); // scenario expenses per month
+  const scenarios = d.scenarios || [];
+  scenarios.filter(s => s.on).forEach(s => {
+    const start = s.startMo || 0;
+    const dur = s.duration || 0; // 0 = ongoing (through month 11)
+    const end = dur > 0 ? Math.min(start + dur - 1, 11) : 11;
+    for (let i = start; i <= end; i++) {
+      if (s.type === "revenue") scRv[i] += s.amount;
+      else scEx[i] -= s.amount; // expenses stored positive, applied negative
+    }
+  });
+
+  const rvT = rv.map((v, i) => v + scRv[i]); // total revenue including scenarios
+  const exT = ex.map((v, i) => v + scEx[i]); // total expenses including scenarios
+  const nt = MO.map((_, i) => rvT[i] + exT[i]);
   const bl = [];
   nt.forEach((n, i) => bl.push(i === 0 ? d.openBal + n : bl[i - 1] + n));
-  return { rv, sb, oc, db, us, ph, ind, ex, nt, bl, at };
+  return { rv: rvT, rvBase: rv, sb, oc, db, us, ph, ind, ex: exT, exBase: ex, nt, bl, at, scRv, scEx };
 }
 
 // Partnership model v3 — service commission (15% of profit) + license commission
