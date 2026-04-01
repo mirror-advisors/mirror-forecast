@@ -137,6 +137,11 @@ export const D0 = {
   // Scenario rows — speculative revenue/expense items for what-if modeling
   // Each: { id, name, type:"revenue"|"expense", amount (positive), startMo (0-11), duration (months, 0=ongoing), on:true }
   scenarios: [],
+
+  // Month-end actuals — populated by reconciliation (bank statement upload)
+  // Keyed by month index (0=Jan, 1=Feb, etc.)
+  // Each: { closingBal, totalIn, totalOut, chaseIn, chaseOut, stripeIn, stripeLoan, wiseOut, ccSpend, reconDate }
+  actuals: {},
 };
 
 export const fmt = n => {

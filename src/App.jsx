@@ -7,6 +7,7 @@ import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle } from "./components
 import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import InternView from "./InternView.jsx";
+import Reconcile from "./Reconcile.jsx";
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, signOut } = useAuth();
@@ -22,6 +23,7 @@ export default function App() {
   const [clFilter, setClFilter] = useState("service"); // V2.1: default to service clients
   const [clSort, setClSort] = useState({ key: "totalValue", dir: "desc" });
   const [scForm, setScForm] = useState(null); // null = closed, object = editing
+  const [showRecon, setShowRecon] = useState(false);
 
   const partnerEmail = "mark@mirroradvisors.com";
   const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
@@ -151,7 +153,7 @@ export default function App() {
               </div>
             )}
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:16 }}>
-              <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
+              <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ display:"flex",alignItems:"baseline",gap:6 }}><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div><button onClick={()=>{const v=prompt("Enter current bank balance:",d.cashNow);if(v!==null&&!isNaN(+v))save({...d,cashNow:Math.round(+v*100)/100});}} style={{ background:"transparent",border:`1px solid ${P.bd}`,borderRadius:4,padding:"2px 6px",color:P.td,fontSize:9,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>edit</button></div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const lastRecon=Object.entries(d.actuals||{}).sort((a,b)=>+b[0]-+a[0])[0];if(lastRecon)return<div style={{ fontSize:9,color:P.g,marginTop:4 }}>Verified: {MO[lastRecon[0]]} {new Date(lastRecon[1].reconDate).toLocaleDateString()}</div>;return null;})()}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
               <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
             </div>
             <Card style={{ padding:12,marginTop:10 }}>
@@ -182,6 +184,27 @@ export default function App() {
         <Lbl>Unit Economics</Lbl>
         <div style={{ display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginTop:6,marginBottom:20 }}>
           {[["Rev/Client",fmt(Math.round(tRv/Math.max(aCl,1)/12)),P.t],["Rev/Head",fmt(Math.round(tRv/Math.max(c.at.length,1)/12)),P.t],["Clients/Dev",devs.length?(aCl/devs.length).toFixed(1):"\u2014",P.t],["Devs",devs.length,P.tx],["Clients",aCl,P.tx]].map(([l,v,co])=><Card key={l} style={{ padding:12 }}><Lbl>{l}</Lbl><div style={{ fontSize:22,fontWeight:800,color:co,fontFamily:"'JetBrains Mono', monospace" }}>{v}</div></Card>)}
+        </div>
+
+        {/* Reconciliation */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+            <Lbl>Month-End Reconciliation</Lbl>
+            <button onClick={()=>setShowRecon(!showRecon)} style={{ background:showRecon?P.gB:"transparent",color:showRecon?P.g:P.tm,border:`1px solid ${showRecon?P.g+"44":P.bd}`,borderRadius:6,padding:"6px 14px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>
+              {showRecon?"Hide":"Upload Statements"}
+            </button>
+          </div>
+          {/* Show reconciled months summary even when collapsed */}
+          {!showRecon && Object.keys(d.actuals||{}).length > 0 && (
+            <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+              {Object.entries(d.actuals||{}).map(([mo,a])=>(
+                <span key={mo} style={{ fontSize:10,padding:"4px 10px",borderRadius:4,background:P.gB,color:P.g }}>
+                  {MO[mo]} ✓ {fmt(a.closingBal)}
+                </span>
+              ))}
+            </div>
+          )}
+          {showRecon && <Reconcile d={d} save={save} compute={c} />}
         </div>
       </>)}
 
