@@ -34,7 +34,10 @@ export const D0 = {
     zm: [0, 0, 0, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
     im: [5453, 4886, 6500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
     mk: [0, 0, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
-    ot: [7000, 0, 6000, 0, 3000, 3000, 3000, 3000, 0, 0, 0, 0],
+    ot: [7000, 0, 6000, 6250, 0, 0, 0, 0, 0, 0, 0, 0],
+    pCruzy:    [0, 0, 0, 0, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000],
+    pPatson:   [0, 0, 0, 0, 6667, 6667, 6667, 0, 0, 0, 0, 0],
+    pPlastics: [0, 0, 0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
   },
 
   // Subscriptions on CC — tracked for visibility, cash impact is CC Paydown in db[]
@@ -59,12 +62,15 @@ export const D0 = {
     { n: "Mark Alberto (COO)",  v: [0,0,0,-5000,0,0,0,0,0,0,0,0] },
     // LearnAll contractor — not paid in Mar, forecasting $3k Apr
     { n: "LearnAll",            v: [0,0,0,-3000,0,0,0,0,0,0,0,0] },
+    { n: "RSK Advisors (Tax)",  v: [0,-4944,0,0,0,0,0,0,0,0,0,0] },
+    { n: "CC Interest",         v: [0,0,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130] },
   ],
 
   // Debt / CC — hits checking account
   db: [
     // CC Paydown: Jan $77 actual, Feb $800 actual, Mar $2,500 actual, Apr+ $600 projected
     { n: "CC Paydown", v: [-77,-800,-2500,-600,-600,-600,-600,-600,-600,-600,-600,-600] },
+    { n: "Stripe Loan", v: [0,0,0,-400,-400,0,0,0,0,0,0,0] },
   ],
 
   // ADP employment taxes — Mar actual: $1,723.57 gross - $223.62 refund = $1,499.95
@@ -88,6 +94,7 @@ export const D0 = {
     { id:"p7", nm:"Yuva",         rl:"Developer",        dp:"Development", ct:"IN", co:650,  on:true },
     { id:"p8", nm:"Gowtham",      rl:"Developer",        dp:"Development", ct:"IN", co:288,  on:true },
     { id:"p9", nm:"New Dev",      rl:"Developer",        dp:"Development", ct:"IN", co:750,  on:true, startMo:3 },
+    { id:"p10",nm:"Aadrika",      rl:"Contractor",       dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
   ],
 
   cl: [
