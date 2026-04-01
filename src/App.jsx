@@ -75,7 +75,7 @@ export default function App() {
   const c = compute(d);
   const cm = new Date().getMonth();
   // V2.1: Precise decimal runway
-  const mg = preciseRunway(c.bl);
+  const mg = (()=>{ let m=0; for(let i=cm;i<12;i++){if(c.bl[i]<=0)break;m++;} return m; })();
   const fd = c.bl.findIndex(b => b <= 0);
   const tRv = sm(c.rv);
   // V2.1: Distinct pie chart colors
@@ -144,7 +144,7 @@ export default function App() {
             </div>
             <div style={{ marginTop:6,color:P.tm,fontSize:12 }}>{fd>=0?<>Deficit: <b style={{ color:P.r }}>{MO[fd]}</b></>:<span style={{ color:P.g }}>Green all year</span>}{" · Dec: "}<b style={{ color:c.bl[11]>0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(c.bl[11])}</b></div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:16 }}>
-              <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow+d.savings)}</div>{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
+              <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
               <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
             </div>
             <Card style={{ padding:12,marginTop:10 }}>

@@ -25,7 +25,7 @@ export const PIE_COLORS = { za:"#6bbfb0", zm:"#60a5fa", im:"#e4b44e", mk:"#b8a9e
 
 export const D0 = {
   // Mar 31 ending balance per Chase6692 statement
-  openBal: 1309, cashNow: 27776, savings: 0, sLoan: 0, ccOwe: -901,
+  openBal: 1309, cashNow: 27776, savings: 50, sLoan: 0, ccOwe: -901,
 
   // Revenue: Jan+Feb+Mar ACTUALS, Apr+ projections
   // Mar actuals: IM $6,500 | Zoho commissions $7,693.85 (both wires) | Patson Doors OT $6,000
