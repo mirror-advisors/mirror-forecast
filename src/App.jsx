@@ -102,10 +102,12 @@ export default function App() {
   // V2.1: Zoho commission totals for summary card
   const zhTotal = d.cl.reduce((s, x) => s + (x.zh || 0) * 12 + (x.zha || 0), 0);
 
-  const cyc = (ci, mi) => { const nx = { "": "P", P: "U", U: "C", C: "" }; const s = d.cl[ci].st[mi] || ""; if (nx[s] === "C") { setModal({ ci, mi }); setNt(""); return; } save({ ...d, cl: d.cl.map((x, i) => i !== ci ? x : { ...x, st: x.st.map((v, j) => j === mi ? nx[s] : v) }) }); };
+  const [stPicker, setStPicker] = useState(null); // { ci, mi } — which cell has the picker open
+  const cyc = (ci, mi) => { setStPicker(stPicker && stPicker.ci===ci && stPicker.mi===mi ? null : { ci, mi }); };
+  const setSt = (ci, mi, val) => { if (val === "C") { setStPicker(null); setModal({ ci, mi }); setNt(""); return; } save({ ...d, cl: d.cl.map((x, i) => i !== ci ? x : { ...x, st: x.st.map((v, j) => j === mi ? val : v) }) }); setStPicker(null); };
   const saveCr = () => { if (!modal) return; save({ ...d, cl: d.cl.map((x, i) => i !== modal.ci ? x : { ...x, st: x.st.map((v, j) => j === modal.mi ? "C" : v), nt: { ...x.nt, [modal.mi]: nt || "Credit" } }) }); setModal(null); };
 
-  const sSty = s => ({ display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,cursor:"pointer",userSelect:"none",fontWeight:700,fontSize:11,fontFamily:"'JetBrains Mono', monospace",background:s==="P"?P.gB:s==="U"?P.rB:s==="C"?P.aB:`${P.bd}25`,color:s==="P"?P.g:s==="U"?P.r:s==="C"?P.a:P.td });
+  const sSty = s => ({ display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,cursor:"pointer",userSelect:"none",fontWeight:700,fontSize:11,fontFamily:"'JetBrains Mono', monospace",background:s==="P"?P.gB:s==="U"?P.aB:s==="L"?P.rB:s==="C"?`${P.b}15`:`${P.bd}25`,color:s==="P"?P.g:s==="U"?P.a:s==="L"?P.r:s==="C"?P.b:P.td });
   const th = { padding:"5px 6px",textAlign:"right",color:P.td,fontSize:10,borderBottom:`1px solid ${P.bd}`,fontFamily:"'DM Sans', sans-serif",fontWeight:500,textTransform:"uppercase",letterSpacing:"0.05em" };
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
@@ -379,11 +381,11 @@ export default function App() {
           {/* SERVICE CLIENTS VIEW — Sara-style clean payment tracker */}
           {clFilter === "service" && <>
             <div style={{ fontSize:11,color:P.tm,marginBottom:12,padding:"10px 14px",background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,display:"flex",gap:16,alignItems:"center" }}>
-              <span>Click to cycle:</span>
+              <span>Click a box to set status:</span>
+              <span><span style={{ color:P.g,fontWeight:700 }}>P</span> paid</span>
               <span><span style={{ color:P.a,fontWeight:700 }}>U</span> unpaid</span>
-              <span>→ <span style={{ color:P.g,fontWeight:700 }}>P</span> paid</span>
-              <span>→ <span style={{ color:P.r,fontWeight:700 }}>L</span> late</span>
-              <span>→ <span style={{ color:P.a,fontWeight:700 }}>U</span></span>
+              <span><span style={{ color:P.r,fontWeight:700 }}>L</span> late</span>
+              <span><span style={{ color:P.b,fontWeight:700 }}>C</span> credit</span>
               <span style={{ marginLeft:"auto",color:P.td }}>▶ Click name to edit details</span>
             </div>
             <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
@@ -418,7 +420,7 @@ export default function App() {
                   </td>
                   <td style={{ padding:"6px 8px",color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(cl.rt)}/mo</td>
                   <td style={{ padding:"6px 8px",color:P.tm,fontSize:11,borderBottom:`1px solid ${P.bd}10` }}>{termLabel}</td>
-                  {win.map((s,wi)=>{const mi=s.idx;const active=s.inCurrentYear;const stVal=active?(cl.st[mi]||"U"):"";return<td key={wi} style={{ padding:"2px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,background:s.isCurrent?P.bB:"transparent" }}><div onClick={()=>active&&cyc(ci,mi)} style={sSty(stVal)}>{active?(stVal||"U"):""}</div></td>})}
+                  {win.map((s,wi)=>{const mi=s.idx;const active=s.inCurrentYear;const stVal=active?(cl.st[mi]||"U"):"";const isPicker=stPicker&&stPicker.ci===ci&&stPicker.mi===mi;return<td key={wi} style={{ padding:"2px",textAlign:"center",borderBottom:`1px solid ${P.bd}10`,background:s.isCurrent?P.bB:"transparent",position:"relative" }}>{active&&isPicker&&(<div style={{ position:"absolute",top:-2,left:"50%",transform:"translateX(-50%)",zIndex:20,display:"flex",gap:2,background:P.c1,border:`1px solid ${P.bd}`,borderRadius:6,padding:3,boxShadow:"0 4px 12px rgba(0,0,0,.5)" }}>{[["P",P.g,P.gB],["U",P.a,P.aB],["L",P.r,P.rB],["C",P.b,`${P.b}15`]].map(([v,co,bg])=><div key={v} onClick={(e)=>{e.stopPropagation();setSt(ci,mi,v);}} style={{ width:24,height:24,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:stVal===v?bg:"transparent",color:co,cursor:"pointer",border:`1px solid ${stVal===v?co+"44":"transparent"}` }}>{v}</div>)}</div>)}<div onClick={()=>active&&cyc(ci,mi)} style={sSty(stVal)}>{active?(stVal||"U"):""}</div></td>})}
                   <td style={{ padding:"6px 8px",textAlign:"right",color:P.g,fontWeight:600,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</td>
                 </tr>
               </React.Fragment>);
@@ -460,10 +462,55 @@ export default function App() {
         </div>
 
         {clFilter === "service" && <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:20 }}>
-          <Card style={{ padding:12 }}><Lbl>Collected YTD</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==="P").length*x.rt,0))}</div></Card>
-          <Card style={{ padding:12 }}><Lbl>Overdue</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==="U").length*x.rt,0))}</div></Card>
-          <Card style={{ padding:12 }}><Lbl>Credits</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==="C").length*x.rt,0))}</div></Card>
+          <Card style={{ padding:12 }}><Lbl>Collected YTD</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="P").length*x.rt,0))}</div></Card>
+          <Card style={{ padding:12 }}><Lbl>Late</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="L").length*x.rt,0))}</div></Card>
+          <Card style={{ padding:12 }}><Lbl>Credits</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="C").length*x.rt,0))}</div></Card>
         </div>}
+
+        {/* ONE-TIME PROJECTS */}
+        <div style={{ marginTop:24 }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+            <Lbl>One-Time Projects</Lbl>
+            <button onClick={()=>save({...d,cl:[...d.cl,{id:"ot"+Date.now(),nm:"New Project",rt:0,tr:"",vi:"Stripe",zh:0,zha:0,tier:"ot",seats:0,st:["","","","","","","","","","","",""],nt:{},otAmt:0,otMonth:cm}]})} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Project</button>
+          </div>
+          {(()=>{
+            const otClients = d.cl.map((cl,i)=>({...cl,origIdx:i})).filter(cl=>cl.tier==="ot");
+            if(!otClients.length) return <div style={{ fontSize:12,color:P.td,padding:12 }}>No one-time projects yet.</div>;
+            return <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+              {otClients.map(cl=>{
+                const ci=cl.origIdx;
+                const isPaid=cl.st.some(s=>s==="P");
+                const isLate=cl.st.some(s=>s==="L");
+                const amt=cl.otAmt||cl.rt||0;
+                const mo=cl.otMonth??cl.st.findIndex(s=>s==="P"||s==="U"||s==="L");
+                return <Card key={cl.id} style={{ padding:12,border:`1px solid ${isPaid?P.g+"33":isLate?P.r+"33":P.a+"33"}`,background:isPaid?`${P.gB}40`:isLate?`${P.rB}40`:"transparent" }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                    <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
+                    <div style={{ display:"flex",alignItems:"center",gap:4 }}>
+                      <span style={{ fontSize:10,color:P.td }}>$</span>
+                      <input type="number" value={amt} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otAmt:+e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"4px 8px",width:80,textAlign:"right" }}/>
+                    </div>
+                    <select value={mo>=0?mo:cm} onChange={e=>{const m=+e.target.value;save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otMonth:m,st:x.st.map((s,j)=>j===m?(s||"U"):j===mo?"":s)})});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:"4px 8px",fontFamily:"'DM Sans', sans-serif" }}>
+                      {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <div style={{ display:"flex",gap:2 }}>
+                      {[["P",P.g,P.gB],["U",P.a,P.aB],["L",P.r,P.rB]].map(([v,co,bg])=>{
+                        const active=mo>=0&&cl.st[mo]===v;
+                        return <div key={v} onClick={()=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,st:x.st.map((s,j)=>j===(mo>=0?mo:cm)?v:s)})})} style={{ width:24,height:24,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:"transparent",color:co,cursor:"pointer",border:`1px solid ${active?co+"44":P.bd}` }}>{v}</div>;
+                      })}
+                    </div>
+                    <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:"3px 8px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>✕</button>
+                  </div>
+                </Card>;
+              })}
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:8 }}>
+                <Card style={{ padding:10 }}><Lbl>Total Value</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(otClients.reduce((s,x)=>s+(x.otAmt||x.rt||0),0))}</div></Card>
+                <Card style={{ padding:10 }}><Lbl>Collected</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(otClients.filter(x=>x.st.some(s=>s==="P")).reduce((s,x)=>s+(x.otAmt||x.rt||0),0))}</div></Card>
+                <Card style={{ padding:10 }}><Lbl>Outstanding</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(otClients.filter(x=>!x.st.some(s=>s==="P")).reduce((s,x)=>s+(x.otAmt||x.rt||0),0))}</div></Card>
+              </div>
+            </div>;
+          })()}
+        </div>
       </>)}
 
       {/* ===================== PAYROLL ===================== */}
