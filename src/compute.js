@@ -1,7 +1,14 @@
 import { MO } from "./data.js";
 
 export function compute(d) {
-  const rv = MO.map((_, i) => Object.values(d.rv).reduce((s, a) => s + (a[i] || 0), 0));
+  // Build ot dynamically from tier:"ot" clients, merged with rv.ot base
+  const otBase = (d.rv.ot || new Array(12).fill(0)).slice();
+  (d.cl || []).filter(c => c.tier === "ot" && (c.otAmt || 0) > 0).forEach(c => {
+    const mo = c.otMonth ?? -1;
+    if (mo >= 0 && mo <= 11) otBase[mo] += c.otAmt;
+  });
+  const rvWithOt = { ...d.rv, ot: otBase };
+  const rv = MO.map((_, i) => Object.values(rvWithOt).reduce((s, a) => s + (a[i] || 0), 0));
   const sb = MO.map((_, i) => -d.sb.reduce((s, x) => {
     if (x.s && i < x.s) return s;
     if (x.e !== undefined && i > x.e) return s;
