@@ -34,7 +34,7 @@ export const D0 = {
     zm: [0, 0, 0, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
     im: [5453, 4886, 6500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
     mk: [0, 0, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
-    ot: [7000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ot: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     pCruzy:    [0, 0, 0, 0, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000],
     pPatson:   [0, 0, 0, 0, 6667, 6667, 6667, 0, 0, 0, 0, 0],
     pPlastics: [0, 0, 0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
@@ -105,6 +105,7 @@ export const D0 = {
     { id:"c5",  nm:"Calco CRM Zen",      rt:500,  tr:"M2M",  vi:"Stripe", zh:0,   zha:0,   tier:"zen", seats:0,  st:["P","P","P","","","","","","","","",""], nt:{} },
     { id:"c6",  nm:"Next Fab",           rt:2000, tr:"6mo",  vi:"Stripe", zh:65,  zha:0,   tier:"im",  seats:0,  st:["","U","U","","","","","","","","",""], nt:{1:"$1,148 first inv"} },
     { id:"c7",  nm:"Jose F / Option One",rt:450,  tr:"3mo",  vi:"Stripe", zh:0,   zha:0,   tier:"mktg",seats:0,  st:["","P","","","","","","","","","",""], nt:{1:"Paid 2/11. Next: 3/25, 4/25"} },
+    { id:"c18", nm:"Urban Operating",     rt:0,    tr:"",     vi:"",       zh:0,   zha:0,   tier:"ot",  seats:0,  st:["P","","","","","","","","","","",""], nt:{0:"$7,000 one-time Jan"}, otAmt:7000, otMonth:0 },
     { id:"c8",  nm:"Patson Doors",       rt:0,    tr:"",     vi:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","P","","","","","","","","",""], nt:{2:"$6,000 one-time Mar 3"}, otAmt:6000, otMonth:2 },
     { id:"c17", nm:"CoverFour",          rt:0,    tr:"",     vi:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{}, otAmt:6250, otMonth:3 },
     // Zoho commission clients

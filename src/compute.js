@@ -1,8 +1,8 @@
 import { MO } from "./data.js";
 
 export function compute(d) {
-  // Build ot dynamically from tier:"ot" clients, merged with rv.ot base
-  const otBase = (d.rv.ot || new Array(12).fill(0)).slice();
+  // Build ot purely from tier:"ot" clients — ignores rv.ot entirely
+  const otBase = new Array(12).fill(0);
   (d.cl || []).filter(c => c.tier === "ot" && (c.otAmt || 0) > 0).forEach(c => {
     const mo = c.otMonth ?? -1;
     if (mo >= 0 && mo <= 11) otBase[mo] += c.otAmt;
