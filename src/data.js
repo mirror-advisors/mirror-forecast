@@ -93,7 +93,7 @@ export const D0 = {
     { id:"p6", nm:"Soorya",       rl:"Lead Dev",         dp:"Development", ct:"IN", co:1000, on:true },
     { id:"p7", nm:"Yuva",         rl:"Developer",        dp:"Development", ct:"IN", co:650,  on:true },
     { id:"p8", nm:"Gowtham",      rl:"Developer",        dp:"Development", ct:"IN", co:288,  on:true },
-    { id:"p9", nm:"New Dev",      rl:"Developer",        dp:"Development", ct:"IN", co:750,  on:true, startMo:3 },
+    { id:"p9", nm:"New Dev",      rl:"Developer",        dp:"Development", ct:"IN", co:750,  on:false, startMo:3 },
     { id:"p10",nm:"Aadrika",      rl:"Contractor",       dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
   ],
 

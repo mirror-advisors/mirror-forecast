@@ -92,7 +92,7 @@ export default function App() {
   const devs = c.at.filter(t => t.dp === "Development");
   const aCl = d.cl.filter(x => x.rt > 0).length;
 
-  const outstanding = d.cl.reduce((s, x) => s + x.st.filter(v => v === "U").length * x.rt, 0);
+  const outstanding = d.cl.reduce((s, x) => s + x.st.filter(v => v === "L").length * x.rt, 0);
   const monthlyBurn = Math.abs(sm(c.ex) / 12);
   const extraRunway = monthlyBurn > 0 ? Math.round(outstanding / monthlyBurn * 4) / 4 : 0;
   const runwayIfCollected = Math.round((mg + extraRunway) * 4) / 4;
@@ -110,7 +110,7 @@ export default function App() {
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
 
-  const tabs = isPartner ? ["partnerships"] : ["dashboard","forecast","clients","payroll","partnerships","dev hire"];
+  const tabs = isPartner ? ["partnerships"] : ["dashboard","forecast","clients","payroll","partnerships"];
   const setPt = (k, v) => save({ ...d, pt: { ...pt, [k]: v } });
   const setDh = (k, v) => save({ ...d, dh: { ...dh, [k]: v } });
 
@@ -157,10 +157,11 @@ export default function App() {
               <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
             </div>
             <Card style={{ padding:12,marginTop:10 }}>
-              <Lbl>Outstanding Invoices</Lbl>
+              <Lbl>Late Invoices</Lbl>
               <div style={{ display:"flex",alignItems:"baseline",gap:10 }}>
-                <span style={{ fontSize:22,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(outstanding)}</span>
+                <span style={{ fontSize:22,fontWeight:800,color:outstanding>0?P.r:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{outstanding>0?fmt(outstanding):"$0"}</span>
                 {outstanding > 0 && <span style={{ fontSize:11,color:P.tm }}>If collected: <b style={{ color:P.g }}>+{extraRunway} ({runwayIfCollected} months)</b></span>}
+                {outstanding === 0 && <span style={{ fontSize:11,color:P.g }}>All current</span>}
               </div>
             </Card>
           </div>
@@ -782,54 +783,6 @@ export default function App() {
       </>)}
 
 
-      {/* ===================== DEV HIRE ===================== */}
-      {tab==="dev hire"&&(<>
-        {/* V2.1: Mode toggle — Capacity vs Growth */}
-        <div style={{ display:"flex",gap:8,marginBottom:20,padding:"10px 14px",background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,alignItems:"center" }}>
-          <span style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600 }}>Hire Purpose</span>
-          {["capacity","growth"].map(m=><button key={m} onClick={()=>setDh("mode",m)} style={{ padding:"6px 14px",borderRadius:6,border:`1px solid ${dh.mode===m?P.b:P.bd}`,background:dh.mode===m?P.bB:"transparent",color:dh.mode===m?P.b:P.tm,cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:"'DM Sans', sans-serif" }}>{m==="capacity"?"Capacity (keep up)":"Growth (new clients)"}</button>)}
-        </div>
-
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
-          <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
-            <Lbl>Current Runway</Lbl>
-            <div style={{ fontSize:36,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg} <span style={{ fontSize:14,fontWeight:500,color:P.tm }}>months</span></div>
-          </Card>
-          <Card style={{ padding:16,borderLeft:`3px solid ${P.b}` }}>
-            <Lbl>With Hire</Lbl>
-            {(()=>{
-              const oBl = c.bl.map((b,i) => b + dm.months[i].cum);
-              const oMg = preciseRunway(oBl);
-              return <div style={{ fontSize:36,fontWeight:800,color:oMg>=9?P.g:oMg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{oMg} <span style={{ fontSize:14,fontWeight:500,color:P.tm }}>months</span></div>;
-            })()}
-          </Card>
-          <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
-            <Lbl>Monthly Burn Increase</Lbl>
-            <div style={{ fontSize:28,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(-dm.totalCost)}<span style={{ fontSize:12,fontWeight:500,color:P.tm }}>/mo</span></div>
-          </Card>
-        </div>
-
-        {/* V2.1: Context callout for capacity mode */}
-        {dh.mode === "capacity" && <div style={{ padding:14,borderRadius:8,background:P.aB,border:`1px solid ${P.a}33`,marginBottom:20 }}>
-          <div style={{ fontSize:11,color:P.a,fontWeight:600 }}>Capacity Hire — No New Revenue Assumed</div>
-          <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>This hire keeps up with current clients. Pure cost, no revenue offset. Switch to "Growth" to model new client revenue.</div>
-        </div>}
-
-        <Card style={{ padding:14,marginBottom:20 }}>
-          <Lbl>Monthly Impact (Dev Hire Delta)</Lbl>
-          <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:3,marginTop:8 }}>
-            {win.map((s,i)=>{
-              const net = s.inCurrentYear ? dm.months[s.idx].net : 0;
-              return <div key={i} style={{ textAlign:"center",padding:"6px 2px",borderRadius:4,background:net>0?P.gB:net<0?P.rB:`${P.bd}20`,fontSize:10 }}>
-                <div style={{ color:s.isCurrent?P.b:P.td,fontWeight:s.isCurrent?700:400,fontSize:9 }}>{s.label}</div>
-                <div style={{ fontWeight:700,color:net>0?P.g:net<0?P.r:P.td,fontFamily:"'JetBrains Mono', monospace" }}>{net>0?"+":""}{net?fK(net):"\u2014"}</div>
-              </div>;
-            })}
-          </div>
-        </Card>
-
-        <div style={{ display:"grid",gridTemplateColumns:"280px 1fr",gap:20 }}><div><Lbl>Hiring Parameters</Lbl><Sld label="Developers to Hire" value={dh.cnt} onChange={v=>setDh("cnt",v)} min={1} max={5} suf=" devs"/><Sld label="Avg Cost / Dev" value={dh.avg} onChange={v=>setDh("avg",v)} min={300} max={2000} step={50} pre="$" suf="/mo"/><Sld label="Start Month" value={dh.sm} onChange={v=>setDh("sm",v)} min={0} max={11} suf={` (${MO[dh.sm]})`} color={P.p}/>{dh.mode==="growth"&&<><Sld label="Clients Per Dev Capacity" value={dh.cpc} onChange={v=>setDh("cpc",v)} min={0.5} max={4} step={0.5} suf=" clients"/><Sld label="Revenue Per New Client" value={dh.rpc} onChange={v=>setDh("rpc",v)} min={500} max={5000} step={250} pre="$" suf="/mo"/></>}</div><div><div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:16 }}><KPI label="Monthly Cost" value={`$${dm.totalCost.toLocaleString()}`} color={P.r}/><KPI label="Capacity Added" value={`${dm.capacity} clients`} color={P.b}/>{dm.isGrowth&&<KPI label="Revenue @ Full Ramp" value={`$${dm.addedRev.toLocaleString()}/mo`} color={P.g}/>}{dm.isGrowth&&<KPI label="Breakeven" value={dm.breakeven>=0?MO[dm.breakeven]:"Not in 2026"} color={dm.breakeven>=0?P.g:P.r}/>}<KPI label="Cost/Client Capacity" value={`$${Math.round(dm.totalCost/Math.max(dm.capacity,0.1)).toLocaleString()}/mo`} color={P.t}/></div><Lbl>Cumulative Cash Impact {dh.mode==="capacity"?"(Pure Cost)":"(3-month ramp)"}</Lbl><div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?dm.months[s.idx]:{cum:0};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=dh.sm?1:.3,background:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div><div style={{ overflowX:"auto" }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}><thead><tr>{["Month",dh.mode==="growth"?"Ramp":"","Rev","Cost","Net","Cumul."].filter(Boolean).map(h=><th key={h} style={{ ...th,fontSize:9 }}>{h}</th>)}</tr></thead><tbody>{dm.months.map((m,i)=>(<tr key={i} style={{ opacity:i>=dh.sm?1:.3 }}><td style={{ padding:"4px 8px",textAlign:"right",borderBottom:`1px solid ${P.bd}10` }}>{MO[i]}</td>{dh.mode==="growth"&&<td style={{ padding:"4px 8px",textAlign:"right",color:P.tm,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.ramp?`${Math.round(m.ramp*100)}%`:"\u2014"}</td>}<td style={{ padding:"4px 8px",textAlign:"right",color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.rev)}</td><td style={{ padding:"4px 8px",textAlign:"right",color:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.cost?fmt(-m.cost):"\u2014"}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,color:m.net>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{m.net>=0?"+":""}{fmt(m.net)}</td><td style={{ padding:"4px 8px",textAlign:"right",fontWeight:600,color:m.cum>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(m.cum)}</td></tr>))}</tbody></table></div><Card style={{ padding:12,marginTop:16 }}><Lbl>Impact on Unit Economics</Lbl><div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:11,marginTop:6 }}><div><span style={{ color:P.td }}>Current devs:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{devs.length}</span></div><div><span style={{ color:P.td }}>After hire:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>{devs.length+dh.cnt}</span></div><div><span style={{ color:P.td }}>Clients/dev:</span> <span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{((aCl+(dm.isGrowth?dm.capacity:0))/(devs.length+dh.cnt)).toFixed(1)}</span></div></div></Card></div></div>
-      </>)}
 
       </div>
 
