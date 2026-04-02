@@ -24,6 +24,7 @@ export default function App() {
   const [clSort, setClSort] = useState({ key: "totalValue", dir: "desc" });
   const [scForm, setScForm] = useState(null); // null = closed, object = editing
   const [showRecon, setShowRecon] = useState(false);
+  const [stPicker, setStPicker] = useState(null); // { ci, mi } — which cell has the picker open
 
   const partnerEmail = "mark@mirroradvisors.com";
   const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
@@ -112,7 +113,6 @@ export default function App() {
   // V2.1: Zoho commission totals for summary card
   const zhTotal = d.cl.reduce((s, x) => s + (x.zh || 0) * 12 + (x.zha || 0), 0);
 
-  const [stPicker, setStPicker] = useState(null); // { ci, mi } — which cell has the picker open
   const cyc = (ci, mi) => { setStPicker(stPicker && stPicker.ci===ci && stPicker.mi===mi ? null : { ci, mi }); };
   const setSt = (ci, mi, val) => { if (val === "C") { setStPicker(null); setModal({ ci, mi }); setNt(""); return; } save({ ...d, cl: d.cl.map((x, i) => i !== ci ? x : { ...x, st: x.st.map((v, j) => j === mi ? val : v) }) }); setStPicker(null); };
   const saveCr = () => { if (!modal) return; save({ ...d, cl: d.cl.map((x, i) => i !== modal.ci ? x : { ...x, st: x.st.map((v, j) => j === modal.mi ? "C" : v), nt: { ...x.nt, [modal.mi]: nt || "Credit" } }) }); setModal(null); };
