@@ -77,9 +77,24 @@ export default function App() {
 
   const c = compute(d);
   const cm = new Date().getMonth();
-  // V2.1: Precise decimal runway
-  const mg = (()=>{ let m=0; for(let i=cm;i<12;i++){if(c.bl[i]<=0)break;m++;} return m; })();
+  const countGreen = (bal) => { let m=0; for(let i=cm;i<12;i++){if(bal[i]<=0)break;m++;} return m; };
+
+  // Baseline runway (no scenarios)
+  const blBase = []; const ntBase = MO.map((_,i) => c.rvBase[i] + c.exBase[i]);
+  ntBase.forEach((n,i) => blBase.push(i===0 ? d.openBal+n : blBase[i-1]+n));
+  const mgBase = countGreen(blBase);
+  const fdBase = blBase.findIndex(b => b <= 0);
+
+  // With-scenarios runway (c.bl already includes scenarios)
+  const mg = countGreen(c.bl);
   const fd = c.bl.findIndex(b => b <= 0);
+  const hasActiveScenarios = (d.scenarios||[]).some(s=>s.on);
+
+  // If-late-collected runway: add outstanding as lump sum at current month
+  const outstanding = d.cl.reduce((s, x) => s + x.st.filter(v => v === "L").length * x.rt, 0);
+  const blCollected = blBase.map((b,i) => i >= cm ? b + outstanding : b);
+  const mgCollected = countGreen(blCollected);
+
   const tRv = sm(c.rv);
   // V2.1: Distinct pie chart colors
   const pieD = [
@@ -91,11 +106,6 @@ export default function App() {
   ];
   const devs = c.at.filter(t => t.dp === "Development");
   const aCl = d.cl.filter(x => x.rt > 0).length;
-
-  const outstanding = d.cl.reduce((s, x) => s + x.st.filter(v => v === "L").length * x.rt, 0);
-  const monthlyBurn = Math.abs(sm(c.ex) / 12);
-  const extraRunway = monthlyBurn > 0 ? Math.round(outstanding / monthlyBurn * 4) / 4 : 0;
-  const runwayIfCollected = Math.round((mg + extraRunway) * 4) / 4;
 
   const ov = computeWithOverlays(d, { partnership: showPartnership, devHire: showDevHire });
 
@@ -140,34 +150,41 @@ export default function App() {
 
       {/* ===================== DASHBOARD ===================== */}
       {tab==="dashboard"&&(<>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:20 }}>
-          <div>
-            <Lbl>Cash Runway</Lbl>
+        {/* Runway Cards */}
+        <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:16,marginBottom:20 }}>
+          <Card style={{ padding:20 }}>
+            <Lbl>Baseline Runway</Lbl>
             <div style={{ display:"flex",alignItems:"baseline",gap:10 }}>
-              <span style={{ fontSize:64,fontWeight:800,lineHeight:1,letterSpacing:"-0.04em",color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg}</span>
+              <span style={{ fontSize:64,fontWeight:800,lineHeight:1,letterSpacing:"-0.04em",color:mgBase>=9?P.g:mgBase>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mgBase}</span>
               <span style={{ fontSize:16,color:P.tm }}>months green</span>
             </div>
-            <div style={{ marginTop:6,color:P.tm,fontSize:12 }}>{fd>=0?<>Deficit: <b style={{ color:P.r }}>{MO[fd]}</b></>:<span style={{ color:P.g }}>Green all year</span>}{" · Dec: "}<b style={{ color:c.bl[11]>0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(c.bl[11])}</b></div>
-            {(d.scenarios||[]).filter(s=>s.on).length > 0 && (
-              <div style={{ marginTop:6,fontSize:11,color:P.a }}>
-                Includes {(d.scenarios||[]).filter(s=>s.on).length} scenario{(d.scenarios||[]).filter(s=>s.on).length>1?"s":""}:
-                {" "}{(d.scenarios||[]).filter(s=>s.on).map(s=>`${s.type==="revenue"?"+":"−"}$${s.amount.toLocaleString()} ${s.name}`).join(", ")}
-              </div>
-            )}
-            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:16 }}>
-              <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ display:"flex",alignItems:"baseline",gap:6 }}><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div><button onClick={()=>{const v=prompt("Enter current bank balance:",d.cashNow);if(v!==null&&!isNaN(+v))save({...d,cashNow:Math.round(+v*100)/100});}} style={{ background:"transparent",border:`1px solid ${P.bd}`,borderRadius:4,padding:"2px 6px",color:P.td,fontSize:9,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>edit</button></div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const lastRecon=Object.entries(d.actuals||{}).sort((a,b)=>+b[0]-+a[0])[0];if(lastRecon)return<div style={{ fontSize:9,color:P.g,marginTop:4 }}>Verified: {MO[lastRecon[0]]} {new Date(lastRecon[1].reconDate).toLocaleDateString()}</div>;return null;})()}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
-              <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
-            </div>
-            <Card style={{ padding:12,marginTop:10 }}>
-              <Lbl>Late Invoices</Lbl>
-              <div style={{ display:"flex",alignItems:"baseline",gap:10 }}>
-                <span style={{ fontSize:22,fontWeight:800,color:outstanding>0?P.r:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{outstanding>0?fmt(outstanding):"$0"}</span>
-                {outstanding > 0 && <span style={{ fontSize:11,color:P.tm }}>If collected: <b style={{ color:P.g }}>+{extraRunway} ({runwayIfCollected} months)</b></span>}
-                {outstanding === 0 && <span style={{ fontSize:11,color:P.g }}>All current</span>}
-              </div>
+            <div style={{ marginTop:6,color:P.tm,fontSize:12 }}>{fdBase>=0?<>Deficit: <b style={{ color:P.r }}>{MO[fdBase]}</b></>:<span style={{ color:P.g }}>Green all year</span>}{" · Dec: "}<b style={{ color:blBase[11]>0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(blBase[11])}</b></div>
+          </Card>
+          <div style={{ display:"grid",gridTemplateRows:"1fr 1fr",gap:16 }}>
+            <Card style={{ padding:16,borderLeft:`3px solid ${hasActiveScenarios?P.p:P.bd}` }}>
+              <Lbl>With Scenarios</Lbl>
+              {hasActiveScenarios?<>
+                <div style={{ fontSize:28,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg}<span style={{ fontSize:12,fontWeight:500,color:P.tm }}> months</span></div>
+                <div style={{ fontSize:10,color:P.p,marginTop:4 }}>{(d.scenarios||[]).filter(s=>s.on).length} active scenario{(d.scenarios||[]).filter(s=>s.on).length>1?"s":""}</div>
+              </>:<div style={{ fontSize:14,color:P.td,marginTop:8 }}>No active scenarios</div>}
+            </Card>
+            <Card style={{ padding:16,borderLeft:`3px solid ${outstanding>0?P.a:P.bd}` }}>
+              <Lbl>If Late Collected</Lbl>
+              {outstanding>0?<>
+                <div style={{ fontSize:28,fontWeight:800,color:mgCollected>=9?P.g:mgCollected>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mgCollected}<span style={{ fontSize:12,fontWeight:500,color:P.tm }}> months</span></div>
+                <div style={{ fontSize:10,color:P.a,marginTop:4 }}>{fmt(outstanding)} late</div>
+              </>:<div style={{ fontSize:14,color:P.g,marginTop:8 }}>All current</div>}
             </Card>
           </div>
-          <Card><Lbl>2026 Revenue ({fmt(tRv)})</Lbl><Pie data={pieD}/></Card>
+        </div>
+        {/* Cash & Debt */}
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
+          <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ display:"flex",alignItems:"baseline",gap:6 }}><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div><button onClick={()=>{const v=prompt("Enter current bank balance:",d.cashNow);if(v!==null&&!isNaN(+v))save({...d,cashNow:Math.round(+v*100)/100});}} style={{ background:"transparent",border:`1px solid ${P.bd}`,borderRadius:4,padding:"2px 6px",color:P.td,fontSize:9,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>edit</button></div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const lastRecon=Object.entries(d.actuals||{}).sort((a,b)=>+b[0]-+a[0])[0];if(lastRecon)return<div style={{ fontSize:9,color:P.g,marginTop:4 }}>Verified: {MO[lastRecon[0]]} {new Date(lastRecon[1].reconDate).toLocaleDateString()}</div>;return null;})()}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Forecast differs by {fmt(delta)}</div>:null;})()}</Card>
+          <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
+          <Card style={{ padding:12 }}><Lbl>2026 Revenue</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(tRv)}</div></Card>
+        </div>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:20 }}>
+          <Card><Lbl>Revenue Breakdown</Lbl><Pie data={pieD}/></Card>
         </div>
         <Card style={{ padding:0,overflow:"hidden",marginBottom:20 }}>
           <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)` }}>
