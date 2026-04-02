@@ -78,7 +78,7 @@ export function compute(d) {
   const nt = MO.map((_, i) => rvT[i] + exT[i]);
   const bl = [];
   nt.forEach((n, i) => bl.push(i === 0 ? d.openBal + n : bl[i - 1] + n));
-  return { rv: rvT, rvBase: rv, sb, oc, db, us, ph, ind, ex: exT, exBase: ex, nt, bl, at, scRv, scEx };
+  return { rv: rvT, rvBase: rv, sb, oc, db, us, ph, ind, ex: exT, exBase: ex, nt, bl, at, scRv, scEx, otMerged: otBase };
 }
 
 // Partnership model v3 — service commission (15% of profit) + license commission
