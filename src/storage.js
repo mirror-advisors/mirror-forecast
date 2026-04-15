@@ -6,11 +6,16 @@ function migrateData(parsed, defaultData) {
   if (!parsed.dh) parsed.dh = defaultData.dh;
   if (!parsed.scenarios) parsed.scenarios = [];
   if (!parsed.actuals) parsed.actuals = {};
+  const payMethods = ['Stripe', 'ACH', 'Check', 'Wire', 'CC'];
   parsed.cl = parsed.cl.map(c => {
     const merged = {
       tier: c.rt >= 2000 ? 'im' : c.rt === 500 ? 'zen' : c.rt > 0 ? 'mktg' : 'zho',
       seats: 0, zha: 0, signed: '', subStart: '', payDay: 1, renewal: '', termMo: 0, startMo: 0, endMo: 11, ...c
     };
+    if (!merged.payMethod) {
+      const matched = payMethods.find(m => m.toLowerCase() === String(merged.vi || '').toLowerCase().trim());
+      merged.payMethod = matched || '';
+    }
     if (merged.tier === 'ot') {
       if (!Array.isArray(merged.payments)) {
         if ((merged.otAmt || 0) > 0 && typeof merged.otMonth === 'number') {

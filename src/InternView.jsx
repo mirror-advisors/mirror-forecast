@@ -213,6 +213,7 @@ export default function InternView({ d, save }) {
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Subscription Start</div><input type="date" value={cl.subStart||''} onChange={e=>updateClient(ci,'subStart',e.target.value)} style={inp}/></div>
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Payment Due Day</div><input type="number" value={cl.payDay||''} onChange={e=>updateClient(ci,'payDay',+e.target.value)} placeholder="1" min={1} max={28} style={inp}/></div>
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Renewal Date</div><input type="date" value={cl.renewal||''} onChange={e=>updateClient(ci,'renewal',e.target.value)} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||''} onChange={e=>updateClient(ci,'payMethod',e.target.value)} style={{...inp,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                 <div style={{ gridColumn:'1/-1',display:'flex',justifyContent:'space-between',fontSize:10,color:P.td,marginTop:4 }}>
                   <span>Active: {MO[cl.startMo??0]} – {MO[cl.endMo??11]} · Due day: {cl.payDay||'1st'}</span>
                   <span>YTD: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):'\u2014'}</b></span>
@@ -255,6 +256,7 @@ export default function InternView({ d, save }) {
                 return <Card key={cl.id} style={{ padding:12,border:`1px solid ${allPaid?P.g+'33':anyLate?P.r+'33':P.a+'33'}`,background:allPaid?`${P.gB}40`:anyLate?`${P.rB}40`:'transparent' }}>
                   <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:8 }}>
                     <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:'transparent',border:'none',color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
+                    <select value={cl.payMethod||''} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:11,padding:'3px 6px',fontFamily:"'DM Sans', sans-serif" }}><option value="">Pay method</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select>
                     <div style={{ fontSize:11,color:P.tm,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collected)} / {fmt(total)}</div>
                     <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:'3px 8px',fontSize:10,cursor:'pointer',fontFamily:"'DM Sans', sans-serif" }}>✕</button>
                   </div>
