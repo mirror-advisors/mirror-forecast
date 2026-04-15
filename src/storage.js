@@ -6,10 +6,25 @@ function migrateData(parsed, defaultData) {
   if (!parsed.dh) parsed.dh = defaultData.dh;
   if (!parsed.scenarios) parsed.scenarios = [];
   if (!parsed.actuals) parsed.actuals = {};
-  parsed.cl = parsed.cl.map(c => ({
-    tier: c.rt >= 2000 ? 'im' : c.rt === 500 ? 'zen' : c.rt > 0 ? 'mktg' : 'zho',
-    seats: 0, zha: 0, signed: '', subStart: '', payDay: 1, renewal: '', termMo: 0, startMo: 0, endMo: 11, ...c
-  }));
+  parsed.cl = parsed.cl.map(c => {
+    const merged = {
+      tier: c.rt >= 2000 ? 'im' : c.rt === 500 ? 'zen' : c.rt > 0 ? 'mktg' : 'zho',
+      seats: 0, zha: 0, signed: '', subStart: '', payDay: 1, renewal: '', termMo: 0, startMo: 0, endMo: 11, ...c
+    };
+    if (merged.tier === 'ot') {
+      if (!Array.isArray(merged.payments)) {
+        if ((merged.otAmt || 0) > 0 && typeof merged.otMonth === 'number') {
+          const status = (merged.st && merged.st[merged.otMonth]) || 'U';
+          merged.payments = [{ id: 'p' + Date.now() + Math.random().toString(36).slice(2,6), amount: merged.otAmt, month: merged.otMonth, status }];
+        } else {
+          merged.payments = [];
+        }
+      }
+      delete merged.otAmt;
+      delete merged.otMonth;
+    }
+    return merged;
+  });
   const hasZho = parsed.cl.some(c => c.nm === 'HV Health');
   if (!hasZho) {
     defaultData.cl.filter(c => c.tier === 'zho').forEach(c => {

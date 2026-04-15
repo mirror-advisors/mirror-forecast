@@ -526,42 +526,56 @@ export default function App() {
         <div style={{ marginTop:24 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
             <Lbl>One-Time Projects</Lbl>
-            <button onClick={()=>save({...d,cl:[...d.cl,{id:"ot"+Date.now(),nm:"New Project",rt:0,tr:"",vi:"Stripe",zh:0,zha:0,tier:"ot",seats:0,st:["","","","","","","","","","","",""],nt:{},otAmt:0,otMonth:cm}]})} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Project</button>
+            <button onClick={()=>save({...d,cl:[...d.cl,{id:"ot"+Date.now(),nm:"New Project",rt:0,tr:"",vi:"Stripe",zh:0,zha:0,tier:"ot",seats:0,st:["","","","","","","","","","","",""],nt:{},payments:[]}]})} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Project</button>
           </div>
           {(()=>{
             const otClients = d.cl.map((cl,i)=>({...cl,origIdx:i})).filter(cl=>cl.tier==="ot");
             if(!otClients.length) return <div style={{ fontSize:12,color:P.td,padding:12 }}>No one-time projects yet.</div>;
-            return <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+            const updPay=(ci,pi,patch)=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payments:x.payments.map((p,j)=>j!==pi?p:{...p,...patch})})});
+            const addPay=(ci)=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payments:[...(x.payments||[]),{id:"p"+Date.now(),amount:0,month:cm,status:"U"}]})});
+            const delPay=(ci,pi)=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payments:x.payments.filter((_,j)=>j!==pi)})});
+            const totalAll=otClients.reduce((s,x)=>s+(x.payments||[]).reduce((a,p)=>a+(p.amount||0),0),0);
+            const collectedAll=otClients.reduce((s,x)=>s+(x.payments||[]).filter(p=>p.status==="P").reduce((a,p)=>a+(p.amount||0),0),0);
+            const outstandingAll=totalAll-collectedAll;
+            return <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
               {otClients.map(cl=>{
                 const ci=cl.origIdx;
-                const isPaid=cl.st.some(s=>s==="P");
-                const isLate=cl.st.some(s=>s==="L");
-                const amt=cl.otAmt||cl.rt||0;
-                const mo=cl.otMonth??cl.st.findIndex(s=>s==="P"||s==="U"||s==="L");
-                return <Card key={cl.id} style={{ padding:12,border:`1px solid ${isPaid?P.g+"33":isLate?P.r+"33":P.a+"33"}`,background:isPaid?`${P.gB}40`:isLate?`${P.rB}40`:"transparent" }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                const pays=cl.payments||[];
+                const total=pays.reduce((a,p)=>a+(p.amount||0),0);
+                const collected=pays.filter(p=>p.status==="P").reduce((a,p)=>a+(p.amount||0),0);
+                const allPaid=pays.length>0 && pays.every(p=>p.status==="P");
+                const anyLate=pays.some(p=>p.status==="L");
+                return <Card key={cl.id} style={{ padding:12,border:`1px solid ${allPaid?P.g+"33":anyLate?P.r+"33":P.a+"33"}`,background:allPaid?`${P.gB}40`:anyLate?`${P.rB}40`:"transparent" }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
                     <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
-                    <div style={{ display:"flex",alignItems:"center",gap:4 }}>
-                      <span style={{ fontSize:10,color:P.td }}>$</span>
-                      <input type="number" value={amt} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otAmt:+e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"4px 8px",width:80,textAlign:"right" }}/>
-                    </div>
-                    <select value={mo>=0?mo:cm} onChange={e=>{const m=+e.target.value;save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otMonth:m,st:x.st.map((s,j)=>j===m?(s||"U"):j===mo?"":s)})});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:"4px 8px",fontFamily:"'DM Sans', sans-serif" }}>
-                      {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
-                    </select>
-                    <div style={{ display:"flex",gap:2 }}>
-                      {[["P",P.g,P.gB],["U",P.a,P.aB],["L",P.r,P.rB]].map(([v,co,bg])=>{
-                        const active=mo>=0&&cl.st[mo]===v;
-                        return <div key={v} onClick={()=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,st:x.st.map((s,j)=>j===(mo>=0?mo:cm)?v:s)})})} style={{ width:24,height:24,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:"transparent",color:co,cursor:"pointer",border:`1px solid ${active?co+"44":P.bd}` }}>{v}</div>;
-                      })}
-                    </div>
+                    <div style={{ fontSize:11,color:P.tm,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collected)} / {fmt(total)}</div>
                     <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:"3px 8px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>✕</button>
+                  </div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:5 }}>
+                    {pays.map((p,pi)=>(<div key={p.id||pi} style={{ display:"flex",alignItems:"center",gap:8,padding:"4px 6px",background:P.c2,borderRadius:6 }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:3 }}>
+                        <span style={{ fontSize:10,color:P.td }}>$</span>
+                        <input type="number" value={p.amount} onChange={e=>updPay(ci,pi,{amount:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"3px 6px",width:80,textAlign:"right" }}/>
+                      </div>
+                      <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:"3px 6px",fontFamily:"'DM Sans', sans-serif" }}>
+                        {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                      </select>
+                      <div style={{ display:"flex",gap:2,marginLeft:"auto" }}>
+                        {[["P",P.g,P.gB],["U",P.a,P.aB],["L",P.r,P.rB]].map(([v,co,bg])=>{
+                          const active=p.status===v;
+                          return <div key={v} onClick={()=>updPay(ci,pi,{status:v})} style={{ width:22,height:22,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:"transparent",color:co,cursor:"pointer",border:`1px solid ${active?co+"44":P.bd}` }}>{v}</div>;
+                        })}
+                      </div>
+                      <button onClick={()=>delPay(ci,pi)} style={{ background:"transparent",color:P.td,border:"none",fontSize:12,cursor:"pointer",padding:"2px 6px" }}>×</button>
+                    </div>))}
+                    <button onClick={()=>addPay(ci)} style={{ alignSelf:"flex-start",background:"transparent",color:P.a,border:`1px dashed ${P.a}55`,borderRadius:4,padding:"4px 10px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>+ Add payment</button>
                   </div>
                 </Card>;
               })}
               <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:8 }}>
-                <Card style={{ padding:10 }}><Lbl>Total Value</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(otClients.reduce((s,x)=>s+(x.otAmt||x.rt||0),0))}</div></Card>
-                <Card style={{ padding:10 }}><Lbl>Collected</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(otClients.filter(x=>x.st.some(s=>s==="P")).reduce((s,x)=>s+(x.otAmt||x.rt||0),0))}</div></Card>
-                <Card style={{ padding:10 }}><Lbl>Outstanding</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(otClients.filter(x=>!x.st.some(s=>s==="P")).reduce((s,x)=>s+(x.otAmt||x.rt||0),0))}</div></Card>
+                <Card style={{ padding:10 }}><Lbl>Total Value</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(totalAll)}</div></Card>
+                <Card style={{ padding:10 }}><Lbl>Collected</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collectedAll)}</div></Card>
+                <Card style={{ padding:10 }}><Lbl>Outstanding</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(outstandingAll)}</div></Card>
               </div>
             </div>;
           })()}

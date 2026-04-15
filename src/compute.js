@@ -1,11 +1,14 @@
 import { MO } from "./data.js";
 
 export function compute(d) {
-  // Build ot purely from tier:"ot" clients — ignores rv.ot entirely
+  // Build ot from tier:"ot" clients' payments[] — all scheduled payments
+  // count toward the forecast regardless of paid/unpaid status.
   const otBase = new Array(12).fill(0);
-  (d.cl || []).filter(c => c.tier === "ot" && (c.otAmt || 0) > 0).forEach(c => {
-    const mo = c.otMonth ?? -1;
-    if (mo >= 0 && mo <= 11) otBase[mo] += c.otAmt;
+  (d.cl || []).filter(c => c.tier === "ot").forEach(c => {
+    (c.payments || []).forEach(p => {
+      const mo = p.month ?? -1;
+      if (mo >= 0 && mo <= 11) otBase[mo] += (p.amount || 0);
+    });
   });
   const rvWithOt = { ...d.rv, ot: otBase };
   const rv = MO.map((_, i) => Object.values(rvWithOt).reduce((s, a) => s + (a[i] || 0), 0));
