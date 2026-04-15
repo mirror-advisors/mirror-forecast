@@ -19,7 +19,7 @@ export function Toast({ message, type }) {
   );
 }
 
-export function ClientProgressRow({ cl, onSegmentClick }) {
+export function ClientProgressRow({ cl, onSegmentClick, expanded, onToggleExpand, children }) {
   const smo = cl.startMo ?? 0;
   const emo = cl.endMo ?? 11;
   const rate = cl.rt || 0;
@@ -32,24 +32,36 @@ export function ClientProgressRow({ cl, onSegmentClick }) {
   const maxT = total * rate;
   const segColor = s => s === "P" ? P.g : s === "L" ? P.r : s === "C" ? P.b : P.a;
   return (
-    <div style={{ padding: "14px 4px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: P.tx, fontFamily: "'DM Sans', sans-serif" }}>{cl.nm}</div>
-        <div style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
-          <span style={{ color: late > 0 ? P.r : P.tx, fontWeight: 600 }}>{paid}/{total} paid</span>
-          <span style={{ color: P.td }}>{" \u00b7 "}</span>
-          <span style={{ color: P.g }}>{fmt(collected)}</span>
-          <span style={{ color: P.td }}>{" / "}{fmt(maxT)}</span>
+    <div>
+      <div onClick={onToggleExpand} style={{ padding: "14px 4px", cursor: onToggleExpand ? "pointer" : "default" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: P.tx, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+            {onToggleExpand && (
+              <span style={{ fontSize: 9, color: P.td, display: "inline-block", transition: "transform 0.15s", transform: expanded ? "rotate(90deg)" : "none" }}>{"\u25b6"}</span>
+            )}
+            {cl.nm}
+          </div>
+          <div style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
+            <span style={{ color: late > 0 ? P.r : P.tx, fontWeight: 600 }}>{paid}/{total} paid</span>
+            <span style={{ color: P.td }}>{" \u00b7 "}</span>
+            <span style={{ color: P.g }}>{fmt(collected)}</span>
+            <span style={{ color: P.td }}>{" / "}{fmt(maxT)}</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: P.c2 }}>
+          {termSegs.map((seg, i) => (
+            <div key={i}
+              onClick={(e) => { if (onSegmentClick) { e.stopPropagation(); onSegmentClick(seg.i); } }}
+              title={`${MO[seg.i]}: ${seg.s}`}
+              style={{ flex: 1, background: segColor(seg.s), cursor: onSegmentClick ? "pointer" : "default" }} />
+          ))}
         </div>
       </div>
-      <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: P.c2 }}>
-        {termSegs.map((seg, i) => (
-          <div key={i}
-            onClick={() => onSegmentClick && onSegmentClick(seg.i)}
-            title={`${MO[seg.i]}: ${seg.s}`}
-            style={{ flex: 1, background: segColor(seg.s), cursor: onSegmentClick ? "pointer" : "default" }} />
-        ))}
-      </div>
+      {expanded && (
+        <div style={{ padding: "12px 14px 16px", background: P.c2, borderRadius: 8, border: `1px solid ${P.bd}`, marginTop: 4, marginBottom: 8 }} onClick={(e) => e.stopPropagation()}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -58,19 +70,23 @@ export function SaveBar({ dirty, saving, onSave }) {
   if (!dirty && !saving) return null;
   return (
     <div style={{
-      position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
-      zIndex: 1000, display: "flex", alignItems: "center", gap: 12,
-      padding: "10px 16px", borderRadius: 10,
-      background: P.c1, border: `1px solid ${P.a}66`,
-      boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      zIndex: 1000,
+      padding: "12px 20px",
+      background: P.c1,
+      borderTop: `2px solid ${P.a}`,
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+      boxShadow: "0 -6px 24px rgba(0,0,0,0.6)",
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: P.a }} />
-      <span style={{ fontSize: 12, color: P.tx, fontWeight: 600 }}>Unsaved changes</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: P.a }} />
+        <span style={{ fontSize: 13, color: P.tx, fontWeight: 600 }}>Unsaved changes</span>
+      </div>
       <button onClick={onSave} disabled={saving} style={{
         background: saving ? P.c2 : P.g, color: saving ? P.td : P.bg,
-        border: "none", borderRadius: 6, padding: "7px 16px",
-        fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer",
+        border: "none", borderRadius: 6, padding: "9px 22px",
+        fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer",
         fontFamily: "'DM Sans', sans-serif",
       }}>{saving ? "Saving\u2026" : "Save (\u2318S)"}</button>
     </div>

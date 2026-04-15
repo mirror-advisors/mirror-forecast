@@ -99,6 +99,7 @@ function getGreeting() {
 export default function InternView({ d, save }) {
   const { signOut, profile } = useAuth();
   const [expanded, setExpanded] = useState(null);
+  const [stPicker, setStPicker] = useState(null);
   const payingClients = d.cl.filter(cl => cl.rt > 0);
   const currentMonth = new Date().getMonth();
   const win = useMemo(() => getRollingWindow(), []);
@@ -115,6 +116,15 @@ export default function InternView({ d, save }) {
     const nx = { 'U': 'P', 'P': 'L', 'L': 'U', '': 'P' };
     const s = cl.st[mi] || 'U';
     save({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : { ...x, st: x.st.map((v, j) => j === mi ? (nx[s] || 'P') : v) }) });
+  };
+
+  const togglePicker = (ci, mi) => {
+    setStPicker(stPicker && stPicker.ci === ci && stPicker.mi === mi ? null : { ci, mi });
+  };
+  const setSt = (ci, mi, val) => {
+    const realIdx = d.cl.indexOf(payingClients[ci]);
+    save({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : { ...x, st: x.st.map((v, j) => j === mi ? val : v) }) });
+    setStPicker(null);
   };
 
   const updateClient = (ci, field, value) => {
@@ -188,9 +198,39 @@ export default function InternView({ d, save }) {
 
         <Lbl>Payment Tracker</Lbl>
         <div>
-          {payingClients.map((cl,ci)=>(
-            <ClientProgressRow key={cl.id} cl={cl} onSegmentClick={(mi)=>inTerm(cl,mi)&&cyc(ci,mi)}/>
-          ))}
+          {payingClients.map((cl,ci)=>{
+            const isExp = expanded === ci;
+            const ytd = cl.st.filter(s=>s==='P').length*cl.rt;
+            return(<ClientProgressRow key={cl.id} cl={cl} onSegmentClick={(mi)=>inTerm(cl,mi)&&cyc(ci,mi)} expanded={isExp} onToggleExpand={()=>setExpanded(isExp?null:ci)}>
+              <div style={{ fontSize:10,color:P.td,textTransform:'uppercase',marginBottom:8,letterSpacing:'0.05em',fontWeight:600 }}>Monthly Status (click a cell for P/U/L/C picker)</div>
+              <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:16 }}>
+                {win.map((slot,wi)=>{
+                  const mi = slot.idx;
+                  const active = slot.inCurrentYear && inTerm(cl, mi);
+                  const s = active ? (cl.st[mi]||'U') : '';
+                  const isPicker = stPicker && stPicker.ci===ci && stPicker.mi===mi;
+                  return(<div key={wi} style={{ position:'relative',textAlign:'center' }}>
+                    <div style={{ fontSize:9,color:slot.isCurrent?P.b:P.td,marginBottom:3,fontWeight:slot.isCurrent?700:500 }}>{slot.label}</div>
+                    {active && isPicker && (<div style={{ position:'absolute',top:32,left:'50%',transform:'translateX(-50%)',zIndex:20,display:'flex',gap:2,background:P.c1,border:`1px solid ${P.bd}`,borderRadius:6,padding:3,boxShadow:'0 4px 12px rgba(0,0,0,.5)' }}>{[['P',P.g,P.gB],['U',P.a,P.aB],['L',P.r,P.rB],['C',P.b,`${P.b}15`]].map(([v,co,bg])=><div key={v} onClick={(e)=>{e.stopPropagation();setSt(ci,mi,v);}} style={{ width:24,height:24,borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:s===v?bg:'transparent',color:co,cursor:'pointer',border:`1px solid ${s===v?co+'44':'transparent'}` }}>{v}</div>)}</div>)}
+                    <div onClick={()=>active&&togglePicker(ci,mi)} style={sSty(s,active)}>{active?(s||'U'):''}</div>
+                  </div>);
+                })}
+              </div>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Monthly Rate</div><input type="number" value={cl.rt} onChange={e=>updateClient(ci,'rt',+e.target.value)} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Term (months)</div><input type="number" value={cl.termMo||''} onChange={e=>updateClient(ci,'termMo',+e.target.value)} placeholder="12" style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Signing Date</div><input type="date" value={cl.signed||''} onChange={e=>updateClient(ci,'signed',e.target.value)} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Subscription Start</div><input type="date" value={cl.subStart||''} onChange={e=>updateClient(ci,'subStart',e.target.value)} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Payment Due Day</div><input type="number" value={cl.payDay||''} onChange={e=>updateClient(ci,'payDay',+e.target.value)} placeholder="1" min={1} max={28} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Renewal Date</div><input type="date" value={cl.renewal||''} onChange={e=>updateClient(ci,'renewal',e.target.value)} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||''} onChange={e=>updateClient(ci,'payMethod',e.target.value)} style={{...inp,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                <div style={{ gridColumn:'1/-1',display:'flex',justifyContent:'space-between',fontSize:10,color:P.td,marginTop:4 }}>
+                  <span>Active: {MO[cl.startMo??0]} – {MO[cl.endMo??11]} · Due day: {cl.payDay||'1st'}</span>
+                  <span>YTD: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):'\u2014'}</b></span>
+                </div>
+              </div>
+            </ClientProgressRow>);
+          })}
         </div>
 
         {/* Summary Cards */}
