@@ -19,6 +19,82 @@ export function Toast({ message, type }) {
   );
 }
 
+export const PROG_COLS = "minmax(160px,1.4fr) 100px minmax(260px,3fr) 140px";
+
+export function ProgressTickStrip({ cm }) {
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:PROG_COLS, gap:10, padding:"6px 10px 2px", fontSize:9, color:P.td, textTransform:"uppercase", letterSpacing:"0.05em", fontFamily:"'DM Sans', sans-serif", fontWeight:600 }}>
+      <div>Client</div>
+      <div>Rate / Term</div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(12,1fr)", gap:1 }}>
+        {MO.map((m,i)=>(
+          <div key={i} style={{ textAlign:"center", color:i===cm?P.b:P.td, fontWeight:i===cm?700:500 }}>{m[0]}</div>
+        ))}
+      </div>
+      <div style={{ textAlign:"right" }}>Paid / Total</div>
+    </div>
+  );
+}
+
+export function ClientProgressRow({ cl, cm, expanded, onToggleExpand, onSegmentClick, children }) {
+  const smo = cl.startMo ?? 0;
+  const emo = cl.endMo ?? 11;
+  const segs = [];
+  for (let i = 0; i < 12; i++) {
+    const inTerm = i >= smo && i <= emo;
+    segs.push({ i, inTerm, s: inTerm ? (cl.st[i] || "U") : "" });
+  }
+  const termSegs = segs.filter(x => x.inTerm);
+  const paid = termSegs.filter(x => x.s === "P").length;
+  const late = termSegs.filter(x => x.s === "L").length;
+  const total = termSegs.length;
+  const rate = cl.rt || 0;
+  const collected = paid * rate;
+  const maxT = total * rate;
+  const segColor = s => s === "P" ? P.g : s === "L" ? P.r : s === "C" ? P.b : s === "U" ? P.a : `${P.bd}60`;
+  const termLabel = cl.tr || (cl.termMo ? `${cl.termMo}mo` : "\u2014");
+  return (
+    <div style={{ borderBottom: `1px solid ${P.bd}30` }}>
+      <div style={{ display: "grid", gridTemplateColumns: PROG_COLS, gap: 10, padding: "10px 10px", alignItems: "center" }}>
+        <div onClick={onToggleExpand} style={{ cursor: "pointer", fontWeight: 600, display: "flex", gap: 6, alignItems: "center", color: P.tx, fontFamily: "'DM Sans', sans-serif" }}>
+          <span style={{ fontSize: 9, color: P.td, transform: expanded ? "rotate(90deg)" : "none", display: "inline-block", transition: "transform 0.15s" }}>{"\u25b6"}</span>
+          {cl.nm}
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: P.g, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(rate)}/mo</div>
+          <div style={{ fontSize: 10, color: P.td, fontFamily: "'DM Sans', sans-serif" }}>{termLabel}</div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(12,1fr)", gap: 1, height: 22, alignItems: "stretch" }}>
+          {segs.map((m, i) => (
+            <div key={i}
+              onClick={() => m.inTerm && onSegmentClick && onSegmentClick(m.i)}
+              title={`${MO[m.i]}${m.inTerm ? `: ${m.s || "U"}` : " (not in term)"}`}
+              style={{
+                background: segColor(m.s),
+                cursor: m.inTerm ? "pointer" : "default",
+                borderRadius: 2,
+                boxShadow: i === cm ? `inset 0 0 0 1.5px ${P.tx}` : "none",
+              }} />
+          ))}
+        </div>
+        <div style={{ textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>
+          <div style={{ color: late > 0 ? P.r : P.tx, fontWeight: 600 }}>
+            {paid}/{total} paid{late > 0 ? ` \u00b7 ${late}L` : ""}
+          </div>
+          <div style={{ color: P.g, fontSize: 10, marginTop: 2 }}>
+            {fmt(collected)} / {fmt(maxT)}
+          </div>
+        </div>
+      </div>
+      {expanded && (
+        <div style={{ padding: "14px 14px 16px", background: P.c2, borderTop: `1px solid ${P.bd}` }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SaveBar({ dirty, saving, onSave }) {
   if (!dirty && !saving) return null;
   return (
