@@ -70,24 +70,38 @@ export function SaveBar({ dirty, saving, onSave }) {
   if (!dirty && !saving) return null;
   return (
     <div style={{
-      position: "fixed", bottom: 0, left: 0, right: 0,
-      zIndex: 1000,
-      padding: "12px 20px",
-      background: P.c1,
+      position: "sticky",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      width: "100%",
+      zIndex: 50,
+      background: "#0a0b0f",
       borderTop: `2px solid ${P.a}`,
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-      boxShadow: "0 -6px 24px rgba(0,0,0,0.6)",
+      padding: "14px 24px",
+      boxSizing: "border-box",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      boxShadow: "0 -8px 28px rgba(0,0,0,0.7)",
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: P.a }} />
-        <span style={{ fontSize: 13, color: P.tx, fontWeight: 600 }}>Unsaved changes</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: P.a, boxShadow: `0 0 8px ${P.a}` }} />
+        <span style={{ fontSize: 14, color: P.tx, fontWeight: 700, letterSpacing: "0.01em" }}>Unsaved changes</span>
       </div>
       <button onClick={onSave} disabled={saving} style={{
-        background: saving ? P.c2 : P.g, color: saving ? P.td : P.bg,
-        border: "none", borderRadius: 6, padding: "9px 22px",
-        fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer",
+        background: saving ? P.c2 : P.g,
+        color: saving ? P.td : P.bg,
+        border: "none",
+        borderRadius: 8,
+        padding: "10px 26px",
+        fontSize: 14,
+        fontWeight: 800,
+        cursor: saving ? "default" : "pointer",
         fontFamily: "'DM Sans', sans-serif",
+        letterSpacing: "0.02em",
       }}>{saving ? "Saving\u2026" : "Save (\u2318S)"}</button>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { MO, P, fmt, getRollingWindow } from './data.js';
-import { Card, Lbl, ClientProgressRow } from './components.jsx';
+import { Card, Lbl, ClientProgressRow, SaveBar } from './components.jsx';
 
 const QUOTES = [
   { q: "The secret of getting ahead is getting started.", a: "Mark Twain" },
@@ -96,7 +96,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-export default function InternView({ d, save }) {
+export default function InternView({ d, save, dirty, saving, persist }) {
   const { signOut, profile } = useAuth();
   const [expanded, setExpanded] = useState(null);
   const [stPicker, setStPicker] = useState(null);
@@ -300,6 +300,7 @@ export default function InternView({ d, save }) {
           })()}
         </div>
       </div>
+      <SaveBar dirty={dirty} saving={saving} onSave={persist} />
     </div>
   );
 }

@@ -117,8 +117,7 @@ export default function App() {
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
   if (!isAdmin && !isPartner) return (
     <>
-      <InternView d={d} save={save} />
-      <SaveBar dirty={dirty} saving={saving} onSave={persist} />
+      <InternView d={d} save={save} dirty={dirty} saving={saving} persist={persist} />
       {toast && <Toast message={toast.msg} type={toast.type} />}
     </>
   );
