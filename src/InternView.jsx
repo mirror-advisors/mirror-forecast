@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { MO, P, fmt, getRollingWindow } from './data.js';
-import { Card, Lbl, ProgressTickStrip, ClientProgressRow } from './components.jsx';
+import { Card, Lbl, ClientProgressRow } from './components.jsx';
 
 const QUOTES = [
   { q: "The secret of getting ahead is getting started.", a: "Mark Twain" },
@@ -179,48 +179,18 @@ export default function InternView({ d, save }) {
         </div>
 
         {/* Legend */}
-        <div style={{ fontSize:11,color:P.tm,marginBottom:12,padding:'10px 14px',background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,display:'flex',gap:16,alignItems:'center' }}>
-          <span>Progress bar — click segment to cycle U → P → L → U:</span>
-          <span><span style={{ color:P.g,fontWeight:700 }}>■</span> paid</span>
-          <span><span style={{ color:P.a,fontWeight:700 }}>■</span> unpaid</span>
-          <span><span style={{ color:P.r,fontWeight:700 }}>■</span> late</span>
-          <span style={{ marginLeft:'auto',color:P.td }}>▶ Click name to expand details</span>
+        <div style={{ fontSize:11,color:P.tm,marginBottom:12,display:'flex',gap:16,alignItems:'center' }}>
+          <span><span style={{ color:P.g }}>■</span> paid</span>
+          <span><span style={{ color:P.a }}>■</span> unpaid</span>
+          <span><span style={{ color:P.r }}>■</span> late</span>
+          <span style={{ color:P.td }}>Click a segment to cycle U → P → L</span>
         </div>
 
         <Lbl>Payment Tracker</Lbl>
         <div>
-          <ProgressTickStrip cm={currentMonth}/>
-          {payingClients.map((cl,ci)=>{
-            const ytd=cl.st.filter(s=>s==='P').length*cl.rt;
-            const isExp=expanded===ci;
-            return(<ClientProgressRow key={cl.id} cl={cl} cm={currentMonth} expanded={isExp} onToggleExpand={()=>setExpanded(isExp?null:ci)} onSegmentClick={(mi)=>inTerm(cl,mi)&&cyc(ci,mi)}>
-              <div style={{ fontSize:10,color:P.td,textTransform:'uppercase',marginBottom:8,letterSpacing:'0.05em',fontWeight:600 }}>Monthly status (click to cycle U → P → L)</div>
-              <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:16 }}>
-                {win.map((slot,wi)=>{
-                  const mi = slot.idx;
-                  const active = slot.inCurrentYear && inTerm(cl, mi);
-                  const s = active ? (cl.st[mi]||'U') : '';
-                  return(<div key={wi} style={{ textAlign:'center' }}>
-                    <div style={{ fontSize:9,color:slot.isCurrent?P.b:P.td,marginBottom:3,fontWeight:slot.isCurrent?700:500 }}>{slot.label}</div>
-                    <div onClick={()=>active&&cyc(ci,mi)} style={sSty(s,active)}>{active?(s||'U'):''}</div>
-                  </div>);
-                })}
-              </div>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Monthly Rate</div><input type="number" value={cl.rt} onChange={e=>updateClient(ci,'rt',+e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Term (months)</div><input type="number" value={cl.termMo||''} onChange={e=>updateClient(ci,'termMo',+e.target.value)} placeholder="12" style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Signing Date</div><input type="date" value={cl.signed||''} onChange={e=>updateClient(ci,'signed',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Subscription Start</div><input type="date" value={cl.subStart||''} onChange={e=>updateClient(ci,'subStart',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Payment Due Day</div><input type="number" value={cl.payDay||''} onChange={e=>updateClient(ci,'payDay',+e.target.value)} placeholder="1" min={1} max={28} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Renewal Date</div><input type="date" value={cl.renewal||''} onChange={e=>updateClient(ci,'renewal',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||''} onChange={e=>updateClient(ci,'payMethod',e.target.value)} style={{...inp,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
-                <div style={{ gridColumn:'1/-1',display:'flex',justifyContent:'space-between',fontSize:10,color:P.td,marginTop:4 }}>
-                  <span>Active: {MO[cl.startMo??0]} – {MO[cl.endMo??11]} · Due day: {cl.payDay||'1st'}</span>
-                  <span>YTD: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):'\u2014'}</b></span>
-                </div>
-              </div>
-            </ClientProgressRow>);
-          })}
+          {payingClients.map((cl,ci)=>(
+            <ClientProgressRow key={cl.id} cl={cl} onSegmentClick={(mi)=>inTerm(cl,mi)&&cyc(ci,mi)}/>
+          ))}
         </div>
 
         {/* Summary Cards */}
