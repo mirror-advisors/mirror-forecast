@@ -3,7 +3,7 @@ import { MO, P, DC, FL, TIERS, PIE_COLORS, D0, fmt, fK, sm, preciseRunway, getRo
 /* v2.2 changes: 14-month window, outstanding+runway KPI, commission tab, Zoho splits, Option One fix, Jeanna endMo */
 import { loadData, saveData } from "./storage.js";
 import { compute, computePartnership, computeDevHire, computeWithOverlays } from "./compute.js";
-import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle, Toast, SaveBar, ClientProgressRow } from "./components.jsx";
+import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle, Toast, SaveBar, ClientProgressRow, EditableNumber } from "./components.jsx";
 import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import InternView from "./InternView.jsx";
@@ -464,12 +464,12 @@ export default function App() {
                   </div>);})}
                 </div>
                 <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8 }}>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Monthly Rate</div><input type="number" value={cl.rt} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,rt:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
+                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Monthly Rate</div><EditableNumber value={cl.rt} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,rt:v})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
                   <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Term</div><input value={cl.tr||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tr:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
                   <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}><option value="">—</option>{["Stripe","ACH","Check","Wire","CC"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                   <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Tier</div><select value={cl.tier} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tier:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}>{Object.entries(TIERS).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Monthly Comm</div><input type="number" value={cl.zh||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zh:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Annual Comm</div><input type="number" value={cl.zha||0} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zha:+e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
+                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Monthly Comm</div><EditableNumber value={cl.zh||0} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zh:v})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
+                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Annual Comm</div><EditableNumber value={cl.zha||0} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zha:v})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
                 </div>
                 <div style={{ display:"flex",justifyContent:"space-between",marginTop:12,alignItems:"center" }}>
                   <div style={{ fontSize:10,color:P.td }}>YTD collected: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</b></div>
@@ -552,7 +552,7 @@ export default function App() {
                     {pays.map((p,pi)=>(<div key={p.id||pi} style={{ display:"flex",alignItems:"center",gap:8,padding:"4px 6px",background:P.c2,borderRadius:6 }}>
                       <div style={{ display:"flex",alignItems:"center",gap:3 }}>
                         <span style={{ fontSize:10,color:P.td }}>$</span>
-                        <input type="number" value={p.amount} onChange={e=>updPay(ci,pi,{amount:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"3px 6px",width:80,textAlign:"right" }}/>
+                        <EditableNumber value={p.amount} onCommit={v=>updPay(ci,pi,{amount:v})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"3px 6px",width:80,textAlign:"right" }}/>
                       </div>
                       <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:"3px 6px",fontFamily:"'DM Sans', sans-serif" }}>
                         {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}

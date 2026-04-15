@@ -1,5 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { P, MO, fmt, sm } from "./data.js";
+
+// Number input that holds its value in local state while the user is typing
+// and only commits to the parent on blur / Enter. Prevents intermediate
+// values (empty string, 0, NaN) from triggering parent re-renders that
+// could filter the row out mid-edit.
+export function EditableNumber({ value, onCommit, style, placeholder, min, max }) {
+  const [local, setLocal] = useState(value == null ? "" : String(value));
+  const [focused, setFocused] = useState(false);
+  useEffect(() => { if (!focused) setLocal(value == null ? "" : String(value)); }, [value, focused]);
+  const commit = () => {
+    const raw = local.trim();
+    if (raw === "") { if (0 !== value) onCommit(0); return; }
+    const n = +raw;
+    if (isNaN(n)) { setLocal(value == null ? "" : String(value)); return; }
+    if (n !== value) onCommit(n);
+  };
+  return (
+    <input
+      type="number"
+      value={local}
+      placeholder={placeholder}
+      min={min}
+      max={max}
+      onChange={(e) => setLocal(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => { setFocused(false); commit(); }}
+      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+      style={style}
+    />
+  );
+}
 
 export function Toast({ message, type }) {
   return (
@@ -70,12 +101,11 @@ export function SaveBar({ dirty, saving, onSave }) {
   if (!dirty && !saving) return null;
   return (
     <div style={{
-      position: "sticky",
+      position: "fixed",
       bottom: 0,
       left: 0,
       right: 0,
-      width: "100%",
-      zIndex: 50,
+      zIndex: 9999,
       background: "#0a0b0f",
       borderTop: `2px solid ${P.a}`,
       padding: "14px 24px",

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { MO, P, fmt, getRollingWindow } from './data.js';
-import { Card, Lbl, ClientProgressRow, SaveBar } from './components.jsx';
+import { Card, Lbl, ClientProgressRow, SaveBar, EditableNumber } from './components.jsx';
 
 const QUOTES = [
   { q: "The secret of getting ahead is getting started.", a: "Mark Twain" },
@@ -100,7 +100,10 @@ export default function InternView({ d, save, dirty, saving, persist }) {
   const { signOut, profile } = useAuth();
   const [expanded, setExpanded] = useState(null);
   const [stPicker, setStPicker] = useState(null);
-  const payingClients = d.cl.filter(cl => cl.rt > 0);
+  // Filter by tier, NOT rt — otherwise a client vanishes mid-edit when
+  // rate briefly drops to 0. Service tiers only; exclude OT projects and
+  // Zoho-commission-only clients.
+  const payingClients = d.cl.filter(cl => cl.tier !== 'ot' && cl.tier !== 'zho');
   const currentMonth = new Date().getMonth();
   const win = useMemo(() => getRollingWindow(), []);
   const quote = useMemo(() => getDailyQuote(), []);
@@ -217,11 +220,11 @@ export default function InternView({ d, save, dirty, saving, persist }) {
                 })}
               </div>
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Monthly Rate</div><input type="number" value={cl.rt} onChange={e=>updateClient(ci,'rt',+e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Term (months)</div><input type="number" value={cl.termMo||''} onChange={e=>updateClient(ci,'termMo',+e.target.value)} placeholder="12" style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Monthly Rate</div><EditableNumber value={cl.rt} onCommit={v=>updateClient(ci,'rt',v)} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Term (months)</div><EditableNumber value={cl.termMo||0} onCommit={v=>updateClient(ci,'termMo',v)} placeholder="12" style={inp}/></div>
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Signing Date</div><input type="date" value={cl.signed||''} onChange={e=>updateClient(ci,'signed',e.target.value)} style={inp}/></div>
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Subscription Start</div><input type="date" value={cl.subStart||''} onChange={e=>updateClient(ci,'subStart',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Payment Due Day</div><input type="number" value={cl.payDay||''} onChange={e=>updateClient(ci,'payDay',+e.target.value)} placeholder="1" min={1} max={28} style={inp}/></div>
+                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Payment Due Day</div><EditableNumber value={cl.payDay||0} onCommit={v=>updateClient(ci,'payDay',v)} placeholder="1" min={1} max={28} style={inp}/></div>
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Renewal Date</div><input type="date" value={cl.renewal||''} onChange={e=>updateClient(ci,'renewal',e.target.value)} style={inp}/></div>
                 <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||''} onChange={e=>updateClient(ci,'payMethod',e.target.value)} style={{...inp,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                 <div style={{ gridColumn:'1/-1',display:'flex',justifyContent:'space-between',fontSize:10,color:P.td,marginTop:4 }}>
@@ -274,7 +277,7 @@ export default function InternView({ d, save, dirty, saving, persist }) {
                     {pays.map((p,pi)=>(<div key={p.id||pi} style={{ display:'flex',alignItems:'center',gap:8,padding:'4px 6px',background:P.c2,borderRadius:6 }}>
                       <div style={{ display:'flex',alignItems:'center',gap:3 }}>
                         <span style={{ fontSize:10,color:P.td }}>$</span>
-                        <input type="number" value={p.amount} onChange={e=>updPay(ci,pi,{amount:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:'3px 6px',width:80,textAlign:'right' }}/>
+                        <EditableNumber value={p.amount} onCommit={v=>updPay(ci,pi,{amount:v})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:'3px 6px',width:80,textAlign:'right' }}/>
                       </div>
                       <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:'3px 6px',fontFamily:"'DM Sans', sans-serif" }}>
                         {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
