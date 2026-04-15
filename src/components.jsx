@@ -1,6 +1,47 @@
 import { useState } from "react";
 import { P, MO, fmt, sm } from "./data.js";
 
+export function Toast({ message, type }) {
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, right: 24, zIndex: 1100,
+      padding: "10px 18px", borderRadius: 8,
+      background: type === "ok" ? P.gB : P.rB,
+      border: `1px solid ${type === "ok" ? P.gM : P.rM}`,
+      color: type === "ok" ? P.g : P.r,
+      fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+      display: "flex", alignItems: "center", gap: 8,
+      boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+    }}>
+      <span>{type === "ok" ? "\u2713" : "\u2715"}</span>
+      {message}
+    </div>
+  );
+}
+
+export function SaveBar({ dirty, saving, onSave }) {
+  if (!dirty && !saving) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+      zIndex: 1000, display: "flex", alignItems: "center", gap: 12,
+      padding: "10px 16px", borderRadius: 10,
+      background: P.c1, border: `1px solid ${P.a}66`,
+      boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: P.a }} />
+      <span style={{ fontSize: 12, color: P.tx, fontWeight: 600 }}>Unsaved changes</span>
+      <button onClick={onSave} disabled={saving} style={{
+        background: saving ? P.c2 : P.g, color: saving ? P.td : P.bg,
+        border: "none", borderRadius: 6, padding: "7px 16px",
+        fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer",
+        fontFamily: "'DM Sans', sans-serif",
+      }}>{saving ? "Saving\u2026" : "Save (\u2318S)"}</button>
+    </div>
+  );
+}
+
 export const Card = ({ children, style: s }) => (
   <div style={{ background: P.c1, borderRadius: 10, padding: 20, border: `1px solid ${P.bd}`, ...s }}>{children}</div>
 );

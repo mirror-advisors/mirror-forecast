@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { MO, P, fmt, getRollingWindow } from './data.js';
 import { Card, Lbl } from './components.jsx';
@@ -96,49 +96,13 @@ function getGreeting() {
   return 'Good evening';
 }
 
-// Toast notification component
-function Toast({ message, type }) {
-  return (
-    <div style={{
-      position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
-      padding: '10px 18px', borderRadius: 8,
-      background: type === 'ok' ? P.gB : P.rB,
-      border: `1px solid ${type === 'ok' ? P.gM : P.rM}`,
-      color: type === 'ok' ? P.g : P.r,
-      fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
-      display: 'flex', alignItems: 'center', gap: 8,
-      boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-      animation: 'fadeInUp 0.2s ease'
-    }}>
-      <span>{type === 'ok' ? '✓' : '✕'}</span>
-      {message}
-    </div>
-  );
-}
-
 export default function InternView({ d, save }) {
   const { signOut, profile } = useAuth();
   const [expanded, setExpanded] = useState(null);
-  const [toast, setToast] = useState(null);
   const payingClients = d.cl.filter(cl => cl.rt > 0);
   const currentMonth = new Date().getMonth();
   const win = useMemo(() => getRollingWindow(), []);
   const quote = useMemo(() => getDailyQuote(), []);
-
-  const showToast = useCallback((message, type = 'ok') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2500);
-  }, []);
-
-  // Wrap save to show confirmation
-  const saveWithFeedback = useCallback(async (newData) => {
-    const result = await save(newData);
-    if (result && result.ok === false) {
-      showToast('Save failed — check your connection', 'err');
-    } else {
-      showToast('Saved ✓', 'ok');
-    }
-  }, [save, showToast]);
 
   const inTerm = (cl, mi) => { const sm = cl.startMo ?? 0; const em = cl.endMo ?? 11; return mi >= sm && mi <= em; };
   const late = payingClients.flatMap(cl => cl.st.map((s, mi) => s === 'L' ? { client: cl, month: mi } : null).filter(Boolean));
@@ -150,7 +114,7 @@ export default function InternView({ d, save }) {
     if (!inTerm(cl, mi)) return;
     const nx = { 'U': 'P', 'P': 'L', 'L': 'U', '': 'P' };
     const s = cl.st[mi] || 'U';
-    saveWithFeedback({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : { ...x, st: x.st.map((v, j) => j === mi ? (nx[s] || 'P') : v) }) });
+    save({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : { ...x, st: x.st.map((v, j) => j === mi ? (nx[s] || 'P') : v) }) });
   };
 
   const updateClient = (ci, field, value) => {
@@ -168,7 +132,7 @@ export default function InternView({ d, save }) {
       const sm = updated.startMo ?? 0; const em = updated.endMo ?? 11;
       updated.st = updated.st.map((s, mi) => { if (mi >= sm && mi <= em && (!s || s === '')) return 'U'; if (mi < sm || mi > em) return ''; return s; });
     }
-    saveWithFeedback({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : updated) });
+    save({ ...d, cl: d.cl.map((x, i) => i !== realIdx ? x : updated) });
   };
 
   const sSty = (s, active) => ({ display:'inline-flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:6,cursor:active?'pointer':'default',userSelect:'none',fontWeight:700,fontSize:11,fontFamily:"'JetBrains Mono', monospace",background:!active?`${P.bd}10`:s==='P'?P.gB:s==='L'?P.rB:s==='U'?P.aB:`${P.bd}25`,color:!active?`${P.td}40`:s==='P'?P.g:s==='L'?P.r:s==='U'?P.a:P.td,opacity:active?1:0.3 });
@@ -282,7 +246,7 @@ export default function InternView({ d, save }) {
         <div style={{ marginTop:24 }}>
           <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
             <Lbl>One-Time Projects</Lbl>
-            <button onClick={()=>saveWithFeedback({...d,cl:[...d.cl,{id:'ot'+Date.now(),nm:'New Project',rt:0,tr:'',vi:'Stripe',zh:0,zha:0,tier:'ot',seats:0,st:['','','','','','','','','','','',''],nt:{},otAmt:0,otMonth:currentMonth}]})} style={{ background:P.a,color:P.bg,border:'none',borderRadius:6,padding:'6px 12px',fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:'pointer' }}>+ Add Project</button>
+            <button onClick={()=>save({...d,cl:[...d.cl,{id:'ot'+Date.now(),nm:'New Project',rt:0,tr:'',vi:'Stripe',zh:0,zha:0,tier:'ot',seats:0,st:['','','','','','','','','','','',''],nt:{},otAmt:0,otMonth:currentMonth}]})} style={{ background:P.a,color:P.bg,border:'none',borderRadius:6,padding:'6px 12px',fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:'pointer' }}>+ Add Project</button>
           </div>
           {(()=>{
             const otClients = d.cl.map((cl,i)=>({...cl,origIdx:i})).filter(cl=>cl.tier==='ot');
@@ -296,21 +260,21 @@ export default function InternView({ d, save }) {
                 const mo=cl.otMonth??cl.st.findIndex(s=>s==='P'||s==='U'||s==='L');
                 return <Card key={cl.id} style={{ padding:12,border:`1px solid ${isPaid?P.g+'33':isLate?P.r+'33':P.a+'33'}`,background:isPaid?`${P.gB}40`:isLate?`${P.rB}40`:'transparent' }}>
                   <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-                    <input value={cl.nm} onChange={e=>saveWithFeedback({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:'transparent',border:'none',color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
+                    <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:'transparent',border:'none',color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
                     <div style={{ display:'flex',alignItems:'center',gap:4 }}>
                       <span style={{ fontSize:10,color:P.td }}>$</span>
-                      <input type="number" value={amt} onChange={e=>saveWithFeedback({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otAmt:+e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:'4px 8px',width:80,textAlign:'right' }}/>
+                      <input type="number" value={amt} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otAmt:+e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:'4px 8px',width:80,textAlign:'right' }}/>
                     </div>
-                    <select value={mo>=0?mo:currentMonth} onChange={e=>{const m=+e.target.value;saveWithFeedback({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otMonth:m,st:x.st.map((s,j)=>j===m?(s||'U'):j===mo?'':s)})});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:'4px 8px',fontFamily:"'DM Sans', sans-serif" }}>
+                    <select value={mo>=0?mo:currentMonth} onChange={e=>{const m=+e.target.value;save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,otMonth:m,st:x.st.map((s,j)=>j===m?(s||'U'):j===mo?'':s)})});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:'4px 8px',fontFamily:"'DM Sans', sans-serif" }}>
                       {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
                     </select>
                     <div style={{ display:'flex',gap:2 }}>
                       {[['P',P.g,P.gB],['U',P.a,P.aB],['L',P.r,P.rB]].map(([v,co,bg])=>{
                         const active=mo>=0&&cl.st[mo]===v;
-                        return <div key={v} onClick={()=>saveWithFeedback({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,st:x.st.map((s,j)=>j===(mo>=0?mo:currentMonth)?v:s)})})} style={{ width:24,height:24,borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:'transparent',color:co,cursor:'pointer',border:`1px solid ${active?co+'44':P.bd}` }}>{v}</div>;
+                        return <div key={v} onClick={()=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,st:x.st.map((s,j)=>j===(mo>=0?mo:currentMonth)?v:s)})})} style={{ width:24,height:24,borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:'transparent',color:co,cursor:'pointer',border:`1px solid ${active?co+'44':P.bd}` }}>{v}</div>;
                       })}
                     </div>
-                    <button onClick={()=>saveWithFeedback({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:'3px 8px',fontSize:10,cursor:'pointer',fontFamily:"'DM Sans', sans-serif" }}>✕</button>
+                    <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:'3px 8px',fontSize:10,cursor:'pointer',fontFamily:"'DM Sans', sans-serif" }}>✕</button>
                   </div>
                 </Card>;
               })}
@@ -323,9 +287,6 @@ export default function InternView({ d, save }) {
           })()}
         </div>
       </div>
-
-      {/* Toast */}
-      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
 }

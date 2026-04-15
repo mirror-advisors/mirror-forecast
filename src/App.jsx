@@ -3,7 +3,7 @@ import { MO, P, DC, FL, TIERS, PIE_COLORS, D0, fmt, fK, sm, preciseRunway, getRo
 /* v2.2 changes: 14-month window, outstanding+runway KPI, commission tab, Zoho splits, Option One fix, Jeanna endMo */
 import { loadData, saveData } from "./storage.js";
 import { compute, computePartnership, computeDevHire, computeWithOverlays } from "./compute.js";
-import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle } from "./components.jsx";
+import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle, Toast, SaveBar } from "./components.jsx";
 import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import InternView from "./InternView.jsx";
@@ -12,6 +12,9 @@ import Reconcile from "./Reconcile.jsx";
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, signOut } = useAuth();
   const [d, setD] = useState(null);
+  const [saved, setSaved] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [modal, setModal] = useState(null);
   const [nt, setNt] = useState("");
@@ -29,9 +32,47 @@ export default function App() {
   const partnerEmail = "mark@mirroradvisors.com";
   const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
 
-  useEffect(() => { loadData(D0).then(setD); }, []);
+  useEffect(() => { loadData(D0).then(x => { setD(x); setSaved(x); }); }, []);
   useEffect(() => { if (!isAdmin && isPartner) setTab("partnerships"); }, [isAdmin, isPartner]);
-  const save = useCallback(async (nd) => { setD(nd); return await saveData(nd); }, []);
+
+  // save() is now LOCAL ONLY — just buffers edits into state.
+  // persist() pushes the draft to Supabase; triggered by the Save button or ⌘S.
+  const save = useCallback((nd) => { setD(nd); }, []);
+  const showToast = useCallback((msg, type) => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+  const dirty = !!(d && saved && d !== saved);
+  const persist = useCallback(async () => {
+    if (!d || !dirty || saving) return;
+    setSaving(true);
+    const result = await saveData(d);
+    setSaving(false);
+    if (result && result.ok === false) {
+      showToast("Save failed — check your connection", "err");
+    } else {
+      setSaved(d);
+      showToast("Saved \u2713", "ok");
+    }
+  }, [d, dirty, saving, showToast]);
+
+  useEffect(() => {
+    const h = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+        e.preventDefault();
+        persist();
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [persist]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
 
   const pt = d?.pt || D0.pt;
   const dh = d?.dh || D0.dh;
@@ -74,7 +115,13 @@ export default function App() {
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
-  if (!isAdmin && !isPartner) return <InternView d={d} save={save} />;
+  if (!isAdmin && !isPartner) return (
+    <>
+      <InternView d={d} save={save} />
+      <SaveBar dirty={dirty} saving={saving} onSave={persist} />
+      {toast && <Toast message={toast.msg} type={toast.type} />}
+    </>
+  );
 
   const c = compute(d);
   const cm = new Date().getMonth();
@@ -849,6 +896,9 @@ export default function App() {
 
 
       </div>
+
+      <SaveBar dirty={dirty} saving={saving} onSave={persist} />
+      {toast && <Toast message={toast.msg} type={toast.type} />}
 
       {modal&&(<div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100 }} onClick={()=>setModal(null)}><div onClick={e=>e.stopPropagation()} style={{ background:P.c1,borderRadius:12,padding:24,width:380,border:`1px solid ${P.bd}` }}><div style={{ fontSize:14,fontWeight:700,marginBottom:14 }}>Credit — {d.cl[modal.ci]?.nm} ({MO[modal.mi]})</div><textarea value={nt} onChange={e=>setNt(e.target.value)} placeholder="Reason for credit..." rows={3} style={{ width:"100%",background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:12,padding:10,resize:"vertical",boxSizing:"border-box" }}/><div style={{ display:"flex",gap:8,marginTop:14,justifyContent:"flex-end" }}><button onClick={()=>setModal(null)} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:6,padding:"7px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:12,cursor:"pointer" }}>Cancel</button><button onClick={saveCr} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"7px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:12,fontWeight:700,cursor:"pointer" }}>Save</button></div></div></div>)}
     </div>
