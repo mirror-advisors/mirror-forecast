@@ -3,7 +3,7 @@ import { MO, P, DC, FL, TIERS, PIE_COLORS, D0, fmt, fK, sm, preciseRunway, getRo
 /* v2.2 changes: 14-month window, outstanding+runway KPI, commission tab, Zoho splits, Option One fix, Jeanna endMo */
 import { loadData, saveData } from "./storage.js";
 import { compute, computePartnership, computeDevHire, computeWithOverlays } from "./compute.js";
-import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle, Toast, SaveBar, ClientProgressRow, EditableNumber } from "./components.jsx";
+import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle, Toast, SaveBar, ClientProgressRow, EditableNumber, StatusChip } from "./components.jsx";
 import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import InternView from "./InternView.jsx";
@@ -424,7 +424,7 @@ export default function App() {
         {/* V2.1: Split view — Service Clients vs Zoho Commissions */}
         <div style={{ display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center" }}>
           {[["service","Service Clients"],["commission","Zoho Commissions"],["all","All"]].map(([k,l])=><button key={k} onClick={()=>setClFilter(k)} style={{ fontSize:11,color:clFilter===k?P.tx:P.tm,background:clFilter===k?P.c2:"transparent",padding:"6px 14px",borderRadius:6,fontWeight:600,border:`1px solid ${clFilter===k?P.bd:"transparent"}`,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>{l}</button>)}
-          <div style={{ marginLeft:"auto" }}><button onClick={()=>save({...d,cl:[...d.cl,{id:"c"+Date.now(),nm:"New Client",rt:2000,tr:"",vi:"",zh:0,zha:0,tier:"im",seats:0,st:["","","","","","","","","","","",""],nt:{}}]})} style={{ background:P.g,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Client</button></div>
+          <div style={{ marginLeft:"auto" }}><button onClick={()=>save({...d,cl:[...d.cl,{id:"c"+Date.now(),nm:"New Client",rt:2000,tr:"",vi:"",zh:0,zha:0,tier:"im",seats:0,st:["","","","","","","","","","","",""],nt:{}}]})} style={{ background:P.b,color:"#ffffff",border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Client</button></div>
         </div>
 
         {/* V2.1: Commission summary card when viewing service clients */}
@@ -463,17 +463,22 @@ export default function App() {
                     <div onClick={()=>active&&cyc(ci,mi)} style={sSty(stVal)}>{active?(stVal||"U"):""}</div>
                   </div>);})}
                 </div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8 }}>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Monthly Rate</div><EditableNumber value={cl.rt} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,rt:v})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Term</div><input value={cl.tr||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tr:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}/></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}><option value="">—</option>{["Stripe","ACH","Check","Wire","CC"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Tier</div><select value={cl.tier} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tier:e.target.value})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"6px 8px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" }}>{Object.entries(TIERS).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Monthly Comm</div><EditableNumber value={cl.zh||0} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zh:v})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                  <div><div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Zoho Annual Comm</div><EditableNumber value={cl.zha||0} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zha:v})})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.t,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"6px 8px",width:"100%",boxSizing:"border-box" }}/></div>
-                </div>
-                <div style={{ display:"flex",justifyContent:"space-between",marginTop:12,alignItems:"center" }}>
-                  <div style={{ fontSize:10,color:P.td }}>YTD collected: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</b></div>
-                  <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:"4px 12px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Delete Client</button>
+                {(()=>{
+                  const fldLbl = { fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6,fontWeight:600 };
+                  const fldTx = { background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif" };
+                  const fldNum = { ...fldTx,color:P.a,fontFamily:"'JetBrains Mono', monospace" };
+                  return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
+                    <div><div style={fldLbl}>Monthly Rate</div><EditableNumber value={cl.rt} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,rt:v})})} style={fldNum}/></div>
+                    <div><div style={fldLbl}>Term</div><input value={cl.tr||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tr:e.target.value})})} style={fldTx}/></div>
+                    <div><div style={fldLbl}>Pay Method</div><select value={cl.payMethod||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{...fldTx,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{["Stripe","ACH","Check","Wire","CC"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    <div><div style={fldLbl}>Tier</div><select value={cl.tier} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,tier:e.target.value})})} style={fldTx}>{Object.entries(TIERS).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select></div>
+                    <div><div style={fldLbl}>Zoho Monthly Comm</div><EditableNumber value={cl.zh||0} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zh:v})})} style={{...fldNum,color:P.t}}/></div>
+                    <div><div style={fldLbl}>Zoho Annual Comm</div><EditableNumber value={cl.zha||0} onCommit={v=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,zha:v})})} style={{...fldNum,color:P.t}}/></div>
+                  </div>;
+                })()}
+                <div style={{ display:"flex",justifyContent:"space-between",marginTop:16,alignItems:"center",paddingTop:14,borderTop:`1px solid ${P.bd}` }}>
+                  <div style={{ fontSize:11,color:P.tm }}>YTD collected: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):"\u2014"}</b></div>
+                  <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:"transparent",color:P.r,border:`1px solid ${P.bd}`,borderRadius:4,padding:"6px 14px",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",fontWeight:600 }}>Delete client</button>
                 </div>
               </ClientProgressRow>);
             })}</>}
@@ -512,17 +517,17 @@ export default function App() {
           </table>}
         </div>
 
-        {clFilter === "service" && <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:20 }}>
-          <Card style={{ padding:12 }}><Lbl>Collected YTD</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="P").length*x.rt,0))}</div></Card>
-          <Card style={{ padding:12 }}><Lbl>Late</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="L").length*x.rt,0))}</div></Card>
-          <Card style={{ padding:12 }}><Lbl>Credits</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="C").length*x.rt,0))}</div></Card>
+        {clFilter === "service" && <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:16 }}>
+          <KPI label="Collected YTD" value={fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="P").length*x.rt,0))} color={P.g}/>
+          <KPI label="Late" value={fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="L").length*x.rt,0))} color={P.r}/>
+          <KPI label="Credits" value={fmt(d.cl.filter(x=>x.tier!=="ot").reduce((s,x)=>s+x.st.filter(v=>v==="C").length*x.rt,0))} color={P.b}/>
         </div>}
 
         {/* ONE-TIME PROJECTS */}
         <div style={{ marginTop:24 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
             <Lbl>One-Time Projects</Lbl>
-            <button onClick={()=>save({...d,cl:[...d.cl,{id:"ot"+Date.now(),nm:"New Project",rt:0,tr:"",vi:"Stripe",zh:0,zha:0,tier:"ot",seats:0,st:["","","","","","","","","","","",""],nt:{},payments:[]}]})} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Project</button>
+            <button onClick={()=>save({...d,cl:[...d.cl,{id:"ot"+Date.now(),nm:"New Project",rt:0,tr:"",vi:"Stripe",zh:0,zha:0,tier:"ot",seats:0,st:["","","","","","","","","","","",""],nt:{},payments:[]}]})} style={{ background:P.b,color:"#ffffff",border:"none",borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Project</button>
           </div>
           {(()=>{
             const otClients = d.cl.map((cl,i)=>({...cl,origIdx:i})).filter(cl=>cl.tier==="ot");
@@ -533,46 +538,57 @@ export default function App() {
             const totalAll=otClients.reduce((s,x)=>s+(x.payments||[]).reduce((a,p)=>a+(p.amount||0),0),0);
             const collectedAll=otClients.reduce((s,x)=>s+(x.payments||[]).filter(p=>p.status==="P").reduce((a,p)=>a+(p.amount||0),0),0);
             const outstandingAll=totalAll-collectedAll;
-            return <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+            const rowGrid = { display:"grid", gridTemplateColumns:"130px 110px 110px 28px", gap:12, alignItems:"center" };
+            const amtInp = { background:P.c1, border:`1px solid ${P.bd}`, borderRadius:4, color:P.a, fontSize:12, fontFamily:"'JetBrains Mono', monospace", padding:"6px 8px", width:"100%", boxSizing:"border-box", textAlign:"right" };
+            const selInp = { background:P.c1, border:`1px solid ${P.bd}`, borderRadius:4, color:P.tx, fontSize:12, padding:"6px 8px", width:"100%", boxSizing:"border-box", fontFamily:"'DM Sans', sans-serif" };
+            return <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
               {otClients.map(cl=>{
                 const ci=cl.origIdx;
                 const pays=cl.payments||[];
                 const total=pays.reduce((a,p)=>a+(p.amount||0),0);
                 const collected=pays.filter(p=>p.status==="P").reduce((a,p)=>a+(p.amount||0),0);
-                const allPaid=pays.length>0 && pays.every(p=>p.status==="P");
-                const anyLate=pays.some(p=>p.status==="L");
-                return <Card key={cl.id} style={{ padding:12,border:`1px solid ${allPaid?P.g+"33":anyLate?P.r+"33":P.a+"33"}`,background:allPaid?`${P.gB}40`:anyLate?`${P.rB}40`:"transparent" }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-                    <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
-                    <select value={cl.payMethod||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:11,padding:"3px 6px",fontFamily:"'DM Sans', sans-serif" }}><option value="">Pay method</option>{["Stripe","ACH","Check","Wire","CC"].map(m=><option key={m} value={m}>{m}</option>)}</select>
-                    <div style={{ fontSize:11,color:P.tm,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collected)} / {fmt(total)}</div>
-                    <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:"3px 8px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>✕</button>
+                return <Card key={cl.id} style={{ padding:16 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:14 }}>
+                    <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:14,fontWeight:700,flex:1,outline:"none" }}/>
+                    <select value={cl.payMethod||""} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:11,padding:"5px 8px",fontFamily:"'DM Sans', sans-serif" }}><option value="">Pay method</option>{["Stripe","ACH","Check","Wire","CC"].map(m=><option key={m} value={m}>{m}</option>)}</select>
+                    <div style={{ fontSize:12,fontFamily:"'JetBrains Mono', monospace" }}>
+                      <span style={{ color:P.g }}>{fmt(collected)}</span>
+                      <span style={{ color:P.td }}>{" / "}</span>
+                      <span style={{ color:P.tm }}>{fmt(total)}</span>
+                    </div>
+                    <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} title="Delete project" style={{ background:"transparent",color:P.td,border:"none",fontSize:16,cursor:"pointer",padding:"2px 6px",lineHeight:1 }}>×</button>
                   </div>
-                  <div style={{ display:"flex",flexDirection:"column",gap:5 }}>
-                    {pays.map((p,pi)=>(<div key={p.id||pi} style={{ display:"flex",alignItems:"center",gap:8,padding:"4px 6px",background:P.c2,borderRadius:6 }}>
-                      <div style={{ display:"flex",alignItems:"center",gap:3 }}>
-                        <span style={{ fontSize:10,color:P.td }}>$</span>
-                        <EditableNumber value={p.amount} onCommit={v=>updPay(ci,pi,{amount:v})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:"3px 6px",width:80,textAlign:"right" }}/>
+                  {pays.length>0 && (
+                    <div style={{ ...rowGrid, padding:"4px 0 6px", borderBottom:`1px solid ${P.bd}` }}>
+                      <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600 }}>Amount</div>
+                      <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600 }}>Month</div>
+                      <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600 }}>Status</div>
+                      <div/>
+                    </div>
+                  )}
+                  <div style={{ display:"flex",flexDirection:"column" }}>
+                    {pays.map((p,pi)=>(
+                      <div key={p.id||pi} style={{ ...rowGrid, padding:"8px 0", borderBottom:`1px solid ${P.bd}30` }}>
+                        <EditableNumber value={p.amount} onCommit={v=>updPay(ci,pi,{amount:v})} style={amtInp}/>
+                        <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={selInp}>
+                          {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                        </select>
+                        <div style={{ display:"flex",gap:4 }}>
+                          {["P","U","L"].map(v=>(
+                            <StatusChip key={v} value={v} selected={p.status===v} onClick={()=>updPay(ci,pi,{status:v})} size={24}/>
+                          ))}
+                        </div>
+                        <button onClick={()=>delPay(ci,pi)} style={{ background:"transparent",color:P.td,border:"none",fontSize:14,cursor:"pointer",padding:0,lineHeight:1 }}>×</button>
                       </div>
-                      <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:"3px 6px",fontFamily:"'DM Sans', sans-serif" }}>
-                        {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
-                      </select>
-                      <div style={{ display:"flex",gap:2,marginLeft:"auto" }}>
-                        {[["P",P.g,P.gB],["U",P.a,P.aB],["L",P.r,P.rB]].map(([v,co,bg])=>{
-                          const active=p.status===v;
-                          return <div key={v} onClick={()=>updPay(ci,pi,{status:v})} style={{ width:22,height:22,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:"transparent",color:co,cursor:"pointer",border:`1px solid ${active?co+"44":P.bd}` }}>{v}</div>;
-                        })}
-                      </div>
-                      <button onClick={()=>delPay(ci,pi)} style={{ background:"transparent",color:P.td,border:"none",fontSize:12,cursor:"pointer",padding:"2px 6px" }}>×</button>
-                    </div>))}
-                    <button onClick={()=>addPay(ci)} style={{ alignSelf:"flex-start",background:"transparent",color:P.a,border:`1px dashed ${P.a}55`,borderRadius:4,padding:"4px 10px",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>+ Add payment</button>
+                    ))}
+                    <button onClick={()=>addPay(ci)} style={{ alignSelf:"flex-start",background:"transparent",color:P.b,border:"none",padding:"10px 0 0",fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",fontWeight:600 }}>+ Add payment</button>
                   </div>
                 </Card>;
               })}
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:8 }}>
-                <Card style={{ padding:10 }}><Lbl>Total Value</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(totalAll)}</div></Card>
-                <Card style={{ padding:10 }}><Lbl>Collected</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collectedAll)}</div></Card>
-                <Card style={{ padding:10 }}><Lbl>Outstanding</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(outstandingAll)}</div></Card>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
+                <KPI label="Total Value" value={fmt(totalAll)} color={P.tx}/>
+                <KPI label="Collected" value={fmt(collectedAll)} color={P.g}/>
+                <KPI label="Outstanding" value={fmt(outstandingAll)} color={P.a}/>
               </div>
             </div>;
           })()}

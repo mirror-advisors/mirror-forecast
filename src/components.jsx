@@ -63,37 +63,58 @@ export function ClientProgressRow({ cl, onSegmentClick, expanded, onToggleExpand
   const maxT = total * rate;
   const segColor = s => s === "P" ? P.g : s === "L" ? P.r : s === "C" ? P.b : P.a;
   return (
-    <div>
-      <div onClick={onToggleExpand} style={{ padding: "14px 4px", cursor: onToggleExpand ? "pointer" : "default" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: P.tx, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+    <div style={{ marginBottom: 8 }}>
+      <div onClick={onToggleExpand} style={{ padding: "12px 4px 14px", cursor: onToggleExpand ? "pointer" : "default" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: P.tx, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 8 }}>
             {onToggleExpand && (
               <span style={{ fontSize: 9, color: P.td, display: "inline-block", transition: "transform 0.15s", transform: expanded ? "rotate(90deg)" : "none" }}>{"\u25b6"}</span>
             )}
             {cl.nm}
           </div>
           <div style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>
-            <span style={{ color: late > 0 ? P.r : P.tx, fontWeight: 600 }}>{paid}/{total} paid</span>
+            <span style={{ color: late > 0 ? P.r : P.tm, fontWeight: 600 }}>{paid}/{total} paid</span>
             <span style={{ color: P.td }}>{" \u00b7 "}</span>
             <span style={{ color: P.g }}>{fmt(collected)}</span>
             <span style={{ color: P.td }}>{" / "}{fmt(maxT)}</span>
           </div>
         </div>
-        <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: P.c2 }}>
+        <div style={{ display: "flex", gap: 2, height: 6, borderRadius: 3, overflow: "hidden" }}>
           {termSegs.map((seg, i) => (
             <div key={i}
               onClick={(e) => { if (onSegmentClick) { e.stopPropagation(); onSegmentClick(seg.i); } }}
               title={`${MO[seg.i]}: ${seg.s}`}
-              style={{ flex: 1, background: segColor(seg.s), cursor: onSegmentClick ? "pointer" : "default" }} />
+              style={{ flex: 1, background: segColor(seg.s), cursor: onSegmentClick ? "pointer" : "default", borderRadius: 1 }} />
           ))}
         </div>
       </div>
       {expanded && (
-        <div style={{ padding: "12px 14px 16px", background: P.c2, borderRadius: 8, border: `1px solid ${P.bd}`, marginTop: 4, marginBottom: 8 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "16px 18px", background: P.c2, borderRadius: 8, border: `1px solid ${P.bd}`, marginTop: 4, marginBottom: 4 }} onClick={(e) => e.stopPropagation()}>
           {children}
         </div>
       )}
     </div>
+  );
+}
+
+// Shared status chip — same size/radius across the app.
+// selected=true fills the chip; false shows an outline.
+// active=false dims it (out-of-term cells).
+export function StatusChip({ value, onClick, selected = false, active = true, size = 24 }) {
+  const color = value === "P" ? P.g : value === "U" ? P.a : value === "L" ? P.r : value === "C" ? P.b : P.td;
+  const bg = value === "P" ? P.gB : value === "U" ? P.aB : value === "L" ? P.rB : value === "C" ? P.bB : "transparent";
+  return (
+    <div onClick={active ? onClick : undefined} style={{
+      width: size, height: size, borderRadius: 4,
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+      background: selected ? bg : "transparent",
+      color,
+      border: `1px solid ${selected ? color : P.bd}`,
+      cursor: active && onClick ? "pointer" : "default",
+      userSelect: "none",
+      opacity: active ? 1 : 0.4,
+    }}>{active ? (value || "") : ""}</div>
   );
 }
 
@@ -106,32 +127,31 @@ export function SaveBar({ dirty, saving, onSave }) {
       left: 0,
       right: 0,
       zIndex: 9999,
-      background: "#0a0b0f",
-      borderTop: `2px solid ${P.a}`,
+      background: P.c1,
+      borderTop: `1px solid ${P.bd}`,
       padding: "14px 24px",
       boxSizing: "border-box",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       gap: 12,
-      boxShadow: "0 -8px 28px rgba(0,0,0,0.7)",
+      boxShadow: "0 -4px 20px rgba(0,0,0,0.5)",
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: P.a, boxShadow: `0 0 8px ${P.a}` }} />
-        <span style={{ fontSize: 14, color: P.tx, fontWeight: 700, letterSpacing: "0.01em" }}>Unsaved changes</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: P.a }} />
+        <span style={{ fontSize: 13, color: P.tx, fontWeight: 600 }}>Unsaved changes</span>
       </div>
       <button onClick={onSave} disabled={saving} style={{
-        background: saving ? P.c2 : P.g,
-        color: saving ? P.td : P.bg,
+        background: saving ? P.c2 : P.b,
+        color: saving ? P.td : "#ffffff",
         border: "none",
-        borderRadius: 8,
-        padding: "10px 26px",
-        fontSize: 14,
-        fontWeight: 800,
+        borderRadius: 6,
+        padding: "9px 22px",
+        fontSize: 13,
+        fontWeight: 700,
         cursor: saving ? "default" : "pointer",
         fontFamily: "'DM Sans', sans-serif",
-        letterSpacing: "0.02em",
       }}>{saving ? "Saving\u2026" : "Save (\u2318S)"}</button>
     </div>
   );
@@ -142,7 +162,7 @@ export const Card = ({ children, style: s }) => (
 );
 
 export const Lbl = ({ children }) => (
-  <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{children}</div>
+  <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{children}</div>
 );
 
 export const Bdg = ({ children, c }) => (
@@ -215,12 +235,12 @@ export function Sld({ label, value, onChange, min, max, step = 1, pre = "", suf 
   );
 }
 
-export function KPI({ label, value, sub, color = P.g, warn }) {
+export function KPI({ label, value, sub, color = P.g }) {
   return (
-    <div style={{ background: warn ? P.aB : P.c1, border: `1px solid ${warn ? P.a + "33" : P.bd}`, borderRadius: 8, padding: "10px 12px", minWidth: 120 }}>
-      <div style={{ fontSize: 9, color: P.td, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
-      {sub && <div style={{ fontSize: 9, color: P.td, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{sub}</div>}
+    <div style={{ background: P.c1, border: `1px solid ${P.bd}`, borderRadius: 8, padding: "12px 14px", minWidth: 120 }}>
+      <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+      {sub && <div style={{ fontSize: 10, color: P.td, marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>{sub}</div>}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { MO, P, fmt, getRollingWindow } from './data.js';
-import { Card, Lbl, ClientProgressRow, SaveBar, EditableNumber } from './components.jsx';
+import { Card, Lbl, ClientProgressRow, SaveBar, EditableNumber, StatusChip, KPI } from './components.jsx';
 
 const QUOTES = [
   { q: "The secret of getting ahead is getting started.", a: "Mark Twain" },
@@ -185,10 +185,10 @@ export default function InternView({ d, save, dirty, saving, persist }) {
         </div>
 
         {/* KPI Cards */}
-        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:24 }}>
-          <Card style={{ padding:14,borderLeft:`3px solid ${P.r}` }}><Lbl>Late</Lbl><div style={{ fontSize:28,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{late.length}</div><div style={{ fontSize:10,color:P.tm,marginTop:4 }}>{late.length>0?late.map(o=>`${o.client.nm} (${MO[o.month]})`).join(', '):'None late'}</div></Card>
-          <Card style={{ padding:14,borderLeft:`3px solid ${P.a}` }}><Lbl>Due This Month ({MO[currentMonth]})</Lbl><div style={{ fontSize:28,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{dueThisMonth.length}</div><div style={{ fontSize:10,color:P.tm,marginTop:4 }}>{dueThisMonth.length>0?dueThisMonth.map(cl=>cl.nm).join(', '):'All logged!'}</div></Card>
-          <Card style={{ padding:14,borderLeft:`3px solid ${P.g}` }}><Lbl>Collected YTD</Lbl><div style={{ fontSize:28,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==='P').length*x.rt,0))}</div></Card>
+        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16 }}>
+          <KPI label="Late" value={late.length} color={late.length>0?P.r:P.tx} sub={late.length>0?late.map(o=>`${o.client.nm} (${MO[o.month]})`).join(', '):'None late'}/>
+          <KPI label={`Due This Month (${MO[currentMonth]})`} value={dueThisMonth.length} color={dueThisMonth.length>0?P.a:P.tx} sub={dueThisMonth.length>0?dueThisMonth.map(cl=>cl.nm).join(', '):'All logged'}/>
+          <KPI label="Collected YTD" value={fmt(d.cl.reduce((s,x)=>s+x.st.filter(v=>v==='P').length*x.rt,0))} color={P.g}/>
         </div>
 
         {/* Legend */}
@@ -219,19 +219,22 @@ export default function InternView({ d, save, dirty, saving, persist }) {
                   </div>);
                 })}
               </div>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Monthly Rate</div><EditableNumber value={cl.rt} onCommit={v=>updateClient(ci,'rt',v)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Term (months)</div><EditableNumber value={cl.termMo||0} onCommit={v=>updateClient(ci,'termMo',v)} placeholder="12" style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Signing Date</div><input type="date" value={cl.signed||''} onChange={e=>updateClient(ci,'signed',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Subscription Start</div><input type="date" value={cl.subStart||''} onChange={e=>updateClient(ci,'subStart',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Payment Due Day</div><EditableNumber value={cl.payDay||0} onCommit={v=>updateClient(ci,'payDay',v)} placeholder="1" min={1} max={28} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Renewal Date</div><input type="date" value={cl.renewal||''} onChange={e=>updateClient(ci,'renewal',e.target.value)} style={inp}/></div>
-                <div><div style={{ fontSize:9,color:P.td,textTransform:'uppercase',marginBottom:3 }}>Pay Method</div><select value={cl.payMethod||''} onChange={e=>updateClient(ci,'payMethod',e.target.value)} style={{...inp,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
-                <div style={{ gridColumn:'1/-1',display:'flex',justifyContent:'space-between',fontSize:10,color:P.td,marginTop:4 }}>
-                  <span>Active: {MO[cl.startMo??0]} – {MO[cl.endMo??11]} · Due day: {cl.payDay||'1st'}</span>
-                  <span>YTD: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):'\u2014'}</b></span>
-                </div>
-              </div>
+              {(()=>{
+                const fldLbl = { fontSize:10,color:P.td,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6,fontWeight:600 };
+                return <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
+                  <div><div style={fldLbl}>Monthly Rate</div><EditableNumber value={cl.rt} onCommit={v=>updateClient(ci,'rt',v)} style={inp}/></div>
+                  <div><div style={fldLbl}>Term (months)</div><EditableNumber value={cl.termMo||0} onCommit={v=>updateClient(ci,'termMo',v)} placeholder="12" style={inp}/></div>
+                  <div><div style={fldLbl}>Signing Date</div><input type="date" value={cl.signed||''} onChange={e=>updateClient(ci,'signed',e.target.value)} style={inp}/></div>
+                  <div><div style={fldLbl}>Subscription Start</div><input type="date" value={cl.subStart||''} onChange={e=>updateClient(ci,'subStart',e.target.value)} style={inp}/></div>
+                  <div><div style={fldLbl}>Payment Due Day</div><EditableNumber value={cl.payDay||0} onCommit={v=>updateClient(ci,'payDay',v)} placeholder="1" min={1} max={28} style={inp}/></div>
+                  <div><div style={fldLbl}>Renewal Date</div><input type="date" value={cl.renewal||''} onChange={e=>updateClient(ci,'renewal',e.target.value)} style={inp}/></div>
+                  <div><div style={fldLbl}>Pay Method</div><select value={cl.payMethod||''} onChange={e=>updateClient(ci,'payMethod',e.target.value)} style={{...inp,color:cl.payMethod?P.tx:P.td}}><option value="">—</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                  <div style={{ gridColumn:'1/-1',display:'flex',justifyContent:'space-between',fontSize:11,color:P.tm,marginTop:4,paddingTop:12,borderTop:`1px solid ${P.bd}` }}>
+                    <span>Active: {MO[cl.startMo??0]} – {MO[cl.endMo??11]} · Due day: {cl.payDay||'1st'}</span>
+                    <span>YTD: <b style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{ytd>0?fmt(ytd):'\u2014'}</b></span>
+                  </div>
+                </div>;
+              })()}
             </ClientProgressRow>);
           })}
         </div>
@@ -247,7 +250,7 @@ export default function InternView({ d, save, dirty, saving, persist }) {
         <div style={{ marginTop:24 }}>
           <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
             <Lbl>One-Time Projects</Lbl>
-            <button onClick={()=>save({...d,cl:[...d.cl,{id:'ot'+Date.now(),nm:'New Project',rt:0,tr:'',vi:'Stripe',zh:0,zha:0,tier:'ot',seats:0,st:['','','','','','','','','','','',''],nt:{},payments:[]}]})} style={{ background:P.a,color:P.bg,border:'none',borderRadius:6,padding:'6px 12px',fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:'pointer' }}>+ Add Project</button>
+            <button onClick={()=>save({...d,cl:[...d.cl,{id:'ot'+Date.now(),nm:'New Project',rt:0,tr:'',vi:'Stripe',zh:0,zha:0,tier:'ot',seats:0,st:['','','','','','','','','','','',''],nt:{},payments:[]}]})} style={{ background:P.b,color:'#ffffff',border:'none',borderRadius:6,padding:'6px 12px',fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:'pointer' }}>+ Add Project</button>
           </div>
           {(()=>{
             const otClients = d.cl.map((cl,i)=>({...cl,origIdx:i})).filter(cl=>cl.tier==='ot');
@@ -258,46 +261,57 @@ export default function InternView({ d, save, dirty, saving, persist }) {
             const totalAll=otClients.reduce((s,x)=>s+(x.payments||[]).reduce((a,p)=>a+(p.amount||0),0),0);
             const collectedAll=otClients.reduce((s,x)=>s+(x.payments||[]).filter(p=>p.status==='P').reduce((a,p)=>a+(p.amount||0),0),0);
             const outstandingAll=totalAll-collectedAll;
-            return <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+            const rowGrid = { display:'grid', gridTemplateColumns:'130px 110px 110px 28px', gap:12, alignItems:'center' };
+            const amtInp = { background:P.c1, border:`1px solid ${P.bd}`, borderRadius:4, color:P.a, fontSize:12, fontFamily:"'JetBrains Mono', monospace", padding:'6px 8px', width:'100%', boxSizing:'border-box', textAlign:'right' };
+            const selInp = { background:P.c1, border:`1px solid ${P.bd}`, borderRadius:4, color:P.tx, fontSize:12, padding:'6px 8px', width:'100%', boxSizing:'border-box', fontFamily:"'DM Sans', sans-serif" };
+            return <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
               {otClients.map(cl=>{
                 const ci=cl.origIdx;
                 const pays=cl.payments||[];
                 const total=pays.reduce((a,p)=>a+(p.amount||0),0);
                 const collected=pays.filter(p=>p.status==='P').reduce((a,p)=>a+(p.amount||0),0);
-                const allPaid=pays.length>0 && pays.every(p=>p.status==='P');
-                const anyLate=pays.some(p=>p.status==='L');
-                return <Card key={cl.id} style={{ padding:12,border:`1px solid ${allPaid?P.g+'33':anyLate?P.r+'33':P.a+'33'}`,background:allPaid?`${P.gB}40`:anyLate?`${P.rB}40`:'transparent' }}>
-                  <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:8 }}>
-                    <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:'transparent',border:'none',color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:13,fontWeight:600,flex:1 }}/>
-                    <select value={cl.payMethod||''} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:11,padding:'3px 6px',fontFamily:"'DM Sans', sans-serif" }}><option value="">Pay method</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select>
-                    <div style={{ fontSize:11,color:P.tm,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collected)} / {fmt(total)}</div>
-                    <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} style={{ background:P.rB,color:P.r,border:`1px solid ${P.rM}`,borderRadius:4,padding:'3px 8px',fontSize:10,cursor:'pointer',fontFamily:"'DM Sans', sans-serif" }}>✕</button>
+                return <Card key={cl.id} style={{ padding:16 }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:14 }}>
+                    <input value={cl.nm} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,nm:e.target.value})})} style={{ background:'transparent',border:'none',color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:14,fontWeight:700,flex:1,outline:'none' }}/>
+                    <select value={cl.payMethod||''} onChange={e=>save({...d,cl:d.cl.map((x,i)=>i!==ci?x:{...x,payMethod:e.target.value})})} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:cl.payMethod?P.tx:P.td,fontSize:11,padding:'5px 8px',fontFamily:"'DM Sans', sans-serif" }}><option value="">Pay method</option>{['Stripe','ACH','Check','Wire','CC'].map(m=><option key={m} value={m}>{m}</option>)}</select>
+                    <div style={{ fontSize:12,fontFamily:"'JetBrains Mono', monospace" }}>
+                      <span style={{ color:P.g }}>{fmt(collected)}</span>
+                      <span style={{ color:P.td }}>{' / '}</span>
+                      <span style={{ color:P.tm }}>{fmt(total)}</span>
+                    </div>
+                    <button onClick={()=>save({...d,cl:d.cl.filter((_,i)=>i!==ci)})} title="Delete project" style={{ background:'transparent',color:P.td,border:'none',fontSize:16,cursor:'pointer',padding:'2px 6px',lineHeight:1 }}>×</button>
                   </div>
-                  <div style={{ display:'flex',flexDirection:'column',gap:5 }}>
-                    {pays.map((p,pi)=>(<div key={p.id||pi} style={{ display:'flex',alignItems:'center',gap:8,padding:'4px 6px',background:P.c2,borderRadius:6 }}>
-                      <div style={{ display:'flex',alignItems:'center',gap:3 }}>
-                        <span style={{ fontSize:10,color:P.td }}>$</span>
-                        <EditableNumber value={p.amount} onCommit={v=>updPay(ci,pi,{amount:v})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.a,fontSize:12,fontFamily:"'JetBrains Mono', monospace",padding:'3px 6px',width:80,textAlign:'right' }}/>
+                  {pays.length>0 && (
+                    <div style={{ ...rowGrid, padding:'4px 0 6px', borderBottom:`1px solid ${P.bd}` }}>
+                      <div style={{ fontSize:10,color:P.td,textTransform:'uppercase',letterSpacing:'0.06em',fontWeight:600 }}>Amount</div>
+                      <div style={{ fontSize:10,color:P.td,textTransform:'uppercase',letterSpacing:'0.06em',fontWeight:600 }}>Month</div>
+                      <div style={{ fontSize:10,color:P.td,textTransform:'uppercase',letterSpacing:'0.06em',fontWeight:600 }}>Status</div>
+                      <div/>
+                    </div>
+                  )}
+                  <div style={{ display:'flex',flexDirection:'column' }}>
+                    {pays.map((p,pi)=>(
+                      <div key={p.id||pi} style={{ ...rowGrid, padding:'8px 0', borderBottom:`1px solid ${P.bd}30` }}>
+                        <EditableNumber value={p.amount} onCommit={v=>updPay(ci,pi,{amount:v})} style={amtInp}/>
+                        <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={selInp}>
+                          {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                        </select>
+                        <div style={{ display:'flex',gap:4 }}>
+                          {['P','U','L'].map(v=>(
+                            <StatusChip key={v} value={v} selected={p.status===v} onClick={()=>updPay(ci,pi,{status:v})} size={24}/>
+                          ))}
+                        </div>
+                        <button onClick={()=>delPay(ci,pi)} style={{ background:'transparent',color:P.td,border:'none',fontSize:14,cursor:'pointer',padding:0,lineHeight:1 }}>×</button>
                       </div>
-                      <select value={p.month} onChange={e=>updPay(ci,pi,{month:+e.target.value})} style={{ background:P.c1,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontSize:11,padding:'3px 6px',fontFamily:"'DM Sans', sans-serif" }}>
-                        {MO.map((m,i)=><option key={i} value={i}>{m}</option>)}
-                      </select>
-                      <div style={{ display:'flex',gap:2,marginLeft:'auto' }}>
-                        {[['P',P.g,P.gB],['U',P.a,P.aB],['L',P.r,P.rB]].map(([v,co,bg])=>{
-                          const active=p.status===v;
-                          return <div key={v} onClick={()=>updPay(ci,pi,{status:v})} style={{ width:22,height:22,borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",background:active?bg:'transparent',color:co,cursor:'pointer',border:`1px solid ${active?co+'44':P.bd}` }}>{v}</div>;
-                        })}
-                      </div>
-                      <button onClick={()=>delPay(ci,pi)} style={{ background:'transparent',color:P.td,border:'none',fontSize:12,cursor:'pointer',padding:'2px 6px' }}>×</button>
-                    </div>))}
-                    <button onClick={()=>addPay(ci)} style={{ alignSelf:'flex-start',background:'transparent',color:P.a,border:`1px dashed ${P.a}55`,borderRadius:4,padding:'4px 10px',fontSize:10,cursor:'pointer',fontFamily:"'DM Sans', sans-serif" }}>+ Add payment</button>
+                    ))}
+                    <button onClick={()=>addPay(ci)} style={{ alignSelf:'flex-start',background:'transparent',color:P.b,border:'none',padding:'10px 0 0',fontSize:12,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:600 }}>+ Add payment</button>
                   </div>
                 </Card>;
               })}
-              <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginTop:8 }}>
-                <Card style={{ padding:10 }}><Lbl>Total Value</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(totalAll)}</div></Card>
-                <Card style={{ padding:10 }}><Lbl>Collected</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(collectedAll)}</div></Card>
-                <Card style={{ padding:10 }}><Lbl>Outstanding</Lbl><div style={{ fontSize:18,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(outstandingAll)}</div></Card>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12 }}>
+                <KPI label="Total Value" value={fmt(totalAll)} color={P.tx}/>
+                <KPI label="Collected" value={fmt(collectedAll)} color={P.g}/>
+                <KPI label="Outstanding" value={fmt(outstandingAll)} color={P.a}/>
               </div>
             </div>;
           })()}
