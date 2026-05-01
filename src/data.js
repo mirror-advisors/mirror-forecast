@@ -25,14 +25,14 @@ export const PIE_COLORS = { za:"#6bbfb0", zm:"#60a5fa", im:"#e4b44e", mk:"#b8a9e
 
 export const D0 = {
   // Mar 31 ending balance per Chase6692 statement
-  openBal: 1309, cashNow: 27776, savings: 50, sLoan: 0, ccOwe: -901,
+  openBal: 1309, cashNow: 24361.66, savings: 50, sLoan: 0, ccOwe: -901,
 
   // Revenue: Jan+Feb+Mar ACTUALS, Apr+ projections
   // Mar actuals: IM $6,500 | Zoho commissions $7,693.85 (both wires) | Patson Doors OT $6,000
   rv: {
     za: [4581, 17703, 7694, 511, 0, 320, 1439, 0, 0, 3706, 0, 240],
     zm: [0, 0, 0, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
-    im: [5453, 4886, 6500, 10500, 10500, 10500, 4500, 6500, 6500, 6500, 6500, 6500],
+    im: [5453, 4886, 6500, 10500, 14500, 14500, 8500, 10500, 10500, 10500, 10500, 10500],
     mk: [0, 0, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
     ot: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     pCruzy:    [0, 0, 0, 0, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000],
@@ -107,7 +107,7 @@ export const D0 = {
     { id:"c7",  nm:"Jose F / Option One",rt:450,  tr:"3mo",  vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"mktg",seats:0,  st:["","P","","","","","","","","","",""], nt:{1:"Paid 2/11. Next: 3/25, 4/25"} },
     { id:"c18", nm:"Urban Operating",    rt:0,    tr:"",     vi:"",       payMethod:"",       zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{0:"$7,000 one-time Jan"}, payments:[{id:"c18p1",amount:7000,month:0,status:"P"}] },
     { id:"c8",  nm:"Patson Doors",       rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{2:"$6,000 one-time Mar 3"}, payments:[{id:"c8p1",amount:6000,month:2,status:"P"}] },
-    { id:"c17", nm:"CoverFour",          rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{}, payments:[{id:"c17p1",amount:6250,month:3,status:"U"}] },
+    { id:"c17", nm:"CoverFour",          rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{}, payments:[{id:"c17p1",amount:3125,month:3,status:"P"},{id:"c17p2",amount:3125,month:4,status:"U"}] },
     // Zoho commission clients
     { id:"c9",  nm:"HV Health",          rt:0, tr:"", vi:"", zh:582, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
     { id:"c10", nm:"Michael Grusell",    rt:0, tr:"", vi:"", zh:181, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
