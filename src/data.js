@@ -62,7 +62,8 @@ export const D0 = {
     { n: "Mark Alberto (COO)",  v: [0,0,0,-5000,0,0,0,0,0,0,0,0] },
     // LearnAll contractor — not paid in Mar, forecasting $3k Apr
     { n: "LearnAll",            v: [0,0,0,-3000,0,0,0,0,0,0,0,0] },
-    { n: "RSK Advisors (Tax)",  v: [0,-4944,0,0,0,0,0,0,0,0,0,0] },
+    // RSK 2026 ($4,944) paid by CC on 2/4 — captured in ccOwe, not oc[]. Future RSK obligations should go here.
+    { n: "RSK Advisors (Tax)",  v: [0,0,0,0,0,0,0,0,0,0,0,0] },
     { n: "CC Interest",         v: [0,0,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130] },
   ],
 
