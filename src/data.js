@@ -25,7 +25,7 @@ export const PIE_COLORS = { za:"#6bbfb0", zm:"#60a5fa", im:"#e4b44e", mk:"#b8a9e
 
 export const D0 = {
   // Mar 31 ending balance per Chase6692 statement
-  openBal: 1309, cashNow: 24361.66, savings: 50, sLoan: 0, ccOwe: -901,
+  openBal: 1309, cashNow: 24361.66, savings: 50, sLoan: 0, ccOwe: -9553.37,
 
   // Revenue: Jan+Feb+Mar ACTUALS, Apr+ projections
   // Mar actuals: IM $6,500 | Zoho commissions $7,693.85 (both wires) | Patson Doors OT $6,000
@@ -68,8 +68,8 @@ export const D0 = {
 
   // Debt / CC — hits checking account
   db: [
-    // CC Paydown: Jan $77 actual, Feb $800 actual, Mar $2,500 actual, Apr+ $600 projected
-    { n: "CC Paydown", v: [-77,-800,-2500,-600,-600,-600,-600,-600,-600,-600,-600,-600] },
+    // CC Paydown: Jan $77, Feb $800, Mar $2,500, Apr $2,000 actuals; May+ $600/mo baseline
+    { n: "CC Paydown", v: [-77,-800,-2500,-2000,-600,-600,-600,-600,-600,-600,-600,-600] },
     { n: "Stripe Loan", v: [0,0,0,-400,-400,0,0,0,0,0,0,0] },
   ],
 
