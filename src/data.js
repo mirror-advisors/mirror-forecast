@@ -32,12 +32,11 @@ export const D0 = {
   rv: {
     za: [4581, 17703, 7694, 511, 0, 320, 1439, 0, 0, 3706, 0, 240],
     zm: [0, 0, 0, 1224, 984, 984, 984, 984, 984, 984, 984, 984],
-    im: [5453, 4886, 6500, 10500, 14500, 14500, 8500, 10500, 10500, 10500, 10500, 10500],
+    im: [5453, 4886, 6500, 10500, 24500, 24500, 18500, 20500, 20500, 8500, 8500, 8500],
     mk: [0, 0, 0, 450, 0, 0, 0, 0, 0, 0, 0, 0],
     ot: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     pCruzy:    [0, 0, 0, 0, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000],
     pPatson:   [0, 0, 0, 0, 6667, 6667, 6667, 0, 0, 0, 0, 0],
-    pPlastics: [0, 0, 0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
   },
 
   // Subscriptions on CC — tracked for visibility, cash impact is CC Paydown in db[]
@@ -71,7 +70,8 @@ export const D0 = {
   db: [
     // CC Paydown: Jan $77, Feb $800, Mar $2,500, Apr $2,000 actuals; May+ $600/mo baseline
     { n: "CC Paydown", v: [-77,-800,-2500,-2000,-600,-600,-600,-600,-600,-600,-600,-600] },
-    { n: "Stripe Loan", v: [0,0,0,-400,-400,0,0,0,0,0,0,0] },
+    // Stripe loan repaid via 20% of payout transactions, netted from rv.za revenue. No separate cash outflow line needed.
+    { n: "Stripe Loan", v: [0,0,0,0,0,0,0,0,0,0,0,0] },
   ],
 
   // ADP employment taxes — Mar actual: $1,723.57 gross - $223.62 refund = $1,499.95
@@ -85,30 +85,41 @@ export const D0 = {
   // Mar actual: $3,294.73 total Wise - ~$2,272 salaries = ~$1,023 fees (FX + transfer fees)
   wf: [-1109,-1340,-1023,-100,-100,-100,-100,-100,-100,-100,-100,-100],
 
+  // Salaries reflect May 2026 rates; co is a flat monthly value applied from startMo onward
+  // (see compute.js for hardcoded Q1 special cases on Paul, Sara, Janna, Soorya).
   tm: [
-    { id:"p1", nm:"Paul",         rl:"CEO",              dp:"Leadership",  ct:"US", co:8333, on:true },
-    { id:"p2", nm:"Sara",         rl:"Intern",           dp:"Operations",  ct:"US", co:792,  on:true, endMo:5 },
-    { id:"p3", nm:"Janna",        rl:"Mktg Lead",        dp:"Marketing",   ct:"PH", co:550,  on:true },
-    { id:"p4", nm:"Mark Atienza", rl:"Marketing",        dp:"Marketing",   ct:"PH", co:273,  on:true, startMo:1 },
-    { id:"p5", nm:"Jeanna",       rl:"Support",          dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
-    { id:"p6", nm:"Soorya",       rl:"Lead Dev",         dp:"Development", ct:"IN", co:1000, on:true },
-    { id:"p7", nm:"Yuva",         rl:"Developer",        dp:"Development", ct:"IN", co:650,  on:true },
-    { id:"p8", nm:"Gowtham",      rl:"Developer",        dp:"Development", ct:"IN", co:288,  on:true },
-    { id:"p9", nm:"New Dev",      rl:"Developer",        dp:"Development", ct:"IN", co:750,  on:false, startMo:3 },
-    { id:"p10",nm:"Aadrika",      rl:"Contractor",       dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
+    { id:"p1", nm:"Paul",            rl:"CEO",          dp:"Leadership",  ct:"US", co:9167, on:true },
+    // Sara: hourly variable, ~16hrs/wk @ $12 = $832/mo. May go FT — endMo removed for long-term retention.
+    { id:"p2", nm:"Sara",            rl:"Intern",       dp:"Operations",  ct:"US", co:832,  on:true },
+    { id:"p3", nm:"Janna",           rl:"Mktg Lead",    dp:"Marketing",   ct:"PH", co:556,  on:true },
+    { id:"p4", nm:"Mark Atienza",    rl:"Marketing",    dp:"Marketing",   ct:"PH", co:276,  on:true, startMo:1 },
+    { id:"p5", nm:"Jeanna",          rl:"Support",      dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
+    { id:"p6", nm:"Soorya",          rl:"Lead Dev",     dp:"Development", ct:"IN", co:1089, on:true },
+    { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1089, on:true },
+    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true },
+    { id:"p10",nm:"Aadrika",         rl:"Contractor",   dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
+    // Ravindar — full-time India dev, ₹96K/mo. April was 3 days only; May = official start.
+    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:true, startMo:4 },
+    // Shanee — full-time India, ₹40K/mo. Started May.
+    { id:"p12",nm:"Shanee Patel",    rl:"Developer",    dp:"Development", ct:"IN", co:473,  on:true, startMo:4 },
+    // Mark Alberto — variable comp, manage via scenarios. April $5K one-time tracked in oc[].
+    { id:"p13",nm:"Mark Alberto",    rl:"COO (var)",    dp:"Leadership",  ct:"US", co:0,    on:true, startMo:3 },
   ],
 
   cl: [
     { id:"c1",  nm:"Gomes Agency",       rt:2000, tr:"12mo", vi:"Stripe", payMethod:"Stripe", zh:155, zha:0,   tier:"im",  seats:0,  st:["P","P","P","","","","","","","","",""], nt:{} },
     { id:"c2",  nm:"Supreme E-Com",      rt:2000, tr:"12mo", vi:"ACH",    payMethod:"ACH",    zh:38,  zha:0,   tier:"im",  seats:30, st:["P","P","P","","","","","","","","",""], nt:{} },
     { id:"c3",  nm:"380 Guide",          rt:2000, tr:"6mo",  vi:"Check",  payMethod:"Check",  zh:0,   zha:0,   tier:"im",  seats:3,  st:["","P","P","","","","","","","","",""], nt:{1:"2x $1k checks deposited 2/3", 2:"ACH $2,000 Mar 17 — credit applied Feb2-Mar2, paid Mar2-Apr2"} },
-    { id:"c4",  nm:"Van Boxel",          rt:2000, tr:"12mo", vi:"Stripe", payMethod:"Stripe", zh:11,  zha:0,   tier:"im",  seats:0,  st:["","P","","","","","","","","","",""], nt:{} },
+    // AT RISK — 2 months late + service complaints. Removed from rv.im[] forecast pending resolution.
+    { id:"c4",  nm:"Van Boxel",          rt:2000, tr:"12mo", vi:"Stripe", payMethod:"Stripe", zh:11,  zha:0,   tier:"im",  seats:0,  st:["","P","L","L","","","","","","","",""], nt:{2:"Late — service complaints",3:"Late — service complaints"} },
     { id:"c5",  nm:"Calco CRM Zen",      rt:500,  tr:"M2M",  vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"zen", seats:0,  st:["P","P","P","","","","","","","","",""], nt:{} },
     { id:"c6",  nm:"Next Fab",           rt:2000, tr:"6mo",  vi:"Stripe", payMethod:"Stripe", zh:65,  zha:0,   tier:"im",  seats:0,  st:["","U","U","","","","","","","","",""], nt:{1:"$1,148 first inv"} },
     { id:"c7",  nm:"Jose F / Option One",rt:450,  tr:"3mo",  vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"mktg",seats:0,  st:["","P","","","","","","","","","",""], nt:{1:"Paid 2/11. Next: 3/25, 4/25"} },
     { id:"c18", nm:"Urban Operating",    rt:0,    tr:"",     vi:"",       payMethod:"",       zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{0:"$7,000 one-time Jan"}, payments:[{id:"c18p1",amount:7000,month:0,status:"P"}] },
     { id:"c8",  nm:"Patson Doors",       rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{2:"$6,000 one-time Mar 3"}, payments:[{id:"c8p1",amount:6000,month:2,status:"P"}] },
     { id:"c17", nm:"CoverFour",          rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","",""], nt:{}, payments:[{id:"c17p1",amount:3125,month:3,status:"P"},{id:"c17p2",amount:3125,month:4,status:"U"}] },
+    // 5-month engagement at $12K/mo, May–Sep 2026. New deal — converted from pPlastics pipeline.
+    { id:"c19", nm:"Plastics Products Mfg", rt:12000, tr:"5mo", vi:"Wire",  payMethod:"Wire",  zh:0,   zha:0,   tier:"im",  seats:0,  st:["","","","","U","U","U","U","U","","",""], nt:{} },
     // Zoho commission clients
     { id:"c9",  nm:"HV Health",          rt:0, tr:"", vi:"", zh:582, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
     { id:"c10", nm:"Michael Grusell",    rt:0, tr:"", vi:"", zh:181, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","",""], nt:{} },
