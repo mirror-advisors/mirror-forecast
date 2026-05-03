@@ -34,8 +34,9 @@ export function AuthProvider({ children }) {
     setProfile(null);
   }
   const isAdmin = profile?.role === 'admin';
+  const isViewer = profile?.role === 'viewer';
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, isAdmin, isViewer, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

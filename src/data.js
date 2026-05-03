@@ -131,23 +131,6 @@ export const D0 = {
     { id:"c16", nm:"Regenics",           rt:0, tr:"", vi:"", zh:0,   zha:2078, tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","",""], nt:{} },
   ],
 
-  sc: { nc:1,cs:5,or:3000,oc:1,oq:1,ol:6,op:0.3,oh:500 },
-
-  pt: { nm:"Mark",rl:"VP Strategic Partnerships",bs:500,ezp:0,
-    targetComp:100000,
-    orgSvc:15, orgLic:10,
-    resSvc:15, resLic:40,
-    pkgOrg:3, pkgRes:5,
-    nzp:10, nzcs:90, ops:35, ocs:30, ips:35,
-    opc:1000,ocq:0,oar:2000,dch:750,cpc:2.5,
-    sm:4,nzq:0, azr:2000,
-    zSeats:15, zSeatPrice:40, zCommPct:18,
-    svcCost:384, dl:3,
-    zLeadBonus:false, zLeadMark:40, zLeadCo:60,
-    equityTrigger:500000 },
-
-  dh: { cnt:1,avg:750,sm:3,cpc:1.5,rpc:2000,mode:"capacity" },
-
   // Scenario rows — speculative revenue/expense items for what-if modeling
   // Each: { id, name, type:"revenue"|"expense", amount (positive), startMo (0-11), duration (months, 0=ongoing), on:true }
   scenarios: [],
@@ -170,45 +153,6 @@ export const fK = n => {
 };
 
 export const sm = a => a.reduce((s, v) => s + v, 0);
-
-// Precise runway — finds when balance goes permanently negative
-export function preciseRunway(bl) {
-  let lastPermanentPos = -1;
-  for (let i = bl.length - 1; i >= 0; i--) {
-    if (bl[i] > 0) { lastPermanentPos = i; break; }
-  }
-  if (lastPermanentPos === -1) {
-    for (let i = 0; i < bl.length; i++) {
-      if (bl[i] <= 0) {
-        if (i === 0) return 0;
-        const posV = bl[i-1];
-        const negV = bl[i];
-        const frac = posV / (posV - negV);
-        return Math.round((i - 1 + 1 + frac - 1) * 4) / 4 || 0.25;
-      }
-    }
-    return 0;
-  }
-  if (lastPermanentPos === bl.length - 1) {
-    const n3 = bl.length >= 3 ? (bl[bl.length-1] - bl[bl.length-3]) / 2 : bl[bl.length-1] - bl[bl.length-2];
-    let balance = bl[bl.length - 1];
-    let monthlyNet = n3;
-    for (let m = 13; m <= 24; m++) {
-      if ((m - 12) % 3 === 0) monthlyNet = monthlyNet - Math.abs(monthlyNet) * 0.05;
-      balance += monthlyNet;
-      if (balance <= 0) {
-        const prev = balance - monthlyNet;
-        const frac = prev / (prev - balance);
-        return Math.round((m - 1 + frac) * 4) / 4;
-      }
-    }
-    return 24;
-  }
-  const posV = bl[lastPermanentPos];
-  const negV = bl[lastPermanentPos + 1];
-  const frac = posV / (posV - negV);
-  return Math.round((lastPermanentPos + 1 + frac) * 4) / 4;
-}
 
 // V2.2: 14-month rolling window — 2 months back + current + 11 ahead
 export function getRollingWindow() {

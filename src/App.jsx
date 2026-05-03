@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { MO, P, DC, FL, TIERS, PIE_COLORS, D0, fmt, fK, sm, preciseRunway, getRollingWindow, getWinVal } from "./data.js";
-/* v2.2 changes: 14-month window, outstanding+runway KPI, commission tab, Zoho splits, Option One fix, Jeanna endMo */
+import { MO, P, DC, FL, TIERS, PIE_COLORS, D0, fmt, fK, sm, getRollingWindow, getWinVal } from "./data.js";
 import { loadData, saveData } from "./storage.js";
-import { compute, computePartnership, computeDevHire, computeWithOverlays } from "./compute.js";
+import { compute } from "./compute.js";
 import { Card, Lbl, Bdg, NumIn, Pie, XRow, Sld, KPI, Toggle, Toast, SaveBar, ClientProgressRow, EditableNumber, StatusChip } from "./components.jsx";
 import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
@@ -10,7 +9,7 @@ import InternView from "./InternView.jsx";
 import Reconcile from "./Reconcile.jsx";
 
 export default function App() {
-  const { user, profile, loading: authLoading, isAdmin, signOut } = useAuth();
+  const { user, profile, loading: authLoading, isAdmin, isViewer, signOut } = useAuth();
   const [d, setD] = useState(null);
   const [saved, setSaved] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -19,9 +18,6 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [nt, setNt] = useState("");
   const [arc, setArc] = useState(false);
-  const [ptab, setPtab] = useState("packages");
-  const [showPartnership, setShowPartnership] = useState(false);
-  const [showDevHire, setShowDevHire] = useState(false);
   const [clExpanded, setClExpanded] = useState(null);
   const [clFilter, setClFilter] = useState("service"); // V2.1: default to service clients
   const [clSort, setClSort] = useState({ key: "totalValue", dir: "desc" });
@@ -29,21 +25,19 @@ export default function App() {
   const [showRecon, setShowRecon] = useState(false);
   const [stPicker, setStPicker] = useState(null); // { ci, mi } — which cell has the picker open
 
-  const partnerEmail = "mark@mirroradvisors.com";
-  const isPartner = (user?.email||"").toLowerCase().trim() === partnerEmail || (profile?.email||"").toLowerCase().trim() === partnerEmail;
-
   useEffect(() => { loadData(D0).then(x => { setD(x); setSaved(x); }); }, []);
-  useEffect(() => { if (!isAdmin && isPartner) setTab("partnerships"); }, [isAdmin, isPartner]);
 
   // save() is now LOCAL ONLY — just buffers edits into state.
   // persist() pushes the draft to Supabase; triggered by the Save button or ⌘S.
-  const save = useCallback((nd) => { setD(nd); }, []);
+  // Viewers (read-only role) get a no-op save/persist so they can't accidentally write.
+  const save = useCallback((nd) => { if (isViewer) return; setD(nd); }, [isViewer]);
   const showToast = useCallback((msg, type) => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2500);
   }, []);
   const dirty = !!(d && saved && d !== saved);
   const persist = useCallback(async () => {
+    if (isViewer) return;
     if (!d || !dirty || saving) return;
     setSaving(true);
     const result = await saveData(d);
@@ -54,7 +48,7 @@ export default function App() {
       setSaved(d);
       showToast("Saved \u2713", "ok");
     }
-  }, [d, dirty, saving, showToast]);
+  }, [d, dirty, saving, showToast, isViewer]);
 
   useEffect(() => {
     const h = (e) => {
@@ -74,10 +68,6 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", h);
   }, [dirty]);
 
-  const pt = d?.pt || D0.pt;
-  const dh = d?.dh || D0.dh;
-  const pm = useMemo(() => computePartnership(pt), [pt]);
-  const dm = useMemo(() => computeDevHire(dh), [dh]);
   const win = useMemo(() => getRollingWindow(), []);
 
   const clientsByValue = useMemo(() => {
@@ -115,7 +105,7 @@ export default function App() {
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
-  if (!isAdmin && !isPartner) return (
+  if (!isAdmin && !isViewer) return (
     <>
       <InternView d={d} save={save} dirty={dirty} saving={saving} persist={persist} />
       {toast && <Toast message={toast.msg} type={toast.type} />}
@@ -154,8 +144,6 @@ export default function App() {
   const devs = c.at.filter(t => t.dp === "Development");
   const aCl = d.cl.filter(x => x.rt > 0).length;
 
-  const ov = computeWithOverlays(d, { partnership: showPartnership, devHire: showDevHire });
-
   // V2.1: Zoho commission totals for summary card
   const zhTotal = d.cl.reduce((s, x) => s + (x.zh || 0) * 12 + (x.zha || 0), 0);
 
@@ -168,9 +156,7 @@ export default function App() {
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
 
-  const tabs = isPartner ? ["partnerships"] : ["dashboard","forecast","clients","payroll","partnerships"];
-  const setPt = (k, v) => save({ ...d, pt: { ...pt, [k]: v } });
-  const setDh = (k, v) => save({ ...d, dh: { ...dh, [k]: v } });
+  const tabs = ["dashboard","forecast","clients","payroll"];
 
   const toggleSort = (key) => setClSort(prev => prev.key === key ? { key, dir: prev.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" });
   const sortIcon = (key) => clSort.key === key ? (clSort.dir === "desc" ? " ↓" : " ↑") : "";
@@ -191,6 +177,8 @@ export default function App() {
           <button onClick={signOut} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:4,padding:"5px 10px",fontFamily:"'DM Sans', sans-serif",fontSize:10,cursor:"pointer" }}>Sign Out</button>
         </div>
       </div>
+
+      {isViewer && <div style={{ background:P.aB,borderBottom:`1px solid ${P.aM||P.bd}`,padding:"6px 20px",fontSize:11,color:P.a,textAlign:"center",fontFamily:"'DM Sans', sans-serif",fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase" }}>Read-only view</div>}
 
       <div style={{ maxWidth:1300,margin:"0 auto",padding:"24px 16px" }}>
 
@@ -276,13 +264,8 @@ export default function App() {
 
       {/* ===================== FORECAST ===================== */}
       {tab==="forecast"&&(<>
-        <div style={{ display:"flex",gap:12,marginBottom:16,padding:"10px 14px",background:P.c1,borderRadius:8,border:`1px solid ${P.bd}`,alignItems:"center",flexWrap:"wrap" }}>
-          <span style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600 }}>Overlays</span>
-          <Toggle label="Partnership Impact" value={showPartnership} onChange={setShowPartnership} color={P.p} />
-          <Toggle label="Dev Hire Impact" value={showDevHire} onChange={setShowDevHire} color={P.b} />
-          <div style={{ marginLeft:"auto" }}>
-            <button onClick={()=>setScForm({ name:"",type:"revenue",amount:2000,startMo:cm,duration:0 })} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Scenario</button>
-          </div>
+        <div style={{ display:"flex",justifyContent:"flex-end",marginBottom:16 }}>
+          <button onClick={()=>setScForm({ name:"",type:"revenue",amount:2000,startMo:cm,duration:0 })} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Scenario</button>
         </div>
 
         {/* Scenario Add Form */}
@@ -368,21 +351,10 @@ export default function App() {
                 {l:"Expenses",v:winVals(c.ex),co:P.r},
               ].map(row=><tr key={row.l}><td style={{ padding:"5px 10px",color:row.co,borderBottom:`1px solid ${P.bd}10` }}>{row.l}</td>{row.v.map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:row.co,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(win[i]) }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:700,color:row.co,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(row.l==="Opening"?[]:row.v))}</td></tr>)}
 
-              {showPartnership && <>
-                <tr><td style={{ padding:"5px 10px",color:P.p,borderBottom:`1px solid ${P.bd}10`,fontSize:11,fontStyle:"italic" }}>+ Partnership Rev</td>{winVals(ov.pRev).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:v?P.p:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11,background:tdCm(win[i]) }}>{v?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:P.p,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{fmt(sm(ov.pRev))}</td></tr>
-                <tr><td style={{ padding:"5px 10px",color:P.p,borderBottom:`1px solid ${P.bd}10`,fontSize:11,fontStyle:"italic" }}>− Partnership Cost</td>{winVals(ov.pCost).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:v?P.r:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11,background:tdCm(win[i]) }}>{v?fmt(-v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:P.r,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{fmt(-sm(ov.pCost))}</td></tr>
-              </>}
+              <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",borderBottom:`1px solid ${P.bd}10` }}>Net Flow</td>{winVals(c.nt).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:v>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(win[i]) }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:sm(c.nt)>=0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(c.nt))}</td></tr>
 
-              {showDevHire && <>
-                <tr><td style={{ padding:"5px 10px",color:P.b,borderBottom:`1px solid ${P.bd}10`,fontSize:11,fontStyle:"italic" }}>+ Dev Hire Rev</td>{winVals(ov.dhRev).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:v?P.b:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11,background:tdCm(win[i]) }}>{v?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:P.b,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{fmt(sm(ov.dhRev))}</td></tr>
-                <tr><td style={{ padding:"5px 10px",color:P.b,borderBottom:`1px solid ${P.bd}10`,fontSize:11,fontStyle:"italic" }}>− Dev Hire Cost</td>{winVals(ov.dhCost).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:v?P.r:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",fontSize:11,background:tdCm(win[i]) }}>{v?fmt(-v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:P.r,fontFamily:"'JetBrains Mono', monospace",fontSize:11 }}>{fmt(-sm(ov.dhCost))}</td></tr>
-              </>}
+              <tr style={{ fontWeight:800 }}><td style={{ padding:"5px 10px" }}>BALANCE</td>{winVals(c.bl).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",background:win[i].isCurrent?P.bB:v>5000?P.gB:v>0?P.aB:P.rB,color:win[i].isCurrent?P.b:v>5000?P.g:v>0?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td></td></tr>
 
-              <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",borderBottom:`1px solid ${P.bd}10` }}>Net Flow</td>{winVals((showPartnership||showDevHire)?ov.overlay.nt:c.nt).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",color:v>=0?P.g:P.r,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(win[i]) }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td style={{ padding:"5px 6px",textAlign:"right",color:sm((showPartnership||showDevHire)?ov.overlay.nt:c.nt)>=0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm((showPartnership||showDevHire)?ov.overlay.nt:c.nt))}</td></tr>
-
-              <tr style={{ fontWeight:800 }}><td style={{ padding:"5px 10px" }}>{(showPartnership||showDevHire)?"BASELINE":"BALANCE"}</td>{winVals(c.bl).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",background:win[i].isCurrent?P.bB:v>5000?P.gB:v>0?P.aB:P.rB,color:win[i].isCurrent?P.b:v>5000?P.g:v>0?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td></td></tr>
-
-              {(showPartnership||showDevHire) && <tr style={{ fontWeight:800 }}><td style={{ padding:"5px 10px",color:P.p }}>W/ SCENARIOS</td>{winVals(ov.overlay.bl).map((v,i)=><td key={i} style={{ padding:"5px 6px",textAlign:"right",background:win[i].isCurrent?P.bB:v>5000?P.gB:v>0?P.aB:P.rB,color:win[i].isCurrent?P.b:v>5000?P.g:v>0?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{win[i].inCurrentYear?fmt(v):"\u2014"}</td>)}<td></td></tr>}
             </tbody>
           </table>
         </div>
@@ -601,321 +573,12 @@ export default function App() {
         {["US","PH","IN"].map(ct=>{const pp=d.tm.filter(t=>t.ct===ct&&(t.on||arc));if(!pp.length)return null;const mo=pp.filter(p=>p.on).reduce((s,p)=>s+p.co,0);return(<div key={ct} style={{ marginBottom:20 }}><div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}><span style={{ fontSize:16 }}>{FL[ct]}</span><span style={{ fontSize:13,fontWeight:700 }}>{ct==="US"?"United States":ct==="PH"?"Philippines":"India"}</span><Bdg c="r">{fmt(-mo)}/mo</Bdg></div><div style={{ display:"grid",gap:6 }}>{pp.map(p=>{const pi=d.tm.indexOf(p);return(<div key={p.id} style={{ background:p.on?P.c1:`${P.c1}80`,borderRadius:8,padding:"10px 14px",border:`1px solid ${P.bd}`,display:"flex",alignItems:"center",gap:12,opacity:p.on?1:.4 }}><div style={{ flex:1 }}><div style={{ display:"flex",alignItems:"center",gap:6 }}><input value={p.nm} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,nm:e.target.value};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:12,fontWeight:600,width:110 }}/><span style={{ fontSize:9,padding:"1px 6px",borderRadius:3,background:`${DC[p.dp]||P.td}20`,color:DC[p.dp]||P.td,fontWeight:600 }}>{p.dp}</span></div><input value={p.rl||""} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,rl:e.target.value};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",color:P.tm,fontFamily:"'DM Sans', sans-serif",fontSize:11,marginTop:1 }} placeholder="Role"/></div><select value={p.dp} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,dp:e.target.value};save({...d,tm:nt2});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:11,padding:4 }}>{["Development","Marketing","Operations","Leadership"].map(dd=><option key={dd}>{dd}</option>)}</select><NumIn value={p.co} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,co:+e.target.value};save({...d,tm:nt2});}} w={70}/><button onClick={()=>{const nt2=[...d.tm];nt2[pi]={...p,on:!p.on};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",cursor:"pointer",fontSize:14 }} title={p.on?"Archive":"Reactivate"}>{p.on?"\ud83d\udce6":"\u267b\ufe0f"}</button><button onClick={()=>save({...d,tm:d.tm.filter((_,i)=>i!==pi)})} style={{ background:"transparent",border:"none",color:P.rM,cursor:"pointer",fontSize:13 }}>×</button></div>);})}</div></div>);})}
       </>)}
 
-      {/* ===================== PARTNERSHIPS ===================== */}
-
-      {/* ===================== PARTNERSHIPS ===================== */}
-      {tab==="partnerships"&&(<>
-
-        {/* === TABS === */}
-        <div style={{ display:"flex",gap:0,borderBottom:`1px solid ${P.bd}`,marginBottom:20 }}>{["packages","runway","config"].map(t=><button key={t} onClick={()=>setPtab(t)} style={{ padding:"10px 14px",cursor:"pointer",border:"none",fontFamily:"'DM Sans', sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:"transparent",color:ptab===t?P.g:P.tm,borderBottom:ptab===t?`2px solid ${P.g}`:"2px solid transparent" }}>{t}</button>)}</div>
-
-        {/* ============ SPLITS TAB ============ */}
-
-        {/* ============ PACKAGES TAB (combined packages + custom) ============ */}
-        {ptab==="packages"&&(<div>
-          {(()=>{
-            const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
-            const devCPC = 300;
-            const overhead = 100;
-            const svcRate = 2000;
-            const svcProfit = svcRate - devCPC - overhead;
-            const orgC = pt.pkgOrg || 3;
-            const resC = pt.pkgRes || 5;
-            const totalEx = orgC + resC;
-
-            const models = [
-              { name:"Entrepreneur", desc:"Zero salary. Maximum upside. For partners who bet on themselves.", color:P.a,
-                bs:0, orgSvc:30, orgLic:20, resSvc:30, resLic:45, equity:"Consideration after $450k/yr revenue" },
-              { name:"Balanced", desc:"Moderate base with solid commissions. Best of both worlds.", color:P.p,
-                bs:2000, orgSvc:15, orgLic:10, resSvc:15, resLic:30, equity:"Consideration after $650k/yr revenue" },
-              { name:"Secure", desc:"Strong guaranteed salary. Limited commission. Predictable income.", color:P.b,
-                bs:4000, orgSvc:5, orgLic:5, resSvc:5, resLic:15, equity:"No equity" },
-            ];
-
-            return <>
-              <div style={{ fontSize:12,color:P.tm,marginBottom:12,lineHeight:1.6 }}>
-                Three packages, same opportunity. Service commissions on profit after dev ($300) + overhead ($100) = <b style={{ color:P.tx }}>${svcProfit}/client profit</b>.
-              </div>
-              <div style={{ display:"flex",gap:12,marginBottom:16,alignItems:"center" }}>
-                <span style={{ fontSize:11,color:P.td }}>Model with:</span>
-                <div style={{ display:"flex",alignItems:"center",gap:4 }}><input type="number" value={orgC} onChange={e=>setPt("pkgOrg",Math.max(0,Math.min(20,parseInt(e.target.value)||0)))} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,padding:"4px 8px",color:P.t,fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:50,textAlign:"center" }}/><span style={{ fontSize:11,color:P.t }}>organic</span></div>
-                <span style={{ color:P.td }}>+</span>
-                <div style={{ display:"flex",alignItems:"center",gap:4 }}><input type="number" value={resC} onChange={e=>setPt("pkgRes",Math.max(0,Math.min(20,parseInt(e.target.value)||0)))} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,padding:"4px 8px",color:P.a,fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",width:50,textAlign:"center" }}/><span style={{ fontSize:11,color:P.a }}>restored Zoho</span></div>
-                <span style={{ fontSize:11,color:P.td }}>= {totalEx} clients</span>
-              </div>
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
-                {models.map((m,mi)=>{
-                  const orgSvcPer = Math.round(svcProfit * m.orgSvc / 100);
-                  const orgLicPer = Math.round(zLic * m.orgLic / 100);
-                  const orgMarkMo = orgC * (orgSvcPer + orgLicPer);
-                  const resSvcPer = Math.round(svcProfit * m.resSvc / 100);
-                  const resLicPer = Math.round(zLic * m.resLic / 100);
-                  const resMarkMo = resC * (resSvcPer + resLicPer);
-                  const markTotal = m.bs + orgMarkMo + resMarkMo;
-
-                  return <Card key={mi} style={{ padding:0,overflow:"hidden",border:`1px solid ${m.color}33` }}>
-                    <div style={{ padding:"12px 14px",background:`${m.color}10`,borderBottom:`1px solid ${m.color}22` }}>
-                      <div style={{ fontSize:14,fontWeight:700,color:m.color }}>{m.name}</div>
-                      <div style={{ fontSize:10,color:P.tm,marginTop:3 }}>{m.desc}</div>
-                    </div>
-                    <div style={{ padding:14 }}>
-                      <div style={{ display:"grid",gap:5,fontSize:11 }}>
-                        <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Base salary</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${m.bs.toLocaleString()}/mo</span></div>
-                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:5,marginTop:2 }}>
-                          <div style={{ fontSize:9,color:P.td,textTransform:"uppercase",marginBottom:3 }}>Organic ({orgC} clients)</div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgSvc}% (${orgSvcPer}/cl)</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>License</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{m.orgLic}% (${orgLicPer}/cl)</span></div>
-                        </div>
-                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:5,marginTop:2 }}>
-                          <div style={{ fontSize:9,color:P.a,textTransform:"uppercase",marginBottom:3 }}>Restored Zoho ({resC} clients)</div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Service</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resSvc}% (${resSvcPer}/cl)</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>License</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{m.resLic}% (${resLicPer}/cl)</span></div>
-                        </div>
-                        <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4 }}>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Guaranteed</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${m.bs.toLocaleString()}/mo</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{pt.nm} total ({totalEx} cl)</span><span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${markTotal.toLocaleString()}/mo</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Annual est.</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${(markTotal*12).toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Equity</span><span style={{ color:mi===2?P.r:P.p,fontSize:10 }}>{m.equity}</span></div>
-                        </div>
-                      </div>
-                      {(()=>{
-                        // Calculate runway for this package
-                        const pkgFixedMo = m.bs + pt.dch;
-                        const pkgSetup = pt.opc || 0;
-                        // Zero deals runway
-                        const zBl = [];
-                        let zCum = 0;
-                        for (let i = 0; i < 12; i++) {
-                          const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-                          if (ma > 0) zCum += pkgFixedMo + (ma === 1 ? pkgSetup : 0);
-                          zBl.push(c.bl[i] - zCum);
-                        }
-                        const pkgRun = preciseRunway(zBl);
-                        return <div style={{ marginTop:8,padding:"8px 0",borderTop:`1px solid ${P.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                          <span style={{ fontSize:10,color:P.td }}>Runway (no deals)</span>
-                          <span style={{ fontSize:18,fontWeight:800,color:pkgRun>=9?P.g:pkgRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{pkgRun} mo</span>
-                        </div>;
-                      })()}
-                    </div>
-                  </Card>;
-                })}
-              </div>
-
-              {/* === CUSTOM PACKAGE BUILDER === */}
-              <Card style={{ padding:16,border:`1px solid ${P.g}33` }}>
-                <Lbl>Build Your Own Package</Lbl>
-                <div style={{ fontSize:11,color:P.tm,marginBottom:12 }}>Set your ideal terms. Click "Apply" on any preset above to start from a template, then customize here.</div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:16 }}>
-                  <div>
-                    <Sld label={`${pt.nm}'s Base Salary`} value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={10000} step={250} pre="$" suf="/mo" color={P.a}/>
-                    <div style={{ marginTop:12 }}>
-                      <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",marginBottom:6,fontWeight:600 }}>Organic Leads</div>
-                      <Sld label="Service Commission" value={pt.orgSvc||15} onChange={v=>setPt("orgSvc",v)} min={0} max={40} suf={`% → $${Math.round(svcProfit*(pt.orgSvc||15)/100)}/client`} color={P.t}/>
-                      <Sld label="License Commission" value={pt.orgLic||10} onChange={v=>setPt("orgLic",v)} min={0} max={30} suf={`% → $${Math.round(zLic*(pt.orgLic||10)/100)}/client`} color={P.t}/>
-                    </div>
-                    <div style={{ marginTop:12 }}>
-                      <div style={{ fontSize:10,color:P.a,textTransform:"uppercase",marginBottom:6,fontWeight:600 }}>Restored Zoho Leads</div>
-                      <Sld label="Service Commission" value={pt.resSvc||15} onChange={v=>setPt("resSvc",v)} min={0} max={40} suf={`% → $${Math.round(svcProfit*(pt.resSvc||15)/100)}/client`} color={P.a}/>
-                      <Sld label="License Commission" value={pt.resLic||40} onChange={v=>setPt("resLic",v)} min={0} max={50} suf={`% → $${Math.round(zLic*(pt.resLic||40)/100)}/client`} color={P.a}/>
-                    </div>
-                    <div style={{ fontSize:10,color:P.tm,marginTop:8 }}>
-                      Restored lead criteria: 2 retail/mo + 1 mid-market/mo from Zoho direct referrals. Falls below = reverts to organic rates.
-                    </div>
-                  </div>
-                  <div>
-                    <Card style={{ padding:14,background:P.c2 }}>
-                      <Lbl>Your Custom Package ({orgC} org + {resC} restored)</Lbl>
-                      {(()=>{
-                        const orgS = Math.round(svcProfit*(pt.orgSvc||15)/100);
-                        const orgL = Math.round(zLic*(pt.orgLic||10)/100);
-                        const resS = Math.round(svcProfit*(pt.resSvc||15)/100);
-                        const resL = Math.round(zLic*(pt.resLic||40)/100);
-                        const markMo = (pt.bs||0) + orgC*(orgS+orgL) + resC*(resS+resL);
-                        return <div style={{ display:"grid",gap:6,fontSize:11,marginTop:8 }}>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Base</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>${(pt.bs||0).toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{orgC} organic × ${orgS+orgL}</span><span style={{ color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>${(orgC*(orgS+orgL)).toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>{resC} restored × ${resS+resL}</span><span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${(resC*(resS+resL)).toLocaleString()}</span></div>
-                          <div style={{ borderTop:`1px solid ${P.bd}`,paddingTop:6,display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td,fontWeight:700 }}>Monthly</span><span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace",fontWeight:700,fontSize:14 }}>${markMo.toLocaleString()}</span></div>
-                          <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:P.td }}>Annual</span><span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace",fontWeight:700 }}>${(markMo*12).toLocaleString()}</span></div>
-                        </div>;
-                      })()}
-                    </Card>
-                    <button onClick={()=>{setPt("nzq",totalEx);setPt("ocq",0);setPtab("runway");}} style={{ width:"100%",marginTop:10,padding:"10px",background:`${P.g}20`,color:P.g,border:`1px solid ${P.g}44`,borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Apply Custom → See Runway Impact</button>
-                  </div>
-                </div>
-              </Card>
-            </>;
-          })()}
-        </div>)}
-
-        {/* ============ ASSUMPTIONS TAB ============ */}
-        {ptab==="runway"&&(<>
-          {/* Three runway cards */}
-          {(()=>{
-            const fixedMo = (pt.bs||0) + pt.dch;
-            const setupCost = pt.opc || 0;
-            const hasDeals = (pt.ocq || 0) + (pt.nzq || 0) > 0;
-
-            // ZERO DEALS: salary + 1 dev, no revenue
-            const zeroBl = [];
-            let zeroCum = 0;
-            for (let i = 0; i < 12; i++) {
-              const ma = i >= pt.sm ? i - pt.sm + 1 : 0;
-              if (ma > 0) zeroCum += fixedMo + (ma === 1 ? setupCost : 0);
-              zeroBl.push(c.bl[i] - zeroCum);
-            }
-            const zeroRun = preciseRunway(zeroBl);
-
-            // DEALS FLOWING: uses pm.months which has 3/mo client ramp
-            const dealsBl = c.bl.map((b, i) => b + pm.months[i].cum);
-            const dealsRun = preciseRunway(dealsBl);
-
-            // Breakeven
-            const zLic = Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100);
-            const svcProfit = 2000 - 300 - 100;
-            const markSvcPer = Math.round(svcProfit * (pt.orgSvc||15) / 100);
-            const compSvcPer = svcProfit - markSvcPer;
-            const compLicPer = Math.round(zLic * 40 / 100);
-            const paulLicPer = Math.round(zLic * 50 / 100);
-            let beClients = null;
-            for (let n = 1; n <= 20; n++) {
-              const devs = Math.ceil(n / (pt.cpc||2.5));
-              const revToCompany = n * (compSvcPer + compLicPer + paulLicPer);
-              const costs = (pt.bs||0) + devs * pt.dch + n * 100;
-              if (revToCompany >= costs) { beClients = n; break; }
-            }
-
-            return <><div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:24 }}>
-              <Card style={{ padding:16,borderLeft:`3px solid ${P.g}` }}>
-                <Lbl>No Changes</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:mg>=9?P.g:mg>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mg}</div>
-                <div style={{ fontSize:11,color:P.tm }}>months runway</div>
-              </Card>
-              <Card style={{ padding:16,borderLeft:`3px solid ${P.r}` }}>
-                <Lbl>{pt.nm} + Zero Deals</Lbl>
-                <div style={{ fontSize:42,fontWeight:800,color:zeroRun>=9?P.g:zeroRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{zeroRun}</div>
-                <div style={{ fontSize:11,color:P.tm }}>months · burns ${fixedMo.toLocaleString()}/mo extra</div>
-                <div style={{ fontSize:10,color:P.r,marginTop:4 }}>Salary ${(pt.bs||0).toLocaleString()} + Dev ${pt.dch.toLocaleString()} + Setup ${setupCost.toLocaleString()}</div>
-              </Card>
-              <Card style={{ padding:16,borderLeft:`3px solid ${hasDeals?P.g:P.td}` }}>
-                <Lbl>{pt.nm} + Deals Flowing</Lbl>
-                {hasDeals ? <>
-                  <div style={{ fontSize:42,fontWeight:800,color:dealsRun>=9?P.g:dealsRun>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{dealsRun>=24?"24+":dealsRun}</div>
-                  <div style={{ fontSize:11,color:P.tm }}>months · {pt.nzq||0} Zoho + {pt.ocq||0} Odoo active</div>
-                  <div style={{ fontSize:10,color:pm.netMonthly>=0?P.g:P.r,marginTop:4 }}>{pm.netMonthly>=0?"+":""}${pm.netMonthly.toLocaleString()}/mo net at steady state</div>
-                </> : <>
-                  <div style={{ fontSize:18,fontWeight:600,color:P.td,marginTop:12 }}>Set deal flow below</div>
-                  <div style={{ fontSize:11,color:P.td,marginTop:4 }}>Slide Zoho or Odoo clients above 0</div>
-                </>}
-              </Card>
-            </div>
-            {beClients && <div style={{ padding:14,borderRadius:8,background:P.gB,border:`1px solid ${P.gM}`,marginBottom:20,display:"flex",alignItems:"center",gap:16 }}>
-              <div style={{ fontSize:42,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{beClients}</div>
-              <div>
-                <div style={{ fontSize:14,color:P.g,fontWeight:700 }}>clients to break even</div>
-                <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>At {beClients} active clients, {pt.nm}'s partnership pays for itself. Every client beyond {beClients} is pure profit.</div>
-              </div>
-            </div>}
-            </>;
-          })()}
-
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:24 }}>
-            <div>
-              <Lbl>Partnership Parameters</Lbl>
-              <Sld label={`${pt.nm}'s Base Salary`} value={pt.bs} onChange={v=>setPt("bs",v)} min={0} max={10000} step={250} pre="$" suf="/mo" color={P.a}/>
-              <Sld label="Start Month" value={pt.sm} onChange={v=>setPt("sm",v)} min={0} max={11} suf={` (${MO[pt.sm]})`} color={P.p}/>
-              <Sld label="Ramp-Up Delay" value={pt.dl||0} onChange={v=>setPt("dl",v)} min={0} max={6} suf=" months before first revenue" color={P.a}/>
-              <div style={{ height:12 }}/>
-              <Lbl>Deal Flow (all clients $2,000/mo × 12mo retainer)</Lbl>
-              <div style={{ fontSize:11,color:P.tm,marginBottom:8 }}>Total active clients Mark brings. Max 3 new/month. Dev: $750/mo per dev (2.5 clients each). Overhead: $100/client.</div>
-              <Sld label="Zoho Clients (active)" value={pt.nzq} onChange={v=>setPt("nzq",v)} min={0} max={20} suf=" clients"/>
-              <Sld label="Odoo Clients (active)" value={pt.ocq} onChange={v=>setPt("ocq",v)} min={0} max={20} suf=" clients"/>
-            </div>
-            <div>
-              <Lbl>Cumulative Cash Impact</Lbl>
-              <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)`,gap:2,marginBottom:16 }}>{win.map((s,i)=>{const m=s.inCurrentYear?pm.months[s.idx]:{cum:0,inDelay:false};return<div key={i} style={{ height:34,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono', monospace",opacity:s.inCurrentYear&&s.idx>=pt.sm?1:.3,background:m.inDelay?P.aB:m.cum>0?P.gB:m.cum>-3000?P.aB:P.rB,color:m.inDelay?P.a:m.cum>0?P.g:m.cum>-3000?P.a:P.r }}>{s.inCurrentYear?fK(m.cum):"\u2014"}</div>})}</div>
-
-              <Card style={{ padding:14,marginBottom:12 }}>
-                <Lbl>Steady State ({pm.totalClients} clients)</Lbl>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,marginTop:8 }}>
-                  <div><span style={{ color:P.td }}>Devs needed:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>{pm.totalDevs} (${pm.totalDevCost.toLocaleString()}/mo)</span></div>
-                  <div><span style={{ color:P.td }}>Overhead:</span> <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>${pm.overhead.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>{pt.nm} earns:</span> <span style={{ color:P.a,fontFamily:"'JetBrains Mono', monospace" }}>${pm.mComp.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>Paul earns:</span> <span style={{ color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>${pm.paulLicTotal.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>Company keeps:</span> <span style={{ color:P.b,fontFamily:"'JetBrains Mono', monospace" }}>${pm.compTotal.toLocaleString()}/mo</span></div>
-                  <div><span style={{ color:P.td }}>New MRR:</span> <span style={{ color:P.tx,fontFamily:"'JetBrains Mono', monospace" }}>${pm.totalNewRev.toLocaleString()}/mo</span></div>
-                  <div style={{ gridColumn:"1/-1",borderTop:`1px solid ${P.bd}`,paddingTop:6,marginTop:4 }}>
-                    <span style={{ color:P.td }}>Net monthly:</span> <span style={{ color:pm.netMonthly>=0?P.g:P.r,fontWeight:700,fontFamily:"'JetBrains Mono', monospace" }}>{pm.netMonthly>=0?"+":""}${pm.netMonthly.toLocaleString()}/mo</span>
-                  </div>
-                </div>
-              </Card>
-
-              {pm.totalClients > 0 && <Card style={{ padding:12,marginBottom:12 }}>
-                <Lbl>Per Client Economics</Lbl>
-                <div style={{ fontSize:11,marginTop:6,lineHeight:1.7 }}>
-                  <div><b style={{ color:P.tx }}>Service:</b> $2,000 − ${pm.devPerClient} dev − $100 overhead = <b>${pm.svcProfit} profit</b> → {pt.nm} 15% (${pm.markSvcPer}) · Co 85% (${pm.companySvcPer})</div>
-                  <div><b style={{ color:P.t }}>License:</b> ${pm.zLicPerClient}/mo → {pt.nm} {pm.licMarkPct}% (${pm.markLicPer}) · Co {pm.licCoPct}% (${pm.compLicPer}) · Paul {pm.licPaulPct}% (${pm.paulLicPer})</div>
-                </div>
-              </Card>}
-
-              {(()=>{
-                const perClient = pm.markSvcPer + pm.markLicPer;
-                const rows = [];
-                for (let t = 1; t <= 15; t++) {
-                  const m = (pt.bs||0) + t * perClient;
-                  rows.push({ n:t, m, ramp: Math.ceil(t/3) });
-                }
-                return <div style={{ marginBottom:12 }}>
-                  <Lbl>{pt.nm}'s Earnings by Client Count</Lbl>
-                  <div style={{ fontSize:10,color:P.tm,marginBottom:4 }}>15% service profit + {pm.licMarkPct}% license. Max 3 new/month.</div>
-                  <div style={{ overflowX:"auto",marginTop:6 }}><table style={{ width:"100%",borderCollapse:"collapse",fontSize:11 }}>
-                    <thead><tr>{["Clients","Ramp","Monthly","Annual"].map(h=><th key={h} style={{ padding:"4px 8px",textAlign:"right",color:P.td,fontSize:9,borderBottom:`1px solid ${P.bd}`,textTransform:"uppercase" }}>{h}</th>)}</tr></thead>
-                    <tbody>{rows.map(r=><tr key={r.n}><td style={{ padding:"3px 8px",textAlign:"right",color:P.tx,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.n}</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.td,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>{r.ramp} mo</td><td style={{ padding:"3px 8px",textAlign:"right",color:P.a,fontWeight:600,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${r.m.toLocaleString()}</td><td style={{ padding:"3px 8px",textAlign:"right",color:r.m*12>=100000?P.g:P.tm,fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}10` }}>${(r.m*12).toLocaleString()}</td></tr>)}</tbody>
-                  </table></div>
-                </div>;
-              })()}
-
-              <div style={{ padding:12,borderRadius:8,background:P.c2,border:`1px solid ${P.bd}`,fontSize:11,color:P.tm,lineHeight:1.7 }}>
-                {(()=>{
-                  const firstRevIdx = pt.sm + (pt.dl || 0);
-                  const delayCost = (pt.bs||0) * (pt.dl || 0) + (pt.opc || 0) + pt.dch * (pt.dl || 0);
-                  return <>Investment: <b style={{ color:P.r }}>${delayCost.toLocaleString()}</b> before first revenue in <b style={{ color:P.g }}>{firstRevIdx<12?MO[firstRevIdx]:"2027"}</b>. {pt.nm} costs <b style={{ color:P.r }}>${((pt.bs||0)+pt.dch).toLocaleString()}/mo</b> during ramp. Max 3 clients/mo after ramp.
-                    {pt.equityTrigger && <><br/><span style={{ color:P.p }}>Equity at ${(pt.equityTrigger||500000).toLocaleString()}/yr revenue.</span></>}
-                  </>;
-                })()}
-              </div>
-            </div>
-          </div>
-        </>)}
-
-        {/* ============ CONFIG TAB ============ */}
-        {ptab==="config"&&(<div style={{ maxWidth:500 }}>
-          <Lbl>Partner Profile</Lbl>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:8,marginBottom:16 }}>
-            <div><div style={{ fontSize:10,color:P.td,marginBottom:3 }}>PARTNER NAME</div><input value={pt.nm} onChange={e=>setPt("nm",e.target.value)} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 12px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",width:"100%" }}/></div>
-            <div><div style={{ fontSize:10,color:P.td,marginBottom:3 }}>ROLE</div><input value={pt.rl} onChange={e=>setPt("rl",e.target.value)} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"8px 12px",color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",width:"100%" }}/></div>
-          </div>
-          <Lbl>Dev Economics</Lbl>
-          <Sld label="Dev Cost Per Hire" value={pt.dch} onChange={v=>setPt("dch",v)} min={300} max={2000} step={50} pre="$" suf="/mo"/>
-          <Sld label="Clients Per Dev" value={pt.cpc||2.5} onChange={v=>setPt("cpc",v)} min={1} max={5} step={0.5} suf={` → $${Math.round(pt.dch/(pt.cpc||2.5))}/client/mo`}/>
-          <Sld label="Setup Cost" value={pt.opc||1000} onChange={v=>setPt("opc",v)} min={0} max={5000} step={500} pre="$" suf=" one-time"/>
-          <div style={{ height:12 }}/>
-          <Lbl>Zoho License Model</Lbl>
-          <Sld label="Avg Seats Per Client" value={pt.zSeats||15} onChange={v=>setPt("zSeats",v)} min={5} max={50} suf=" seats"/>
-          <Sld label="Seat Price" value={pt.zSeatPrice||40} onChange={v=>setPt("zSeatPrice",v)} min={20} max={80} step={5} pre="$" suf="/seat/mo"/>
-          <Sld label="Commission Rate" value={pt.zCommPct||18} onChange={v=>setPt("zCommPct",v)} min={10} max={25} suf="%"/>
-          <div style={{ fontSize:11,color:P.tm,marginTop:4 }}>License commission: {pt.zSeats||15} × ${pt.zSeatPrice||40} × {pt.zCommPct||18}% = <b style={{ color:P.t }}>${Math.round((pt.zSeats||15)*(pt.zSeatPrice||40)*(pt.zCommPct||18)/100)}/mo</b> per client</div>
-          <div style={{ height:12 }}/>
-          <Lbl>Equity</Lbl>
-          <Sld label="Revenue Trigger" value={pt.equityTrigger||500000} onChange={v=>setPt("equityTrigger",v)} min={250000} max={1000000} step={50000} pre="$" suf="/yr" color={P.p}/>
-        </div>)}
-      </>)}
 
 
 
       </div>
 
-      <SaveBar dirty={dirty} saving={saving} onSave={persist} />
+      {!isViewer && <SaveBar dirty={dirty} saving={saving} onSave={persist} />}
       {toast && <Toast message={toast.msg} type={toast.type} />}
 
       {modal&&(<div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100 }} onClick={()=>setModal(null)}><div onClick={e=>e.stopPropagation()} style={{ background:P.c1,borderRadius:12,padding:24,width:380,border:`1px solid ${P.bd}` }}><div style={{ fontSize:14,fontWeight:700,marginBottom:14 }}>Credit — {d.cl[modal.ci]?.nm} ({MO[modal.mi]})</div><textarea value={nt} onChange={e=>setNt(e.target.value)} placeholder="Reason for credit..." rows={3} style={{ width:"100%",background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:12,padding:10,resize:"vertical",boxSizing:"border-box" }}/><div style={{ display:"flex",gap:8,marginTop:14,justifyContent:"flex-end" }}><button onClick={()=>setModal(null)} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:6,padding:"7px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:12,cursor:"pointer" }}>Cancel</button><button onClick={saveCr} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"7px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:12,fontWeight:700,cursor:"pointer" }}>Save</button></div></div></div>)}

@@ -2,8 +2,6 @@ import { supabase } from './supabase.js';
 const LOCAL_KEY = "mirror_forecast_v1";
 
 function migrateData(parsed, defaultData) {
-  if (!parsed.pt) parsed.pt = defaultData.pt;
-  if (!parsed.dh) parsed.dh = defaultData.dh;
   if (!parsed.scenarios) parsed.scenarios = [];
   if (!parsed.actuals) parsed.actuals = {};
   const payMethods = ['Stripe', 'ACH', 'Check', 'Wire', 'CC'];
