@@ -24,6 +24,16 @@ export default function App() {
   const [scForm, setScForm] = useState(null); // null = closed, object = editing
   const [showRecon, setShowRecon] = useState(false);
   const [stPicker, setStPicker] = useState(null); // { ci, mi } — which cell has the picker open
+  const [crmFilter, setCrmFilter] = useState("all");
+  const [crmSort, setCrmSort] = useState("status");
+  const [zohoExpanded, setZohoExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => { loadData(D0).then(x => { setD(x); setSaved(x); }); }, []);
 
@@ -156,7 +166,58 @@ export default function App() {
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
 
-  const tabs = ["dashboard","forecast","clients","payroll"];
+  const tabs = ["dashboard","forecast","clients","crm","payroll"];
+
+  // === CRM helpers (Phase B) ===
+  const STATUS_COLORS = {
+    active:    { bg: P.gB, fg: P.g },
+    "at-risk": { bg: P.aB, fg: P.a },
+    churned:   { bg: P.rB, fg: P.r },
+    pipeline:  { bg: P.c2, fg: P.tm },
+  };
+  const statusPill = (s) => {
+    const co = STATUS_COLORS[s] || STATUS_COLORS.pipeline;
+    return <span style={{ display:"inline-flex",alignItems:"center",gap:6,padding:"3px 9px",borderRadius:11,background:co.bg,color:co.fg,fontSize:10,fontWeight:700,fontFamily:"'DM Sans', sans-serif",textTransform:"capitalize",whiteSpace:"nowrap",letterSpacing:"0.02em" }}><span style={{ width:6,height:6,borderRadius:3,background:co.fg }} />{s || "unknown"}</span>;
+  };
+  const formatCrmAmount = (cl) => {
+    if (cl.contractType === "retainer") return `$${(cl.monthlyAmount || 0).toLocaleString()}/mo`;
+    if (cl.contractType === "project") {
+      if (cl.termMonths) return `$${(cl.monthlyAmount || 0).toLocaleString()}/mo × ${cl.termMonths}`;
+      if (cl.totalContractValue) return `$${cl.totalContractValue.toLocaleString()} total`;
+      return "—";
+    }
+    if (cl.contractType === "one-time") {
+      const paid = (cl.payments || []).filter(p => p.status === "P").reduce((s, p) => s + p.amount, 0);
+      const total = (cl.payments || []).reduce((s, p) => s + p.amount, 0);
+      if (total === 0) return "—";
+      if (paid === total) return `$${total.toLocaleString()} (paid)`;
+      if (paid === 0) return `$${total.toLocaleString()} (pending)`;
+      return `$${total.toLocaleString()} ($${paid.toLocaleString()} paid)`;
+    }
+    if (cl.contractType === "zoho-only") {
+      if (cl.commissionFrequency === "annual") return `$${(cl.currentCommissionAnnual || 0).toLocaleString()}/yr`;
+      return `$${(cl.currentCommissionMonthly || 0).toLocaleString()}/mo`;
+    }
+    return "—";
+  };
+  const formatRenewal = (cl) => cl.renewalDate || cl.endDate || "—";
+  const STATUS_PRIORITY = { "at-risk": 0, active: 1, pipeline: 2, churned: 3 };
+  const isZohoCl = (cl) => cl.contractType === "zoho-only";
+  const zohoMonthlySum = d.cl.filter(c => isZohoCl(c) && c.commissionFrequency !== "annual").reduce((s, c) => s + (c.currentCommissionMonthly || 0), 0);
+  const zohoAnnualSum = d.cl.filter(c => isZohoCl(c) && c.commissionFrequency === "annual").reduce((s, c) => s + (c.currentCommissionAnnual || 0), 0);
+  const zohoTotalCount = d.cl.filter(isZohoCl).length;
+  const matchesCrmFilter = (cl, f) => f === "all" ? true : f === "one-time" ? cl.contractType === "one-time" : cl.status === f;
+  const sortCrmRows = (rows) => {
+    const arr = [...rows];
+    if (crmSort === "status") arr.sort((a, b) => (STATUS_PRIORITY[a.status] ?? 99) - (STATUS_PRIORITY[b.status] ?? 99) || a.nm.localeCompare(b.nm));
+    else if (crmSort === "name") arr.sort((a, b) => a.nm.localeCompare(b.nm));
+    else if (crmSort === "type") arr.sort((a, b) => (a.contractType || "").localeCompare(b.contractType || "") || a.nm.localeCompare(b.nm));
+    else if (crmSort === "amount") {
+      const v = (c) => c.monthlyAmount || (c.totalContractValue ? c.totalContractValue / 12 : 0) || (c.payments || []).reduce((s, p) => s + p.amount, 0) || (c.currentCommissionMonthly || 0) || (c.currentCommissionAnnual ? c.currentCommissionAnnual / 12 : 0);
+      arr.sort((a, b) => v(b) - v(a));
+    }
+    return arr;
+  };
 
   const toggleSort = (key) => setClSort(prev => prev.key === key ? { key, dir: prev.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" });
   const sortIcon = (key) => clSort.key === key ? (clSort.dir === "desc" ? " ↓" : " ↑") : "";
@@ -566,6 +627,146 @@ export default function App() {
           })()}
         </div>
       </>)}
+
+      {/* ===================== CRM ===================== */}
+      {tab==="crm"&&(()=>{
+        const filtersList = [["all","All"],["active","Active"],["at-risk","At-Risk"],["churned","Churned"],["one-time","One-Time"],["pipeline","Pipeline"]];
+        const showZohoAggregate = (crmFilter === "all" || crmFilter === "active") && zohoTotalCount > 0;
+        const filteredNonZoho = d.cl.filter(c => !isZohoCl(c) && matchesCrmFilter(c, crmFilter));
+        const zohoAggregate = showZohoAggregate ? { id:"_zoho_agg", _isAggregate:true, nm:"Zoho Commissions", status:"active", contractType:"zoho-only", monthlyAmount: zohoMonthlySum, _count: zohoTotalCount } : null;
+        const rowsBeforeSort = zohoAggregate ? [...filteredNonZoho, zohoAggregate] : filteredNonZoho;
+        const rows = sortCrmRows(rowsBeforeSort);
+        const zohoSorted = sortCrmRows(d.cl.filter(isZohoCl));
+        const zohoAmountLabel = (() => {
+          const parts = [];
+          if (zohoMonthlySum > 0) parts.push(`~$${zohoMonthlySum.toLocaleString()}/mo`);
+          if (zohoAnnualSum > 0) parts.push(`~$${zohoAnnualSum.toLocaleString()}/yr`);
+          return parts.length ? parts.join(" + ") : "—";
+        })();
+        const viewBtnSty = { background:"transparent",border:`1px solid ${P.bd}`,borderRadius:6,padding:"4px 10px",color:P.tm,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",letterSpacing:"0.02em" };
+        const thS = { padding:"10px 14px",textAlign:"left",color:P.td,fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",fontFamily:"'DM Sans', sans-serif",borderBottom:`1px solid ${P.bd}` };
+        const tdS = { padding:"12px 14px",borderBottom:`1px solid ${P.bd}50`,color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",verticalAlign:"middle" };
+        const tdMono = { ...tdS, fontFamily:"'JetBrains Mono', monospace",fontSize:11,color:P.tm };
+        return (<>
+          {/* Filter pills + sort dropdown */}
+          <div style={{ display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center" }}>
+            {filtersList.map(([k,l])=>(
+              <button key={k} onClick={()=>setCrmFilter(k)} style={{ fontSize:11,color:crmFilter===k?P.tx:P.tm,background:crmFilter===k?P.c2:"transparent",padding:"6px 14px",borderRadius:6,fontWeight:600,border:`1px solid ${crmFilter===k?P.bd:"transparent"}`,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>{l}</button>
+            ))}
+            <div style={{ marginLeft:"auto",display:"flex",alignItems:"center",gap:8 }}>
+              <span style={{ fontSize:9,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600 }}>Sort</span>
+              <select value={crmSort} onChange={e=>setCrmSort(e.target.value)} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:6,padding:"6px 12px",color:P.tx,fontSize:11,fontFamily:"'DM Sans', sans-serif",cursor:"pointer" }}>
+                <option value="status">Status</option>
+                <option value="name">Name</option>
+                <option value="type">Type</option>
+                <option value="amount">Amount</option>
+              </select>
+            </div>
+          </div>
+
+          {rows.length === 0 ? (
+            <Card style={{ padding:36,textAlign:"center" }}>
+              <div style={{ color:P.tm,fontSize:13,fontFamily:"'DM Sans', sans-serif",fontWeight:500 }}>No clients match this filter.</div>
+              <div style={{ color:P.td,fontSize:11,marginTop:6 }}>Try a different status or contract type.</div>
+            </Card>
+          ) : isMobile ? (
+            /* MOBILE: stacked cards */
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+              {rows.map(cl => cl._isAggregate ? (
+                <Card key={cl.id} style={{ padding:14 }}>
+                  <div onClick={()=>setZohoExpanded(!zohoExpanded)} style={{ cursor:"pointer",display:"flex",flexDirection:"column",gap:6 }}>
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                      {statusPill("active")}
+                      <span style={{ fontSize:11,color:P.td }}>{zohoExpanded ? "▼" : "▶"} expand</span>
+                    </div>
+                    <div style={{ fontSize:14,fontWeight:700,color:P.tx,fontFamily:"'DM Sans', sans-serif" }}>Zoho Commissions <span style={{ color:P.td,fontWeight:400,fontSize:11 }}>({cl._count})</span></div>
+                    <div style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em" }}>zoho-only · renewal —</div>
+                    <div style={{ fontSize:13,color:P.t,fontFamily:"'JetBrains Mono', monospace",fontWeight:600 }}>{zohoAmountLabel}</div>
+                  </div>
+                  {zohoExpanded && (
+                    <div style={{ marginTop:12,paddingTop:10,borderTop:`1px solid ${P.bd}`,display:"flex",flexDirection:"column",gap:8 }}>
+                      {zohoSorted.map(zc => (
+                        <div key={zc.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12 }}>
+                          <div>
+                            <div style={{ color:P.tx,fontWeight:600 }}>{zc.nm}</div>
+                            <div style={{ color:P.td,fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2 }}>{zc.commissionFrequency || "monthly"}</div>
+                          </div>
+                          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                            <span style={{ fontFamily:"'JetBrains Mono', monospace",color:P.tm,fontSize:11 }}>{formatCrmAmount(zc)}</span>
+                            <button style={viewBtnSty}>View →</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              ) : (
+                <Card key={cl.id} style={{ padding:14 }}>
+                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+                    {statusPill(cl.status)}
+                    <button style={viewBtnSty}>View →</button>
+                  </div>
+                  <div style={{ fontSize:14,fontWeight:700,color:P.tx,marginBottom:4 }}>{cl.nm}</div>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:11,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em" }}>
+                    <span>{cl.contractType || "—"}</span>
+                    <span>renewal {formatRenewal(cl)}</span>
+                  </div>
+                  <div style={{ marginTop:6,fontSize:13,color:P.t,fontFamily:"'JetBrains Mono', monospace",fontWeight:600 }}>{formatCrmAmount(cl)}</div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            /* DESKTOP: table */
+            <Card style={{ padding:0,overflow:"hidden" }}>
+              <table style={{ width:"100%",borderCollapse:"collapse",fontFamily:"'DM Sans', sans-serif" }}>
+                <thead>
+                  <tr style={{ background:P.c2 }}>
+                    <th style={{ ...thS,width:110 }}>Status</th>
+                    <th style={thS}>Client</th>
+                    <th style={{ ...thS,width:120 }}>Type</th>
+                    <th style={{ ...thS,width:230,textAlign:"right" }}>Amount</th>
+                    <th style={{ ...thS,width:120 }}>Renewal</th>
+                    <th style={{ ...thS,width:90 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(cl => cl._isAggregate ? (
+                    <React.Fragment key={cl.id}>
+                      <tr onClick={()=>setZohoExpanded(!zohoExpanded)} style={{ cursor:"pointer",background:zohoExpanded?`${P.c2}80`:"transparent" }}>
+                        <td style={tdS}>{statusPill("active")}</td>
+                        <td style={tdS}><span style={{ display:"inline-flex",alignItems:"center",gap:8 }}><span style={{ color:P.td,fontSize:11,width:12,display:"inline-block" }}>{zohoExpanded?"▼":"▶"}</span><span style={{ fontWeight:700 }}>Zoho Commissions</span><span style={{ color:P.td,fontSize:10,marginLeft:4 }}>({cl._count})</span></span></td>
+                        <td style={{ ...tdS,color:P.td,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em" }}>zoho-only</td>
+                        <td style={{ ...tdMono,textAlign:"right",color:P.t,fontWeight:600 }}>{zohoAmountLabel}</td>
+                        <td style={tdMono}>—</td>
+                        <td style={tdS}></td>
+                      </tr>
+                      {zohoExpanded && zohoSorted.map(zc => (
+                        <tr key={zc.id} style={{ background:`${P.c2}40` }}>
+                          <td style={tdS}></td>
+                          <td style={{ ...tdS,paddingLeft:42,color:P.tm }}><span style={{ color:P.td,marginRight:8 }}>•</span>{zc.nm}</td>
+                          <td style={{ ...tdS,color:P.td,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em" }}>{zc.commissionFrequency || "monthly"}</td>
+                          <td style={{ ...tdMono,textAlign:"right" }}>{formatCrmAmount(zc)}</td>
+                          <td style={tdMono}>—</td>
+                          <td style={tdS}><button style={viewBtnSty}>View →</button></td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ) : (
+                    <tr key={cl.id} style={{ transition:"background 120ms" }} onMouseEnter={e=>e.currentTarget.style.background=`${P.c2}40`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={tdS}>{statusPill(cl.status)}</td>
+                      <td style={{ ...tdS,fontWeight:600 }}>{cl.nm}</td>
+                      <td style={{ ...tdS,color:P.td,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em" }}>{cl.contractType || "—"}</td>
+                      <td style={{ ...tdMono,textAlign:"right" }}>{formatCrmAmount(cl)}</td>
+                      <td style={tdMono}>{formatRenewal(cl)}</td>
+                      <td style={tdS}><button style={viewBtnSty}>View →</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+        </>);
+      })()}
 
       {/* ===================== PAYROLL ===================== */}
       {tab==="payroll"&&(<>
