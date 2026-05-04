@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { deriveSegment, generateSchedule } from './clientsHelpers.js';
 const LOCAL_KEY = "mirror_forecast_v1";
 
 // Post-E1: clients carry serviceContract / zohoCommission objects.
@@ -25,14 +26,38 @@ function migrateData(parsed, defaultData) {
   if (!parsed.scenarios) parsed.scenarios = [];
   if (!parsed.actuals) parsed.actuals = {};
 
+  // E2a schema detection: has lastEditedAt field OR serviceContract.segment
+  const isE2a = (parsed.cl || []).some(c =>
+    c.lastEditedAt !== undefined || c.serviceContract?.segment !== undefined
+  );
+  if (isE2a) {
+    console.log('[migrateData] E2a schema detected — passthrough + legacy strip');
+    parsed.cl = (parsed.cl || []).map(stripLegacy);
+    return parsed;
+  }
+
+  // E1 schema detection: has serviceContract or zohoCommission but no E2a fields
   const isE1Schema = (parsed.cl || []).some(c =>
     c.serviceContract !== undefined || c.zohoCommission !== undefined
   );
 
   if (isE1Schema) {
-    // Post-E1 path: pass clients through, strip any legacy debris that survived
-    // an earlier migration round-trip. Don't inject any defaults.
-    parsed.cl = (parsed.cl || []).map(stripLegacy);
+    // E1 → E2a migration: add segment, paymentSchedule, lastEditedAt fields then strip legacy.
+    console.log('[migrateData] E1 schema detected — running E1 → E2a migration');
+    parsed.cl = (parsed.cl || []).map(c => {
+      const stripped = stripLegacy(c);
+      const sc = stripped.serviceContract;
+      return {
+        ...stripped,
+        lastEditedAt: stripped.lastEditedAt ?? null,
+        lastEditedBy: stripped.lastEditedBy ?? null,
+        serviceContract: sc ? {
+          ...sc,
+          segment: sc.segment ?? deriveSegment(sc.type, stripped.id),
+          paymentSchedule: sc.paymentSchedule ?? generateSchedule(stripped),
+        } : null,
+      };
+    });
     return parsed;
   }
 

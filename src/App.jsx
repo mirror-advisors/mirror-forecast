@@ -7,6 +7,7 @@ import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import InternView from "./InternView.jsx";
 import Reconcile from "./Reconcile.jsx";
+import ClientsTab from "./ClientsTab.jsx";
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isViewer, signOut } = useAuth();
@@ -91,6 +92,17 @@ export default function App() {
     }).sort((a, b) => b.totalValue - a.totalValue);
   }, [d]);
 
+  // Phase E2a: hooks below MUST stay above the early returns. Hook order
+  // violation (R-310 "Rendered more hooks than during the previous render")
+  // happens if any useEffect/useState/useMemo is placed after a conditional
+  // early return — which is the bug that took the live app down on first push.
+  const isIntern = !isAdmin && !isViewer;
+  const tabs = useMemo(
+    () => isIntern ? ["clients","payroll"] : ["dashboard","forecast","clients","payroll"],
+    [isIntern]
+  );
+  useEffect(() => { if (!tabs.includes(tab)) setTab(tabs[0]); }, [tabs, tab]);
+
   const filteredClients = useMemo(() => {
     if (!d) return [];
     let cls = [...d.cl].map((cl, origIdx) => {
@@ -117,12 +129,10 @@ export default function App() {
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
-  if (!isAdmin && !isViewer) return (
-    <>
-      <InternView d={d} save={save} dirty={dirty} saving={saving} persist={persist} />
-      {toast && <Toast message={toast.msg} type={toast.type} />}
-    </>
-  );
+  // Phase E2a: Sara (intern) role gets restricted-tab access to main app
+  // (was: wholesale InternView routing). InternView.jsx is now dead code, removed in E2e.
+  // Note: `isIntern` and `tabs` are computed above, before early returns, to
+  // satisfy Rules of Hooks. Re-deriving here would shadow / duplicate.
 
   const c = compute(d);
   const cm = new Date().getMonth();
@@ -190,7 +200,7 @@ export default function App() {
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
 
-  const tabs = ["dashboard","forecast","clients","crm","payroll"];
+  // (tabs + tab-allowlist useEffect declared at top of App, before early returns)
 
   // === CRM helpers (Phase B) ===
   const STATUS_COLORS = {
@@ -268,7 +278,7 @@ export default function App() {
       <div style={{ maxWidth:1300,margin:"0 auto",padding:"24px 16px" }}>
 
       {/* ===================== DASHBOARD ===================== */}
-      {tab==="dashboard"&&(<>
+      {tab==="dashboard"&&!isIntern&&(<>
         {/* Runway Cards */}
         <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:16,marginBottom:20 }}>
           <Card style={{ padding:20 }}>
@@ -348,7 +358,7 @@ export default function App() {
       </>)}
 
       {/* ===================== FORECAST ===================== */}
-      {tab==="forecast"&&(<>
+      {tab==="forecast"&&!isIntern&&(<>
         <div style={{ display:"flex",justifyContent:"flex-end",marginBottom:16 }}>
           <button onClick={()=>setScForm({ name:"",type:"revenue",amount:2000,startMo:cm,duration:0 })} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Scenario</button>
         </div>
@@ -516,8 +526,13 @@ export default function App() {
         </div>
       </>)}
 
-      {/* ===================== CLIENTS ===================== */}
-      {tab==="clients"&&(<>
+      {/* ===================== CLIENTS (E2a: unified) ===================== */}
+      {tab==="clients"&&(
+        <ClientsTab d={d} isAdmin={isAdmin} isViewer={isViewer} isIntern={isIntern} />
+      )}
+
+      {/* DEPRECATED — pre-E2a inline Clients tab. Removed in E2e. */}
+      {false&&(<>
         {/* V2.1: Split view — Service Clients vs Zoho Commissions */}
         <div style={{ display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center" }}>
           {[["service","Service Clients"],["commission","Zoho Commissions"],["all","All"]].map(([k,l])=><button key={k} onClick={()=>setClFilter(k)} style={{ fontSize:11,color:clFilter===k?P.tx:P.tm,background:clFilter===k?P.c2:"transparent",padding:"6px 14px",borderRadius:6,fontWeight:600,border:`1px solid ${clFilter===k?P.bd:"transparent"}`,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>{l}</button>)}
@@ -692,8 +707,8 @@ export default function App() {
         </div>
       </>)}
 
-      {/* ===================== CRM ===================== */}
-      {tab==="crm"&&(()=>{
+      {/* DEPRECATED — pre-E2a CRM tab. Removed in E2e. */}
+      {false&&(()=>{
         // === Phase C1: Profile view (read-only) ===
         if (crmSelectedId) {
           const cl = d.cl.find(c => c.id === crmSelectedId);

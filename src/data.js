@@ -116,33 +116,86 @@ export const D0 = {
       payments: [],
       st: ["P","P","P","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
+        type: "retainer", segment: "infinityMirror", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-01-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-02-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-03-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-10-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-11-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-12-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-01-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-02-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-03-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-04-15", amount: 2000, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c2", nm: "Supreme E-Com", notes: "",
       payments: [],
       st: ["P","P","P","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
+        type: "retainer", segment: "infinityMirror", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "ACH", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-01-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-02-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-03-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-10-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-11-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-12-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-01-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-02-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-03-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-04-15", amount: 2000, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c3", nm: "380 Guide", notes: "29 days late on April invoice.",
       payments: [],
       st: ["","P","P","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 6,
+        type: "retainer", segment: "infinityMirror", monthlyAmount: 2000, totalContractValue: null, termMonths: 6,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Check", status: "at-risk", churnRisk: "medium", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-02-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-03-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-10-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-11-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-12-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-01-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-02-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-03-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-04-15", amount: 2000, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     // AT RISK — 2 months late + service complaints. inForecast:false until resolved.
     {
@@ -150,77 +203,147 @@ export const D0 = {
       payments: [],
       st: ["","P","L","L","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
+        type: "retainer", segment: "infinityMirror", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "at-risk", churnRisk: "high", inForecast: false,
+        paymentSchedule: [
+          { dueDate: "2026-02-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-03-15", amount: 2000, paid: false, paidDate: null, note: "Late" },
+          { dueDate: "2026-04-15", amount: 2000, paid: false, paidDate: null, note: "Late" },
+          { dueDate: "2026-05-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-10-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-11-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-12-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-01-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-02-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-03-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-04-15", amount: 2000, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c5", nm: "Calco CRM Zen", notes: "",
       payments: [],
       st: ["P","P","P","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "retainer", monthlyAmount: 500, totalContractValue: null, termMonths: null,
+        type: "retainer", segment: "infinityMirror", monthlyAmount: 500, totalContractValue: null, termMonths: null,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-01-15", amount: 500, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-02-15", amount: 500, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-03-15", amount: 500, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-10-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-11-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-12-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-01-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-02-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-03-15", amount: 500, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-04-15", amount: 500, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c6", nm: "Next Fab", notes: "",
       payments: [],
-      st: ["","U","U","","","","","","","","","","","","","","","","","","","","",""],
+      st: ["","P","P","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 6,
+        type: "retainer", segment: "infinityMirror", monthlyAmount: 2000, totalContractValue: null, termMonths: 6,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-02-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-03-15", amount: 2000, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-10-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-11-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-12-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-01-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-02-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-03-15", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2027-04-15", amount: 2000, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c7", nm: "Jose F / Option One", notes: "Refused photographer engagement. Treat as closed.",
       payments: [{ id: "c7p1", amount: 450, month: 1, status: "P", kind: "service" }],
       st: ["","P","","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        type: "one-time", segment: "scopeOnly", monthlyAmount: 0, totalContractValue: null, termMonths: null,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "churned", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-02-15", amount: 450, paid: true, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c18", nm: "Urban Operating", notes: "",
       payments: [{ id: "c18p1", amount: 7000, month: 0, status: "P", kind: "service" }],
       st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        type: "one-time", segment: "scopeOnly", monthlyAmount: 0, totalContractValue: null, termMonths: null,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-01-15", amount: 7000, paid: true, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c8", nm: "Patson Doors", notes: "",
       payments: [{ id: "c8p1", amount: 6000, month: 2, status: "P", kind: "service" }],
       st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        type: "one-time", segment: "scopeOnly", monthlyAmount: 0, totalContractValue: null, termMonths: null,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-03-15", amount: 6000, paid: true, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c17", nm: "CoverFour", notes: "",
       payments: [{ id: "c17p1", amount: 3125, month: 3, status: "P", kind: "service" }, { id: "c17p2", amount: 3125, month: 4, status: "U", kind: "service" }],
       st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        type: "one-time", segment: "scopeOnly", monthlyAmount: 0, totalContractValue: null, termMonths: null,
         startDate: null, endDate: null, renewalDate: null, autoRenew: false,
         payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-04-15", amount: 3125, paid: true, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 3125, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     // 5-month engagement at $12K/mo, May–Sep 2026.
     {
@@ -228,11 +351,19 @@ export const D0 = {
       payments: [],
       st: ["","","","","U","U","U","U","U","","","","","","","","","","","","","","",""],
       serviceContract: {
-        type: "project", monthlyAmount: 12000, totalContractValue: 60000, termMonths: 5,
+        type: "project", segment: "fullProject", monthlyAmount: 12000, totalContractValue: 60000, termMonths: 5,
         startDate: "2026-05-01", endDate: "2026-09-30", renewalDate: null, autoRenew: false,
         payMethod: "Wire", status: "active", churnRisk: "low", inForecast: true,
+        paymentSchedule: [
+          { dueDate: "2026-05-15", amount: 12000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-06-15", amount: 12000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-07-15", amount: 12000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-08-15", amount: 12000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-09-15", amount: 12000, paid: false, paidDate: null, note: "" }
+        ],
       },
       zohoCommission: null,
+      lastEditedAt: null, lastEditedBy: null,
     },
     // Zoho commission clients
     {
@@ -245,6 +376,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c10", nm: "Michael Grusell", notes: "",
@@ -256,6 +388,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c11", nm: "Gomes (Zoho Only)", notes: "",
@@ -267,6 +400,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c12", nm: "CloverLeaf", notes: "",
@@ -278,6 +412,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c13", nm: "Jeanes", notes: "",
@@ -289,6 +424,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c14", nm: "Revele", notes: "",
@@ -300,6 +436,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c15", nm: "United Weld", notes: "",
@@ -311,6 +448,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
     {
       id: "c16", nm: "Regenics", notes: "",
@@ -322,6 +460,7 @@ export const D0 = {
         renewalDate: null, renewalMonth: null, seats: 0, note: "",
         status: "active", inForecast: true,
       },
+      lastEditedAt: null, lastEditedBy: null,
     },
   ],
 
