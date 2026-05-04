@@ -1,9 +1,44 @@
 import { supabase } from './supabase.js';
 const LOCAL_KEY = "mirror_forecast_v1";
 
+// Post-E1: clients carry serviceContract / zohoCommission objects.
+// Any other legacy field on the client is orphaned debris — strip it so we
+// don't keep round-tripping it through Supabase on every load/save cycle.
+const E1_LEGACY_FIELDS = [
+  'tier', 'rt', 'tr', 'vi', 'zh', 'zha', 'zhType', 'seats',
+  'contractType', 'monthlyAmount', 'totalContractValue', 'termMonths',
+  'startDate', 'endDate', 'renewalDate', 'autoRenew', 'churnRisk',
+  'status', 'payMethod',
+  'signed', 'subStart', 'payDay', 'renewal', 'termMo', 'startMo', 'endMo',
+  'licenseType', 'currentCommissionMonthly', 'currentCommissionAnnual',
+  'commissionFrequency', 'zohoRenewalDate', 'commissionNote',
+  'otAmt', 'otMonth',
+];
+
+function stripLegacy(c) {
+  const out = { ...c };
+  for (const k of E1_LEGACY_FIELDS) delete out[k];
+  return out;
+}
+
 function migrateData(parsed, defaultData) {
   if (!parsed.scenarios) parsed.scenarios = [];
   if (!parsed.actuals) parsed.actuals = {};
+
+  const isE1Schema = (parsed.cl || []).some(c =>
+    c.serviceContract !== undefined || c.zohoCommission !== undefined
+  );
+
+  if (isE1Schema) {
+    // Post-E1 path: pass clients through, strip any legacy debris that survived
+    // an earlier migration round-trip. Don't inject any defaults.
+    parsed.cl = (parsed.cl || []).map(stripLegacy);
+    return parsed;
+  }
+
+  // Pre-E1 legacy compatibility path. Should not run after Phase E1 — log so
+  // we notice if a stale row sneaks through.
+  console.warn('[migrateData] pre-E1 legacy schema detected on load; running compat migration');
   const payMethods = ['Stripe', 'ACH', 'Check', 'Wire', 'CC'];
   parsed.cl = parsed.cl.map(c => {
     const merged = {

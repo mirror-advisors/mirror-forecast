@@ -147,9 +147,11 @@ export default function App() {
     return Math.round(count * 4) / 4;
   };
 
-  // Baseline runway (no scenarios)
-  const blBase = []; const ntBase = MO.map((_,i) => c.rvBase[i] + c.exBase[i]);
-  ntBase.forEach((n,i) => blBase.push(i===0 ? d.openBal+n : blBase[i-1]+n));
+  // Baseline runway (no scenarios). Iterate over actual forecast horizon length
+  // (24 after Phase D1) — MO.map would only give us 12 and silently truncate bl.
+  const blBase = [];
+  const ntBase = Array.from({ length: c.rvBase.length }, (_, i) => c.rvBase[i] + c.exBase[i]);
+  ntBase.forEach((n, i) => blBase.push(i === 0 ? d.openBal + n : blBase[i - 1] + n));
   const mgBase = countGreen(blBase);
   const fdBase = blBase.findIndex(b => b <= 0);
 
