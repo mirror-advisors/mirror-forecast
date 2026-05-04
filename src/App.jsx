@@ -7,7 +7,6 @@ import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import InternView from "./InternView.jsx";
 import Reconcile from "./Reconcile.jsx";
-import ClientsTab from "./ClientsTab.jsx";
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isViewer, signOut } = useAuth();
@@ -118,9 +117,12 @@ export default function App() {
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
-  // Phase E2a: Sara (intern) role gets restricted-tab access to main app
-  // (was: wholesale InternView routing). InternView.jsx is now dead code, removed in E2e.
-  const isIntern = !isAdmin && !isViewer;
+  if (!isAdmin && !isViewer) return (
+    <>
+      <InternView d={d} save={save} dirty={dirty} saving={saving} persist={persist} />
+      {toast && <Toast message={toast.msg} type={toast.type} />}
+    </>
+  );
 
   const c = compute(d);
   const cm = new Date().getMonth();
@@ -188,12 +190,7 @@ export default function App() {
   const thCm = (slot) => ({ ...th, background:slot.isCurrent?P.bB:"transparent",color:slot.isCurrent?P.b:P.td,fontWeight:slot.isCurrent?700:500 });
   const tdCm = (slot) => slot.isCurrent?P.bB:"transparent";
 
-  // Role-aware tabs: Sara sees only [clients, payroll]; Paul/Mark see full set.
-  // Defense in depth: per-tab content blocks also re-gate on role.
-  const tabs = isIntern ? ["clients","payroll"] : ["dashboard","forecast","clients","payroll"];
-
-  // If `tab` state is stale and not in current allowed list, force-correct
-  useEffect(() => { if (!tabs.includes(tab)) setTab(tabs[0]); }, [tabs, tab]);
+  const tabs = ["dashboard","forecast","clients","crm","payroll"];
 
   // === CRM helpers (Phase B) ===
   const STATUS_COLORS = {
@@ -271,7 +268,7 @@ export default function App() {
       <div style={{ maxWidth:1300,margin:"0 auto",padding:"24px 16px" }}>
 
       {/* ===================== DASHBOARD ===================== */}
-      {tab==="dashboard"&&!isIntern&&(<>
+      {tab==="dashboard"&&(<>
         {/* Runway Cards */}
         <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:16,marginBottom:20 }}>
           <Card style={{ padding:20 }}>
@@ -351,7 +348,7 @@ export default function App() {
       </>)}
 
       {/* ===================== FORECAST ===================== */}
-      {tab==="forecast"&&!isIntern&&(<>
+      {tab==="forecast"&&(<>
         <div style={{ display:"flex",justifyContent:"flex-end",marginBottom:16 }}>
           <button onClick={()=>setScForm({ name:"",type:"revenue",amount:2000,startMo:cm,duration:0 })} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Scenario</button>
         </div>
@@ -519,13 +516,8 @@ export default function App() {
         </div>
       </>)}
 
-      {/* ===================== CLIENTS (E2a: unified) ===================== */}
-      {tab==="clients"&&(
-        <ClientsTab d={d} isAdmin={isAdmin} isViewer={isViewer} isIntern={isIntern} />
-      )}
-
-      {/* DEPRECATED — pre-E2a inline Clients tab. Removed in E2e. */}
-      {false&&(<>
+      {/* ===================== CLIENTS ===================== */}
+      {tab==="clients"&&(<>
         {/* V2.1: Split view — Service Clients vs Zoho Commissions */}
         <div style={{ display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center" }}>
           {[["service","Service Clients"],["commission","Zoho Commissions"],["all","All"]].map(([k,l])=><button key={k} onClick={()=>setClFilter(k)} style={{ fontSize:11,color:clFilter===k?P.tx:P.tm,background:clFilter===k?P.c2:"transparent",padding:"6px 14px",borderRadius:6,fontWeight:600,border:`1px solid ${clFilter===k?P.bd:"transparent"}`,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>{l}</button>)}
@@ -700,8 +692,8 @@ export default function App() {
         </div>
       </>)}
 
-      {/* DEPRECATED — pre-E2a CRM tab. Removed in E2e. */}
-      {false&&(()=>{
+      {/* ===================== CRM ===================== */}
+      {tab==="crm"&&(()=>{
         // === Phase C1: Profile view (read-only) ===
         if (crmSelectedId) {
           const cl = d.cl.find(c => c.id === crmSelectedId);
