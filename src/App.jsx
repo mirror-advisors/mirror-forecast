@@ -125,7 +125,7 @@ export default function App() {
 
   const c = compute(d);
   const cm = new Date().getMonth();
-  const countGreen = (bal) => { let m=0; for(let i=cm;i<12;i++){if(bal[i]<=0)break;m++;} return m; };
+  const countGreen = (bal) => { let m=0; for(let i=cm;i<bal.length;i++){if(bal[i]<=0)break;m++;} return m; };
 
   // Baseline runway (no scenarios)
   const blBase = []; const ntBase = MO.map((_,i) => c.rvBase[i] + c.exBase[i]);
