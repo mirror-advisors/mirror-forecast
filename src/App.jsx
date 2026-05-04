@@ -28,6 +28,7 @@ export default function App() {
   const [crmSort, setCrmSort] = useState("status");
   const [crmSelectedId, setCrmSelectedId] = useState(null);
   const [zohoExpanded, setZohoExpanded] = useState(false);
+  const [expandedLines, setExpandedLines] = useState({}); // Forecast revenue stream expand state, keyed by stream key
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 768);
 
   useEffect(() => {
@@ -449,7 +450,47 @@ export default function App() {
           <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
             <thead><tr><th style={{ ...th,textAlign:"left",width:160 }}></th>{win.map((s,i)=><th key={i} style={thCm(s)}>{s.label}</th>)}<th style={th}>Year</th></tr></thead>
             <tbody>
-              {[["Zoho Annual",c.rvDerived.za],["Zoho Monthly",c.rvDerived.zm],["Infinity Mirror",c.rvDerived.im],["Marketing",d.rv.mk||[]],["One-Time",c.otMerged]].map(([l,v])=><tr key={l}><td style={{ padding:"5px 10px",color:P.tm,borderBottom:`1px solid ${P.bd}10` }}>{l}</td>{win.map((s,i)=>{const x=getWinVal(v,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.tm:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(v))}</td></tr>)}
+              {[
+                { key:"za", label:"Zoho Annual",     source:c.rvDerived.za,   breakdown:c.rvBreakdown.za, expandable:true },
+                { key:"zm", label:"Zoho Monthly",    source:c.rvDerived.zm,   breakdown:c.rvBreakdown.zm, expandable:true },
+                { key:"im", label:"Infinity Mirror", source:c.rvDerived.im,   breakdown:c.rvBreakdown.im, expandable:true },
+                { key:"mk", label:"Marketing",       source:d.rv.mk||[],      breakdown:null,             expandable:false },
+                { key:"ot", label:"One-Time",        source:c.otMerged,       breakdown:c.rvBreakdown.ot, expandable:true },
+              ].map(stream => {
+                const open = expandedLines[stream.key] === true;
+                const visibleKids = stream.expandable && stream.breakdown
+                  ? stream.breakdown.filter(child => winVals(child.monthly).some(v => v !== 0))
+                  : [];
+                const showChevron = stream.expandable;
+                return (
+                  <React.Fragment key={stream.key}>
+                    <tr onClick={showChevron ? () => setExpandedLines({ ...expandedLines, [stream.key]: !open }) : undefined}
+                        style={{ cursor: showChevron ? "pointer" : "default" }}>
+                      <td style={{ padding:"5px 10px",color:P.tm,borderBottom:`1px solid ${P.bd}10` }}>
+                        {showChevron && <span style={{ display:"inline-block",width:14,fontSize:9,color:P.td,transition:"transform 0.15s",transform:open?"rotate(90deg)":"rotate(0)" }}>{"\u25b6"}</span>}
+                        {stream.label}
+                      </td>
+                      {win.map((s,i) => { const x = getWinVal(stream.source, s, 0); return <td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.tm:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>; })}
+                      <td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(stream.source))}</td>
+                    </tr>
+                    {open && stream.expandable && visibleKids.length === 0 && stream.key === "za" && (
+                      <tr style={{ background:`${P.c2}80` }}>
+                        <td colSpan={win.length+2} style={{ padding:"6px 10px 6px 32px",fontSize:11,color:P.td,fontStyle:"italic",borderBottom:`1px solid ${P.bd}15`,fontFamily:"'DM Sans', sans-serif" }}>No annual zoho clients have renewalMonth set. Q1 history shown above is from reconciled actuals.</td>
+                      </tr>
+                    )}
+                    {open && visibleKids.map(child => {
+                      const cVals = winVals(child.monthly);
+                      return (
+                        <tr key={child.clientId} style={{ background:`${P.c2}80` }}>
+                          <td style={{ padding:"3px 10px 3px 32px",fontSize:11,color:P.td,borderBottom:`1px solid ${P.bd}15`,fontFamily:"'DM Sans', sans-serif" }}>{child.clientName}</td>
+                          {cVals.map((v,i) => <td key={i} style={{ padding:"3px 6px",textAlign:"right",fontSize:11,color:v?P.td:`${P.td}60`,borderBottom:`1px solid ${P.bd}15`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(win[i]) }}>{v ? fmt(v) : "\u2014"}</td>)}
+                          <td style={{ padding:"3px 6px",textAlign:"right",fontSize:11,fontWeight:600,color:P.tm,borderBottom:`1px solid ${P.bd}15`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(cVals))}</td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
               {/* Scenario revenue rows */}
               {(d.scenarios||[]).filter(s=>s.on&&s.type==="revenue").map(sc=>{const start=sc.startMo||0;const dur=sc.duration||0;const end=dur>0?Math.min(start+dur-1,11):11;const vals=MO.map((_,i)=>i>=start&&i<=end?sc.amount:0);return<tr key={sc.id}><td style={{ padding:"5px 10px",color:P.a,borderBottom:`1px solid ${P.bd}10`,fontStyle:"italic" }}><span style={{ fontSize:8,fontWeight:700,background:P.aB,color:P.a,padding:"1px 4px",borderRadius:3,marginRight:5 }}>SC</span>{sc.name}</td>{win.map((s,i)=>{const x=getWinVal(vals,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.a:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.a,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(vals))}</td></tr>})}
               <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",color:P.g,borderTop:`2px solid ${P.gM}` }}>TOTAL</td>{win.map((s,i)=>{const v=getWinVal(c.rv,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:P.g,borderTop:`2px solid ${P.gM}`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?fmt(v):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",color:P.g,borderTop:`2px solid ${P.gM}`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(c.rv))}</td></tr>
