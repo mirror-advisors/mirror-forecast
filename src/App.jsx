@@ -125,7 +125,27 @@ export default function App() {
 
   const c = compute(d);
   const cm = new Date().getMonth();
-  const countGreen = (bal) => { let m=0; for(let i=cm;i<bal.length;i++){if(bal[i]<=0)break;m++;} return m; };
+  // Decimal runway: walks positive months from cm, interpolates fractional remainder
+  // when crossing zero, or projects beyond array end using last 3 months' avg burn.
+  // Rounded to nearest 0.25.
+  const countGreen = (bal) => {
+    let count = 0;
+    let i = cm;
+    while (i < bal.length && bal[i] > 0) { count++; i++; }
+    if (i < bal.length) {
+      const lastPos = bal[i - 1];
+      const burn = lastPos - bal[i];
+      if (burn > 0) count += Math.min(lastPos / burn, 1);
+    } else {
+      const buffer = bal[bal.length - 1];
+      const ntDerived = bal.map((v, idx) => idx === 0 ? v - d.openBal : v - bal[idx - 1]);
+      const last3 = ntDerived.slice(-3);
+      const avgNet = last3.reduce((s, v) => s + v, 0) / last3.length;
+      const projectedBurn = -avgNet;
+      if (projectedBurn > 0 && buffer > 0) count += buffer / projectedBurn;
+    }
+    return Math.round(count * 4) / 4;
+  };
 
   // Baseline runway (no scenarios)
   const blBase = []; const ntBase = MO.map((_,i) => c.rvBase[i] + c.exBase[i]);
@@ -146,10 +166,10 @@ export default function App() {
   const tRv = sm(c.rv);
   // V2.1: Distinct pie chart colors
   const pieD = [
-    { label: "Zoho Annual", value: sm(d.rv.za), color: PIE_COLORS.za },
-    { label: "Zoho Monthly", value: sm(d.rv.zm), color: PIE_COLORS.zm },
-    { label: "Infinity Mirror", value: sm(d.rv.im), color: PIE_COLORS.im },
-    { label: "Marketing", value: sm(d.rv.mk), color: PIE_COLORS.mk },
+    { label: "Zoho Annual", value: sm(c.rvDerived.za), color: PIE_COLORS.za },
+    { label: "Zoho Monthly", value: sm(c.rvDerived.zm), color: PIE_COLORS.zm },
+    { label: "Infinity Mirror", value: sm(c.rvDerived.im), color: PIE_COLORS.im },
+    { label: "Marketing", value: sm(d.rv.mk || []), color: PIE_COLORS.mk },
     { label: "One-Time", value: sm(c.otMerged), color: PIE_COLORS.ot },
   ];
   const devs = c.at.filter(t => t.dp === "Development");
@@ -427,7 +447,7 @@ export default function App() {
           <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
             <thead><tr><th style={{ ...th,textAlign:"left",width:160 }}></th>{win.map((s,i)=><th key={i} style={thCm(s)}>{s.label}</th>)}<th style={th}>Year</th></tr></thead>
             <tbody>
-              {[["Zoho Annual",d.rv.za],["Zoho Monthly",d.rv.zm],["Infinity Mirror",d.rv.im],["Marketing",d.rv.mk],["One-Time",c.otMerged]].map(([l,v])=><tr key={l}><td style={{ padding:"5px 10px",color:P.tm,borderBottom:`1px solid ${P.bd}10` }}>{l}</td>{win.map((s,i)=>{const x=getWinVal(v,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.tm:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(v))}</td></tr>)}
+              {[["Zoho Annual",c.rvDerived.za],["Zoho Monthly",c.rvDerived.zm],["Infinity Mirror",c.rvDerived.im],["Marketing",d.rv.mk||[]],["One-Time",c.otMerged]].map(([l,v])=><tr key={l}><td style={{ padding:"5px 10px",color:P.tm,borderBottom:`1px solid ${P.bd}10` }}>{l}</td>{win.map((s,i)=>{const x=getWinVal(v,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.tm:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.g,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(v))}</td></tr>)}
               {/* Scenario revenue rows */}
               {(d.scenarios||[]).filter(s=>s.on&&s.type==="revenue").map(sc=>{const start=sc.startMo||0;const dur=sc.duration||0;const end=dur>0?Math.min(start+dur-1,11):11;const vals=MO.map((_,i)=>i>=start&&i<=end?sc.amount:0);return<tr key={sc.id}><td style={{ padding:"5px 10px",color:P.a,borderBottom:`1px solid ${P.bd}10`,fontStyle:"italic" }}><span style={{ fontSize:8,fontWeight:700,background:P.aB,color:P.a,padding:"1px 4px",borderRadius:3,marginRight:5 }}>SC</span>{sc.name}</td>{win.map((s,i)=>{const x=getWinVal(vals,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:x>0?P.a:P.td,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?(x>0?fmt(x):"\u2014"):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",fontWeight:600,color:P.a,borderBottom:`1px solid ${P.bd}10`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(vals))}</td></tr>})}
               <tr style={{ fontWeight:700 }}><td style={{ padding:"5px 10px",color:P.g,borderTop:`2px solid ${P.gM}` }}>TOTAL</td>{win.map((s,i)=>{const v=getWinVal(c.rv,s,0);return<td key={i} style={{ padding:"5px 6px",textAlign:"right",color:P.g,borderTop:`2px solid ${P.gM}`,fontFamily:"'JetBrains Mono', monospace",background:tdCm(s) }}>{s.inCurrentYear?fmt(v):"\u2014"}</td>})}<td style={{ padding:"5px 6px",textAlign:"right",color:P.g,borderTop:`2px solid ${P.gM}`,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(sm(c.rv))}</td></tr>

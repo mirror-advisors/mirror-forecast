@@ -27,16 +27,20 @@ export const D0 = {
   // Mar 31 ending balance per Chase6692 statement
   openBal: 1309, cashNow: 24361.66, savings: 50, sLoan: 0, ccOwe: -9553.37,
 
-  // Revenue: Jan-Mar ACTUALS (idx 0-2), Apr-Dec 2026 projections (idx 3-11), 2027 forecast (idx 12-23)
-  // Mar actuals: IM $6,500 | Zoho commissions $7,693.85 (both wires) | Patson Doors OT $6,000
+  // Revenue: derived from cl[] (im/za/zm) + manual rv.mk/pCruzy/pPatson + rv.ot from cl[].payments
+  // Q1 2026 actuals (idx 0-3) preserved in rvActuals; idx 4+ derived from clients
   rv: {
-    za: [4581, 17703, 7694, 511, 0, 320, 1439, 0, 0, 3706, 0, 240, 3016, 3016, 3016, 3016, 3016, 3016, 3016, 3016, 3016, 3016, 3016, 3016],
-    zm: [0, 0, 0, 1224, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984, 984],
-    im: [5453, 4886, 6500, 10500, 24500, 24500, 18500, 20500, 20500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500, 8500],
     mk: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ot: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     pCruzy:    [0, 0, 0, 0, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     pPatson:   [0, 0, 0, 0, 6667, 6667, 6667, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  },
+
+  // Q1 2026 actuals — overrides derived rv per-stream for idx 0-3 only
+  rvActuals: {
+    im: { 0: 5453, 1: 4886, 2: 6500, 3: 10500 },
+    za: { 0: 4581, 1: 17703, 2: 7694, 3: 511 },
+    zm: { 0: 0, 1: 0, 2: 0, 3: 1224 },
   },
 
   // Subscriptions on CC — tracked for visibility, cash impact is CC Paydown in db[]
@@ -107,28 +111,218 @@ export const D0 = {
   ],
 
   cl: [
-    { id:"c1",  nm:"Gomes Agency",       rt:2000, tr:"12mo", vi:"Stripe", payMethod:"Stripe", zh:155, zha:0,   tier:"im",  seats:0,  st:["P","P","P","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"retainer", monthlyAmount:2000, totalContractValue:null, termMonths:12, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    { id:"c2",  nm:"Supreme E-Com",      rt:2000, tr:"12mo", vi:"ACH",    payMethod:"ACH",    zh:38,  zha:0,   tier:"im",  seats:30, st:["P","P","P","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"retainer", monthlyAmount:2000, totalContractValue:null, termMonths:12, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    { id:"c3",  nm:"380 Guide",          rt:2000, tr:"6mo",  vi:"Check",  payMethod:"Check",  zh:0,   zha:0,   tier:"im",  seats:3,  st:["","P","P","","","","","","","","","","","","","","","","","","","","",""], nt:{1:"2x $1k checks deposited 2/3", 2:"ACH $2,000 Mar 17 — credit applied Feb2-Mar2, paid Mar2-Apr2"}, status:"at-risk", startDate:null, endDate:null, contractType:"retainer", monthlyAmount:2000, totalContractValue:null, termMonths:6, renewalDate:null, autoRenew:false, churnRisk:"medium", notes:"29 days late on April invoice." },
-    // AT RISK — 2 months late + service complaints. Removed from rv.im[] forecast pending resolution.
-    { id:"c4",  nm:"Van Boxel",          rt:2000, tr:"12mo", vi:"Stripe", payMethod:"Stripe", zh:11,  zha:0,   tier:"im",  seats:0,  st:["","P","L","L","","","","","","","","","","","","","","","","","","","",""], nt:{2:"Late — service complaints",3:"Late — service complaints"}, status:"at-risk", startDate:null, endDate:null, contractType:"retainer", monthlyAmount:2000, totalContractValue:null, termMonths:12, renewalDate:null, autoRenew:false, churnRisk:"high", notes:"2 months late + service complaints. Removed from rv.im[] forecast pending resolution." },
-    { id:"c5",  nm:"Calco CRM Zen",      rt:500,  tr:"M2M",  vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"zen", seats:0,  st:["P","P","P","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"retainer", monthlyAmount:500, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    { id:"c6",  nm:"Next Fab",           rt:2000, tr:"6mo",  vi:"Stripe", payMethod:"Stripe", zh:65,  zha:0,   tier:"im",  seats:0,  st:["","U","U","","","","","","","","","","","","","","","","","","","","",""], nt:{1:"$1,148 first inv"}, status:"active", startDate:null, endDate:null, contractType:"retainer", monthlyAmount:2000, totalContractValue:null, termMonths:6, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    { id:"c7",  nm:"Jose F / Option One",rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","P","","","","","","","","","","","","","","","","","","","","","",""], nt:{1:"Paid 2/11. Next: 3/25, 4/25"}, payments:[{id:"c7p1",amount:450,month:1,status:"P"}], status:"churned", startDate:null, endDate:null, contractType:"one-time", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"Refused photographer engagement. Treat as closed." },
-    { id:"c18", nm:"Urban Operating",    rt:0,    tr:"",     vi:"",       payMethod:"",       zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{0:"$7,000 one-time Jan"}, payments:[{id:"c18p1",amount:7000,month:0,status:"P"}], status:"active", startDate:null, endDate:null, contractType:"one-time", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    { id:"c8",  nm:"Patson Doors",       rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{2:"$6,000 one-time Mar 3"}, payments:[{id:"c8p1",amount:6000,month:2,status:"P"}], status:"active", startDate:null, endDate:null, contractType:"one-time", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    { id:"c17", nm:"CoverFour",          rt:0,    tr:"",     vi:"Stripe", payMethod:"Stripe", zh:0,   zha:0,   tier:"ot",  seats:0,  st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, payments:[{id:"c17p1",amount:3125,month:3,status:"P"},{id:"c17p2",amount:3125,month:4,status:"U"}], status:"active", startDate:null, endDate:null, contractType:"one-time", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
-    // 5-month engagement at $12K/mo, May–Sep 2026. New deal — converted from pPlastics pipeline.
-    { id:"c19", nm:"Plastics Products Mfg", rt:12000, tr:"5mo", vi:"Wire",  payMethod:"Wire",  zh:0,   zha:0,   tier:"im",  seats:0,  st:["","","","","U","U","U","U","U","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:"2026-05-01", endDate:"2026-09-30", contractType:"project", monthlyAmount:12000, totalContractValue:60000, termMonths:5, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"" },
+    {
+      id: "c1", nm: "Gomes Agency", notes: "",
+      payments: [],
+      st: ["P","P","P","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c2", nm: "Supreme E-Com", notes: "",
+      payments: [],
+      st: ["P","P","P","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "ACH", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c3", nm: "380 Guide", notes: "29 days late on April invoice.",
+      payments: [],
+      st: ["","P","P","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 6,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Check", status: "at-risk", churnRisk: "medium", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    // AT RISK — 2 months late + service complaints. inForecast:false until resolved.
+    {
+      id: "c4", nm: "Van Boxel", notes: "2 months late + service complaints. Removed from rv.im[] forecast pending resolution.",
+      payments: [],
+      st: ["","P","L","L","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 12,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "at-risk", churnRisk: "high", inForecast: false,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c5", nm: "Calco CRM Zen", notes: "",
+      payments: [],
+      st: ["P","P","P","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "retainer", monthlyAmount: 500, totalContractValue: null, termMonths: null,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c6", nm: "Next Fab", notes: "",
+      payments: [],
+      st: ["","U","U","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "retainer", monthlyAmount: 2000, totalContractValue: null, termMonths: 6,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c7", nm: "Jose F / Option One", notes: "Refused photographer engagement. Treat as closed.",
+      payments: [{ id: "c7p1", amount: 450, month: 1, status: "P", kind: "service" }],
+      st: ["","P","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "churned", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c18", nm: "Urban Operating", notes: "",
+      payments: [{ id: "c18p1", amount: 7000, month: 0, status: "P", kind: "service" }],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c8", nm: "Patson Doors", notes: "",
+      payments: [{ id: "c8p1", amount: 6000, month: 2, status: "P", kind: "service" }],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    {
+      id: "c17", nm: "CoverFour", notes: "",
+      payments: [{ id: "c17p1", amount: 3125, month: 3, status: "P", kind: "service" }, { id: "c17p2", amount: 3125, month: 4, status: "U", kind: "service" }],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "one-time", monthlyAmount: 0, totalContractValue: null, termMonths: null,
+        startDate: null, endDate: null, renewalDate: null, autoRenew: false,
+        payMethod: "Stripe", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
+    // 5-month engagement at $12K/mo, May–Sep 2026.
+    {
+      id: "c19", nm: "Plastics Products Mfg", notes: "",
+      payments: [],
+      st: ["","","","","U","U","U","U","U","","","","","","","","","","","","","","",""],
+      serviceContract: {
+        type: "project", monthlyAmount: 12000, totalContractValue: 60000, termMonths: 5,
+        startDate: "2026-05-01", endDate: "2026-09-30", renewalDate: null, autoRenew: false,
+        payMethod: "Wire", status: "active", churnRisk: "low", inForecast: true,
+      },
+      zohoCommission: null,
+    },
     // Zoho commission clients
-    { id:"c9",  nm:"HV Health",          rt:0, tr:"", vi:"", zh:582, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:582, currentCommissionAnnual:0, commissionFrequency:"monthly", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c10", nm:"Michael Grusell",    rt:0, tr:"", vi:"", zh:181, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:181, currentCommissionAnnual:0, commissionFrequency:"monthly", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c11", nm:"Gomes (Zoho Only)",  rt:0, tr:"", vi:"", zh:155, zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:155, currentCommissionAnnual:0, commissionFrequency:"monthly", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c12", nm:"CloverLeaf",         rt:0, tr:"", vi:"", zh:40,  zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:40, currentCommissionAnnual:0, commissionFrequency:"monthly", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c13", nm:"Jeanes",             rt:0, tr:"", vi:"", zh:26,  zha:0,    tier:"zho", seats:0, zhType:"monthly", st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:26, currentCommissionAnnual:0, commissionFrequency:"monthly", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c14", nm:"Revele",             rt:0, tr:"", vi:"", zh:0,   zha:16826,tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:0, currentCommissionAnnual:16826, commissionFrequency:"annual", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c15", nm:"United Weld",        rt:0, tr:"", vi:"", zh:0,   zha:3370, tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:0, currentCommissionAnnual:3370, commissionFrequency:"annual", zohoRenewalDate:null, commissionNote:"" },
-    { id:"c16", nm:"Regenics",           rt:0, tr:"", vi:"", zh:0,   zha:2078, tier:"zho", seats:0, zhType:"annual",  st:["","","","","","","","","","","","","","","","","","","","","","","",""], nt:{}, status:"active", startDate:null, endDate:null, contractType:"zoho-only", monthlyAmount:0, totalContractValue:null, termMonths:null, renewalDate:null, autoRenew:false, churnRisk:"low", notes:"", licenseType:null, currentCommissionMonthly:0, currentCommissionAnnual:2078, commissionFrequency:"annual", zohoRenewalDate:null, commissionNote:"" },
+    {
+      id: "c9", nm: "HV Health", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 582, annualAmount: 0, frequency: "monthly",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c10", nm: "Michael Grusell", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 181, annualAmount: 0, frequency: "monthly",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c11", nm: "Gomes (Zoho Only)", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 155, annualAmount: 0, frequency: "monthly",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c12", nm: "CloverLeaf", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 40, annualAmount: 0, frequency: "monthly",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c13", nm: "Jeanes", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 26, annualAmount: 0, frequency: "monthly",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c14", nm: "Revele", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 0, annualAmount: 16826, frequency: "annual",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c15", nm: "United Weld", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 0, annualAmount: 3370, frequency: "annual",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
+    {
+      id: "c16", nm: "Regenics", notes: "",
+      payments: [],
+      st: ["","","","","","","","","","","","","","","","","","","","","","","",""],
+      serviceContract: null,
+      zohoCommission: {
+        licenseType: null, monthlyAmount: 0, annualAmount: 2078, frequency: "annual",
+        renewalDate: null, renewalMonth: null, seats: 0, note: "",
+        status: "active", inForecast: true,
+      },
+    },
   ],
 
   // Scenario rows — speculative revenue/expense items for what-if modeling

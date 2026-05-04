@@ -1,22 +1,112 @@
 import { MO } from "./data.js";
 
-// Forecast horizon: 24 months total (idx 0-11 = 2026, idx 12-23 = 2027).
-// MO is still 12 entries — for label use only. All per-month iteration uses N.
+// Forecast horizon: 24 months (idx 0-11 = 2026, idx 12-23 = 2027).
 const N = 24;
+const BASE_YEAR = 2026;
 const idxRange = (n) => Array.from({ length: n }, (_, i) => i);
 
+// "2026-05-01" → 4 (May 2026, 0-indexed within 24-month horizon)
+function monthIdxFromDate(dateStr) {
+  if (!dateStr) return null;
+  const m = /^(\d{4})-(\d{2})/.exec(dateStr);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10);
+  return (y - BASE_YEAR) * 12 + (mo - 1);
+}
+
 export function compute(d) {
-  // Build ot from tier:"ot" clients' payments[] — all scheduled payments
-  // count toward the forecast regardless of paid/unpaid status.
-  const otBase = new Array(N).fill(0);
-  (d.cl || []).filter(c => c.tier === "ot").forEach(c => {
+  // === Derive per-stream revenue from cl[] ===
+  const rvDerived = {
+    im: new Array(N).fill(0),
+    za: new Array(N).fill(0),
+    zm: new Array(N).fill(0),
+    ot: new Array(N).fill(0),
+  };
+  const rvBreakdown = { im: [], za: [], zm: [], ot: [] };
+
+  (d.cl || []).forEach(c => {
+    const sc = c.serviceContract;
+    const zc = c.zohoCommission;
+
+    // Service contract — retainer / project contribute to rv.im
+    if (sc && sc.inForecast !== false && (sc.status === "active" || sc.status === "at-risk")) {
+      if (sc.type === "retainer" || sc.type === "project") {
+        const monthly = new Array(N).fill(0);
+        const startIdx = sc.startDate ? Math.max(0, monthIdxFromDate(sc.startDate) ?? 0) : 0;
+        let endIdx;
+        if (sc.endDate) endIdx = Math.min(N - 1, monthIdxFromDate(sc.endDate) ?? N - 1);
+        else if (sc.type === "project" && sc.termMonths) endIdx = Math.min(N - 1, startIdx + sc.termMonths - 1);
+        else endIdx = N - 1;
+        for (let i = startIdx; i <= endIdx; i++) monthly[i] = sc.monthlyAmount || 0;
+        for (let i = 0; i < N; i++) rvDerived.im[i] += monthly[i];
+        rvBreakdown.im.push({ clientId: c.id, clientName: c.nm, monthly });
+      }
+    }
+
+    // Zoho commission — monthly → rv.zm; annual → rv.za at renewalMonth
+    if (zc && zc.inForecast !== false && (zc.status === "active" || zc.status === "at-risk")) {
+      const monthly = new Array(N).fill(0);
+      if (zc.frequency === "monthly") {
+        const amt = zc.monthlyAmount || 0;
+        for (let i = 0; i < N; i++) monthly[i] = amt;
+        for (let i = 0; i < N; i++) rvDerived.zm[i] += monthly[i];
+        rvBreakdown.zm.push({ clientId: c.id, clientName: c.nm, monthly });
+      } else if (zc.frequency === "annual" && typeof zc.renewalMonth === "number") {
+        if (zc.renewalMonth >= 0 && zc.renewalMonth < N) {
+          monthly[zc.renewalMonth] = zc.annualAmount || 0;
+          rvDerived.za[zc.renewalMonth] += monthly[zc.renewalMonth];
+        }
+        rvBreakdown.za.push({ clientId: c.id, clientName: c.nm, monthly });
+      }
+    }
+
+    // One-time service payments — kind:"service" only (zoho payments not summed here)
+    let otEntry = null;
     (c.payments || []).forEach(p => {
+      if (p.kind && p.kind !== "service") return;
       const mo = p.month ?? -1;
-      if (mo >= 0 && mo <= N - 1) otBase[mo] += (p.amount || 0);
+      if (mo >= 0 && mo < N) {
+        if (!otEntry) {
+          otEntry = { clientId: c.id, clientName: c.nm, monthly: new Array(N).fill(0) };
+          rvBreakdown.ot.push(otEntry);
+        }
+        otEntry.monthly[mo] += p.amount || 0;
+        rvDerived.ot[mo] += p.amount || 0;
+      }
     });
   });
-  const rvWithOt = { ...d.rv, ot: otBase };
-  const rv = idxRange(N).map(i => Object.values(rvWithOt).reduce((s, a) => s + (a[i] || 0), 0));
+
+  // Apply Q1 2026 actuals overrides (idx 0-3) — preserves reconciled history
+  const ra = d.rvActuals || {};
+  ["im", "za", "zm"].forEach(stream => {
+    if (ra[stream]) {
+      Object.entries(ra[stream]).forEach(([k, v]) => {
+        const idx = parseInt(k, 10);
+        if (idx >= 0 && idx < N) rvDerived[stream][idx] = v;
+      });
+    }
+  });
+
+  // Manual streams: mk + pipeline (pCruzy, pPatson) — extend to 24 if shorter
+  const padTo = (arr) => {
+    const a = (arr || []).slice(0, N);
+    while (a.length < N) a.push(0);
+    return a;
+  };
+  const rvManual = {
+    mk: padTo(d.rv?.mk),
+    pCruzy: padTo(d.rv?.pCruzy),
+    pPatson: padTo(d.rv?.pPatson),
+  };
+
+  // Total revenue across all streams
+  const rv = idxRange(N).map(i =>
+    rvDerived.im[i] + rvDerived.za[i] + rvDerived.zm[i] + rvDerived.ot[i] +
+    rvManual.mk[i] + rvManual.pCruzy[i] + rvManual.pPatson[i]
+  );
+
+  // === Expenses (unchanged structure) ===
   const sb = idxRange(N).map(i => -d.sb.reduce((s, x) => {
     if (x.s && i < x.s) return s;
     if (x.e !== undefined && i > x.e) return s;
@@ -31,9 +121,7 @@ export function compute(d) {
       const sm = p.startMo ?? 0;
       const em = p.endMo ?? (N - 1);
       if (i < sm || i > em) return;
-      // Paul: Jan=0 (no pay), Feb=special, then normal rate
       if (p.nm === "Paul") { if (i === 0) return; if (i === 1) { t -= 3917; return; } t -= p.co; return; }
-      // Sara: Jan=824, Feb=180, then normal rate until her endMo
       if (p.nm === "Sara") { t -= (i === 0 ? 824 : i === 1 ? 180 : p.co); return; }
       t -= p.co;
     });
@@ -45,7 +133,6 @@ export function compute(d) {
       const sm = p.startMo ?? 0;
       const em = p.endMo ?? (N - 1);
       if (i < sm || i > em) return;
-      // Janna: Jan-Feb was $800 (temp increase), $550 from Mar onward
       if (p.nm === "Janna") { t -= (i < 2 ? 800 : p.co); return; }
       t -= p.co;
     });
@@ -57,35 +144,39 @@ export function compute(d) {
       const sm = p.startMo ?? 0;
       const em = p.endMo ?? (N - 1);
       if (i < sm || i > em) return;
-      // Soorya: Jan was $2000 (one-time), then normal
       if (p.nm === "Soorya" && i === 0) { t -= 2000; return; }
       t -= p.co;
     });
     return t;
   });
-  // sb excluded from cash flow — subs are on CC, cash impact is through CC Paydown in db[]
-  // sb is still computed for display/tracking purposes
   const ex = idxRange(N).map(i => us[i] + ph[i] + ind[i] + oc[i] + db[i]);
 
-  // Scenario rows — fold active scenarios into revenue/expense
-  const scRv = new Array(N).fill(0); // scenario revenue per month
-  const scEx = new Array(N).fill(0); // scenario expenses per month
+  // === Scenarios ===
+  const scRv = new Array(N).fill(0);
+  const scEx = new Array(N).fill(0);
   const scenarios = d.scenarios || [];
   scenarios.filter(s => s.on).forEach(s => {
     const start = s.startMo || 0;
-    const dur = s.duration || 0; // 0 = ongoing (through end of horizon)
+    const dur = s.duration || 0;
     const end = dur > 0 ? Math.min(start + dur - 1, N - 1) : (N - 1);
     for (let i = start; i <= end; i++) {
       if (s.type === "revenue") scRv[i] += s.amount;
-      else scEx[i] -= s.amount; // expenses stored positive, applied negative
+      else scEx[i] -= s.amount;
     }
   });
 
-  const rvT = rv.map((v, i) => v + scRv[i]); // total revenue including scenarios
-  const exT = ex.map((v, i) => v + scEx[i]); // total expenses including scenarios
+  const rvT = rv.map((v, i) => v + scRv[i]);
+  const exT = ex.map((v, i) => v + scEx[i]);
   const nt = idxRange(N).map(i => rvT[i] + exT[i]);
   const bl = [];
   nt.forEach((n, i) => bl.push(i === 0 ? d.openBal + n : bl[i - 1] + n));
-  return { rv: rvT, rvBase: rv, sb, oc, db, us, ph, ind, ex: exT, exBase: ex, nt, bl, at, scRv, scEx, otMerged: otBase };
-}
 
+  return {
+    rv: rvT, rvBase: rv,
+    rvDerived, rvBreakdown,
+    sb, oc, db, us, ph, ind,
+    ex: exT, exBase: ex,
+    nt, bl, at, scRv, scEx,
+    otMerged: rvDerived.ot,
+  };
+}
