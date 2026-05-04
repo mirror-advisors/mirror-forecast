@@ -26,6 +26,7 @@ export default function App() {
   const [stPicker, setStPicker] = useState(null); // { ci, mi } — which cell has the picker open
   const [crmFilter, setCrmFilter] = useState("all");
   const [crmSort, setCrmSort] = useState("status");
+  const [crmSelectedId, setCrmSelectedId] = useState(null);
   const [zohoExpanded, setZohoExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 768);
 
@@ -630,6 +631,170 @@ export default function App() {
 
       {/* ===================== CRM ===================== */}
       {tab==="crm"&&(()=>{
+        // === Phase C1: Profile view (read-only) ===
+        if (crmSelectedId) {
+          const cl = d.cl.find(c => c.id === crmSelectedId);
+          if (!cl) { setCrmSelectedId(null); return null; }
+
+          const formatDate = (s) => { if (!s) return "—"; const dt = new Date(s); return isNaN(dt) ? s : dt.toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" }); };
+          const formatTerm = () => cl.termMonths ? `${cl.termMonths} months` : (cl.tr === "M2M" ? "M2M" : "—");
+          const RISK_COLORS = { low: P.g, medium: P.a, high: P.r };
+          const PMT_LABEL = { P:"Paid", U:"Unpaid", L:"Late", C:"Credited" };
+          const PMT_COLOR = { P: P.g, U: P.a, L: P.r, C: P.b };
+          const baseYear = cl.startDate ? new Date(cl.startDate).getFullYear() : new Date().getFullYear();
+
+          let subtitle = "—";
+          if (cl.contractType === "retainer") subtitle = `$${(cl.monthlyAmount||0).toLocaleString()}/mo retainer`;
+          else if (cl.contractType === "project") {
+            const parts = [];
+            if (cl.termMonths) parts.push(`${cl.termMonths}-month engagement`);
+            if (cl.monthlyAmount) parts.push(`$${cl.monthlyAmount.toLocaleString()}/mo`);
+            if (cl.totalContractValue) parts.push(`$${cl.totalContractValue.toLocaleString()} total`);
+            subtitle = parts.join(" · ") || "—";
+          }
+          else if (cl.contractType === "one-time") subtitle = formatCrmAmount(cl);
+          else if (cl.contractType === "zoho-only") {
+            if (cl.commissionFrequency === "annual") subtitle = `$${(cl.currentCommissionAnnual||0).toLocaleString()}/yr Zoho commission`;
+            else subtitle = `$${(cl.currentCommissionMonthly||0).toLocaleString()}/mo Zoho commission`;
+          }
+
+          let pmtRows = [];
+          if ((cl.payments || []).length > 0) pmtRows = cl.payments.map(p => ({ month:p.month, amount:p.amount, status:p.status }));
+          else if (cl.st && cl.st.some(s => s !== "")) pmtRows = cl.st.map((s, i) => s ? { month:i, amount: cl.monthlyAmount || cl.rt || 0, status:s } : null).filter(Boolean);
+
+          const monthNotes = Object.entries(cl.nt || {}).map(([k,v]) => ({ idx:parseInt(k,10), text:v })).filter(e => !isNaN(e.idx)).sort((a,b) => a.idx - b.idx);
+
+          const sectLbl = { fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,fontFamily:"'DM Sans', sans-serif",marginBottom:14 };
+          const fRow = { display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"7px 0",borderBottom:`1px solid ${P.bd}30` };
+          const fRowLast = { ...fRow, borderBottom:"none" };
+          const fLbl = { color:P.tm,fontSize:12,fontFamily:"'DM Sans', sans-serif" };
+          const fVal = { color:P.tx,fontSize:12,fontFamily:"'DM Sans', sans-serif",fontWeight:500 };
+          const fValMono = { ...fVal, fontFamily:"'JetBrains Mono', monospace" };
+          const cardSty = { padding:18 };
+
+          const headerPill = (s) => {
+            const co = STATUS_COLORS[s] || STATUS_COLORS.pipeline;
+            return <span style={{ display:"inline-flex",alignItems:"center",gap:7,padding:"5px 12px",borderRadius:13,background:co.bg,color:co.fg,fontSize:12,fontWeight:700,fontFamily:"'DM Sans', sans-serif",textTransform:"capitalize",whiteSpace:"nowrap",letterSpacing:"0.02em" }}><span style={{ width:7,height:7,borderRadius:4,background:co.fg }} />{s || "unknown"}</span>;
+          };
+
+          const monthlyDisplay = (cl.contractType === "retainer" || cl.contractType === "project") && cl.monthlyAmount
+            ? `$${cl.monthlyAmount.toLocaleString()}` : "—";
+          const totalDisplay = cl.totalContractValue ? `$${cl.totalContractValue.toLocaleString()}` : "—";
+          const freqDisplay = cl.commissionFrequency ? cl.commissionFrequency.charAt(0).toUpperCase() + cl.commissionFrequency.slice(1) : "—";
+          const monthlyCommDisplay = cl.currentCommissionMonthly ? `$${cl.currentCommissionMonthly.toLocaleString()}` : "—";
+          const annualCommDisplay = cl.currentCommissionAnnual ? `$${cl.currentCommissionAnnual.toLocaleString()}` : "—";
+
+          return (<>
+            {/* Breadcrumb */}
+            <button onClick={()=>setCrmSelectedId(null)} style={{ background:"transparent",border:"none",color:P.tm,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",padding:"6px 0",marginBottom:14 }} onMouseEnter={e=>e.currentTarget.style.color=P.tx} onMouseLeave={e=>e.currentTarget.style.color=P.tm}>← Back to all clients</button>
+
+            {/* Header */}
+            <div style={{ marginBottom:22 }}>
+              <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12,flexWrap:"wrap" }}>
+                {headerPill(cl.status)}
+                <span style={{ fontSize:10,color:P.td,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,fontFamily:"'DM Sans', sans-serif" }}>{cl.contractType || "—"}</span>
+              </div>
+              <div style={{ fontSize:24,fontWeight:500,color:P.tx,fontFamily:"'DM Sans', sans-serif",marginBottom:6,letterSpacing:"-0.01em",lineHeight:1.15 }}>{cl.nm}</div>
+              <div style={{ fontSize:13,color:P.tm,fontFamily:"'DM Sans', sans-serif" }}>{subtitle}</div>
+            </div>
+
+            {/* Contract + Payment grid */}
+            <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14 }}>
+              <Card style={cardSty}>
+                <div style={sectLbl}>Contract</div>
+                <div style={fRow}><span style={fLbl}>Type</span><span style={fVal}>{cl.contractType || "—"}</span></div>
+                <div style={fRow}><span style={fLbl}>Monthly</span><span style={fValMono}>{monthlyDisplay}</span></div>
+                <div style={fRow}><span style={fLbl}>Total</span><span style={fValMono}>{totalDisplay}</span></div>
+                <div style={fRow}><span style={fLbl}>Term</span><span style={fVal}>{formatTerm()}</span></div>
+                <div style={fRow}><span style={fLbl}>Start</span><span style={fVal}>{formatDate(cl.startDate)}</span></div>
+                <div style={fRow}><span style={fLbl}>End</span><span style={fVal}>{formatDate(cl.endDate)}</span></div>
+                <div style={fRowLast}><span style={fLbl}>Renewal</span><span style={fVal}>{formatDate(cl.renewalDate)}</span></div>
+              </Card>
+
+              <Card style={cardSty}>
+                <div style={sectLbl}>Payment</div>
+                <div style={fRow}><span style={fLbl}>Method</span><span style={fVal}>{cl.payMethod || "—"}</span></div>
+                <div style={fRow}><span style={fLbl}>Terms</span><span style={fVal}>—</span></div>
+                <div style={fRow}><span style={fLbl}>Auto-renew</span><span style={fVal}>{cl.autoRenew ? "Yes" : "No"}</span></div>
+                <div style={fRowLast}>
+                  <span style={fLbl}>Risk</span>
+                  <span style={{ ...fVal,color:RISK_COLORS[cl.churnRisk] || P.tm,textTransform:"capitalize",display:"inline-flex",alignItems:"center",gap:6 }}>
+                    <span style={{ width:6,height:6,borderRadius:3,background:RISK_COLORS[cl.churnRisk] || P.tm }} />
+                    {cl.churnRisk || "—"}
+                  </span>
+                </div>
+              </Card>
+            </div>
+
+            {/* Zoho License (zoho-only clients) */}
+            {cl.contractType === "zoho-only" && (
+              <Card style={{ ...cardSty,marginBottom:14 }}>
+                <div style={sectLbl}>Zoho License</div>
+                <div style={fRow}><span style={fLbl}>License Type</span><span style={{ ...fVal,color:cl.licenseType?P.tx:P.td,fontStyle:cl.licenseType?"normal":"italic" }}>{cl.licenseType || "Not set"}</span></div>
+                <div style={fRow}><span style={fLbl}>Monthly Commission</span><span style={fValMono}>{monthlyCommDisplay}</span></div>
+                <div style={fRow}><span style={fLbl}>Annual Commission</span><span style={fValMono}>{annualCommDisplay}</span></div>
+                <div style={fRow}><span style={fLbl}>Frequency</span><span style={fVal}>{freqDisplay}</span></div>
+                <div style={fRow}><span style={fLbl}>Renewal Date</span><span style={fVal}>{formatDate(cl.zohoRenewalDate)}</span></div>
+                <div style={fRowLast}><span style={fLbl}>Commission Note</span><span style={{ ...fVal,color:cl.commissionNote?P.tx:P.td,fontStyle:cl.commissionNote?"normal":"italic" }}>{cl.commissionNote || "—"}</span></div>
+              </Card>
+            )}
+
+            {/* Payments */}
+            <Card style={{ ...cardSty,marginBottom:14 }}>
+              <div style={sectLbl}>Payments</div>
+              {pmtRows.length === 0 ? (
+                <div style={{ color:P.td,fontSize:12,fontFamily:"'DM Sans', sans-serif",fontStyle:"italic",padding:"4px 0" }}>No payments recorded yet.</div>
+              ) : (
+                <table style={{ width:"100%",borderCollapse:"collapse",fontFamily:"'DM Sans', sans-serif" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign:"left",fontSize:9,color:P.td,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",padding:"6px 0",borderBottom:`1px solid ${P.bd}` }}>Month</th>
+                      <th style={{ textAlign:"right",fontSize:9,color:P.td,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",padding:"6px 0",borderBottom:`1px solid ${P.bd}` }}>Amount</th>
+                      <th style={{ textAlign:"right",fontSize:9,color:P.td,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",padding:"6px 0",borderBottom:`1px solid ${P.bd}` }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pmtRows.map((p,i) => (
+                      <tr key={i}>
+                        <td style={{ padding:"8px 0",fontSize:12,color:P.tx,borderBottom:`1px solid ${P.bd}30`,fontFamily:"'DM Sans', sans-serif" }}>{MO[p.month]} {baseYear}</td>
+                        <td style={{ padding:"8px 0",fontSize:12,color:P.tx,textAlign:"right",fontFamily:"'JetBrains Mono', monospace",borderBottom:`1px solid ${P.bd}30` }}>{p.amount ? `$${p.amount.toLocaleString()}` : "—"}</td>
+                        <td style={{ padding:"8px 0",fontSize:12,textAlign:"right",borderBottom:`1px solid ${P.bd}30` }}>
+                          <span style={{ display:"inline-flex",alignItems:"center",gap:6,color:PMT_COLOR[p.status] || P.tm }}>
+                            <span style={{ width:6,height:6,borderRadius:3,background:PMT_COLOR[p.status] || P.tm }} />
+                            {PMT_LABEL[p.status] || p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </Card>
+
+            {/* Notes */}
+            <Card style={cardSty}>
+              <div style={sectLbl}>Notes</div>
+              <div style={{ color:cl.notes?P.tx:P.td,fontSize:13,fontFamily:"'DM Sans', sans-serif",fontStyle:cl.notes?"normal":"italic",lineHeight:1.5 }}>
+                {cl.notes || "No notes."}
+              </div>
+              {monthNotes.length > 0 && (
+                <div style={{ marginTop:14,paddingTop:14,borderTop:`1px solid ${P.bd}` }}>
+                  <div style={{ ...sectLbl,marginBottom:10,fontSize:9 }}>Per-month notes</div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                    {monthNotes.map(n => (
+                      <div key={n.idx} style={{ display:"flex",gap:14,fontSize:12,alignItems:"baseline" }}>
+                        <span style={{ color:P.tm,fontFamily:"'JetBrains Mono', monospace",fontSize:11,width:84,flexShrink:0 }}>{MO[n.idx]} {baseYear}</span>
+                        <span style={{ color:P.tx,fontFamily:"'DM Sans', sans-serif",lineHeight:1.5 }}>{n.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </>);
+        }
+
+        // === Phase B: list view ===
         const filtersList = [["all","All"],["active","Active"],["at-risk","At-Risk"],["churned","Churned"],["one-time","One-Time"],["pipeline","Pipeline"]];
         const showZohoAggregate = (crmFilter === "all" || crmFilter === "active") && zohoTotalCount > 0;
         const filteredNonZoho = d.cl.filter(c => !isZohoCl(c) && matchesCrmFilter(c, crmFilter));
@@ -693,7 +858,7 @@ export default function App() {
                           </div>
                           <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                             <span style={{ fontFamily:"'JetBrains Mono', monospace",color:P.tm,fontSize:11 }}>{formatCrmAmount(zc)}</span>
-                            <button style={viewBtnSty}>View →</button>
+                            <button onClick={()=>setCrmSelectedId(zc.id)} style={viewBtnSty}>View →</button>
                           </div>
                         </div>
                       ))}
@@ -704,7 +869,7 @@ export default function App() {
                 <Card key={cl.id} style={{ padding:14 }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
                     {statusPill(cl.status)}
-                    <button style={viewBtnSty}>View →</button>
+                    <button onClick={()=>setCrmSelectedId(cl.id)} style={viewBtnSty}>View →</button>
                   </div>
                   <div style={{ fontSize:14,fontWeight:700,color:P.tx,marginBottom:4 }}>{cl.nm}</div>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:11,color:P.td,textTransform:"uppercase",letterSpacing:"0.06em" }}>
@@ -747,7 +912,7 @@ export default function App() {
                           <td style={{ ...tdS,color:P.td,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em" }}>{zc.commissionFrequency || "monthly"}</td>
                           <td style={{ ...tdMono,textAlign:"right" }}>{formatCrmAmount(zc)}</td>
                           <td style={tdMono}>—</td>
-                          <td style={tdS}><button style={viewBtnSty}>View →</button></td>
+                          <td style={tdS}><button onClick={()=>setCrmSelectedId(zc.id)} style={viewBtnSty}>View →</button></td>
                         </tr>
                       ))}
                     </React.Fragment>
@@ -758,7 +923,7 @@ export default function App() {
                       <td style={{ ...tdS,color:P.td,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em" }}>{cl.contractType || "—"}</td>
                       <td style={{ ...tdMono,textAlign:"right" }}>{formatCrmAmount(cl)}</td>
                       <td style={tdMono}>{formatRenewal(cl)}</td>
-                      <td style={tdS}><button style={viewBtnSty}>View →</button></td>
+                      <td style={tdS}><button onClick={()=>setCrmSelectedId(cl.id)} style={viewBtnSty}>View →</button></td>
                     </tr>
                   ))}
                 </tbody>
