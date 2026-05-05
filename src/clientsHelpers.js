@@ -82,6 +82,25 @@ export function effectiveStatus(entry) {
   return "U";
 }
 
+// E2d — single source of truth for the P/U/L/C → entry-shape mapping.
+// "P" sets paid+paidDate (today, only if not already set so Sara can override
+// via the ScheduleEditor paidDate column). U/L/C clear both. Used by both
+// ScheduleEditor and PaymentsTab so the rule lives in one place.
+export function applyStatusToEntry(entry, newStatus, today) {
+  const out = { ...entry, status: newStatus };
+  if (newStatus === "P") {
+    out.paid = true;
+    if (!entry.paidDate) {
+      const t = today instanceof Date ? today : new Date();
+      out.paidDate = t.toISOString().slice(0, 10);
+    }
+  } else {
+    out.paid = false;
+    out.paidDate = null;
+  }
+  return out;
+}
+
 // Generate an empty paymentSchedule for a freshly-added serviceContract.
 // Retainer / support-retainer: 12 forward months from current month.
 // Project: startDate through endDate.

@@ -1,7 +1,9 @@
 // Phase E2c.1 — unified Clients tab with master/detail (List) + sortable
 // table (Ranked) views. View pref + selection persisted per user in
-// localStorage. Sara still routes to her worklist view (unchanged); her
-// view-pref key is stubbed for future-proofing (Q7) but no toggle UI surfaces.
+// localStorage.
+// E2d: SaraView removed; Sara now reaches client editing through this same
+// tab (full Paul-equivalent surface). Cross-tab navigation from PaymentsTab
+// arrives via the pendingClientId prop.
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { P } from "./data.js";
@@ -10,15 +12,7 @@ import ClientList from "./ClientList.jsx";
 import ClientDetail from "./ClientDetail.jsx";
 import ClientTable from "./ClientTable.jsx";
 import ClientDrawer from "./ClientDrawer.jsx";
-import {
-  daysUntil, paymentDueStatus, nextClientId,
-} from "./clientsHelpers.js";
-
-const fmtMoney = (n) => {
-  if (!n || n === 0) return "—";
-  const a = Math.abs(Math.round(n));
-  return n < 0 ? `($${a.toLocaleString()})` : `$${a.toLocaleString()}`;
-};
+import { daysUntil, nextClientId } from "./clientsHelpers.js";
 
 const FILTER_PILLS = [
   ["all",            "All"],
@@ -44,84 +38,6 @@ function matchesSearch(c, q) {
   const ql = q.toLowerCase();
   return (c.nm || "").toLowerCase().includes(ql)
       || (c.email || "").toLowerCase().includes(ql);
-}
-
-// === Sara's worklist view (unchanged from E2b — she's not in scope for E2c.1) ===
-function SaraView({ clients, today }) {
-  const todayMonth = today.getFullYear() * 12 + today.getMonth();
-  const allEntries = clients.flatMap(c =>
-    (c.serviceContract?.paymentSchedule || []).map(p => ({
-      ...p, clientId: c.id, clientName: c.nm, _due: new Date(p.dueDate),
-    }))
-  );
-  const worklist = allEntries.filter(e => {
-    const dueMonth = e._due.getFullYear() * 12 + e._due.getMonth();
-    if (dueMonth === todayMonth) return true;
-    if (dueMonth < todayMonth && !e.paid) return true;
-    return false;
-  }).sort((a, b) => a._due - b._due);
-
-  const lateEntries = worklist.filter(e => !e.paid && e._due < today && (e._due.getFullYear() * 12 + e._due.getMonth()) < todayMonth);
-  const thisMonthEntries = worklist.filter(e => (e._due.getFullYear() * 12 + e._due.getMonth()) === todayMonth);
-  const lateAmount = lateEntries.reduce((s, e) => s + (e.amount || 0), 0);
-  const dueAmount = thisMonthEntries.filter(e => !e.paid).reduce((s, e) => s + (e.amount || 0), 0);
-
-  const monthLabel = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-
-  const renderEntry = (e) => {
-    const status = paymentDueStatus(e, today);
-    const isLate = status === "late";
-    const days = isLate ? -daysUntil(e._due, today) : 0;
-    const statusColor = status === "paid" ? P.g : status === "late" ? P.r : status === "due" ? P.a : P.tm;
-    return (
-      <div key={`${e.clientId}-${e.dueDate}`} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto auto", gap: 12, padding: "10px 12px", background: P.c1, border: `1px solid ${P.bd}`, borderRadius: 6, alignItems: "center", fontFamily: "'DM Sans', sans-serif", fontSize: 12 }}>
-        <div style={{ color: P.tx, fontWeight: 600 }}>{e.clientName}</div>
-        <div style={{ color: P.tx, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>{fmtMoney(e.amount)}</div>
-        <div style={{ color: P.td, fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}>{e.dueDate}</div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, color: statusColor, fontWeight: 600, fontSize: 11 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 3, background: statusColor }} />
-          {status === "paid" ? "Paid" : status === "late" ? `${days} days late` : status === "due" ? "Due" : "Upcoming"}
-        </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button disabled style={{ background: "transparent", border: `1px solid ${P.bd}`, borderRadius: 4, padding: "3px 8px", color: P.td, fontSize: 10, cursor: "not-allowed", fontFamily: "'DM Sans', sans-serif", opacity: 0.55 }}>Mark paid</button>
-          <button disabled style={{ background: "transparent", border: `1px solid ${P.bd}`, borderRadius: 4, padding: "3px 8px", color: P.td, fontSize: 10, cursor: "not-allowed", fontFamily: "'DM Sans', sans-serif", opacity: 0.55 }}>Note</button>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div>
-      <Card style={{ padding: 16, marginBottom: 16, borderLeft: `3px solid ${P.t}` }}>
-        <Lbl>{monthLabel} invoices</Lbl>
-        <div style={{ fontSize: 13, color: P.tx, fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: lateEntries.length > 0 ? P.r : P.tm }}>
-            {lateEntries.length} late ({fmtMoney(lateAmount)})
-          </span>
-          <span style={{ color: P.td }}> · </span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: thisMonthEntries.length > 0 ? P.a : P.tm }}>
-            {thisMonthEntries.length} due this month ({fmtMoney(dueAmount)})
-          </span>
-        </div>
-      </Card>
-
-      {lateEntries.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <Lbl style={{ color: P.r }}>! Late ({lateEntries.length})</Lbl>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{lateEntries.map(renderEntry)}</div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: 24 }}>
-        <Lbl>This month ({thisMonthEntries.length})</Lbl>
-        {thisMonthEntries.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{thisMonthEntries.map(renderEntry)}</div>
-        ) : (
-          <div style={{ fontSize: 12, color: P.tm, fontStyle: "italic", padding: "8px 12px" }}>No invoices this month.</div>
-        )}
-      </div>
-    </div>
-  );
 }
 
 // === Renewal Watch banner (unchanged from E2b) ===
@@ -152,7 +68,7 @@ function RenewalWatch({ clients, today }) {
 }
 
 // === Main ClientsTab ===
-export default function ClientsTab({ d, save, profile, isAdmin, isViewer, isIntern }) {
+export default function ClientsTab({ d, save, profile, isAdmin, isViewer, pendingClientId, onConsumePending }) {
   const today = useMemo(() => new Date(), []);
   const userKey = profile?.id || profile?.email || "anon";
   const viewPrefKey = `clients_view_pref:${userKey}`;
@@ -160,7 +76,9 @@ export default function ClientsTab({ d, save, profile, isAdmin, isViewer, isInte
 
   const [view, setView] = useState(() => {
     if (typeof window === "undefined") return "list";
-    return localStorage.getItem(viewPrefKey) || "list";
+    const stored = localStorage.getItem(viewPrefKey);
+    // E2d: scrub legacy "sara" pref left over from the removed SaraView routing.
+    return (stored === "list" || stored === "ranked") ? stored : "list";
   });
   const [selectedId, setSelectedId] = useState(() => {
     if (typeof window === "undefined") return null;
@@ -170,12 +88,15 @@ export default function ClientsTab({ d, save, profile, isAdmin, isViewer, isInte
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Q7: stub Sara view pref on first load (no toggle UI surfaced)
+  // E2d: cross-tab nav from PaymentsTab. When pendingClientId arrives, force
+  // List view + select that client, then signal App to clear the pending flag
+  // so re-clicking the same row later still re-fires.
   useEffect(() => {
-    if (isIntern && typeof window !== "undefined" && !localStorage.getItem(viewPrefKey)) {
-      localStorage.setItem(viewPrefKey, "sara");
-    }
-  }, [isIntern, viewPrefKey]);
+    if (!pendingClientId) return;
+    setView("list");
+    setSelectedId(pendingClientId);
+    if (onConsumePending) onConsumePending();
+  }, [pendingClientId, onConsumePending]);
 
   // Persist view pref
   useEffect(() => {
@@ -221,9 +142,6 @@ export default function ClientsTab({ d, save, profile, isAdmin, isViewer, isInte
     setSelectedId(newId);
     if (view === "ranked") setDrawerClientId(newId);
   }, [d, save, view]);
-
-  // Sara fallback — no toggle, her worklist view
-  if (isIntern) return <SaraView clients={d.cl} today={today} />;
 
   const selectedClient = d.cl.find(c => c.id === selectedId) || filteredClients[0] || null;
   const drawerClient = drawerClientId ? d.cl.find(c => c.id === drawerClientId) : null;

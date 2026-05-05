@@ -7,6 +7,7 @@ import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import Reconcile from "./Reconcile.jsx";
 import ClientsTab from "./ClientsTab.jsx";
+import PaymentsTab from "./PaymentsTab.jsx";
 import RunwayChart from "./RunwayChart.jsx";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
   const [arc, setArc] = useState(false); // payroll: show archived
   const [expandedLines, setExpandedLines] = useState({}); // forecast revenue stream expand state
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 768);
+  const [pendingClientId, setPendingClientId] = useState(null); // E2d: cross-tab nav (PaymentsTab → ClientsTab)
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -80,7 +82,7 @@ export default function App() {
   // early return — the bug that took the live app down on first push.
   const isIntern = !isAdmin && !isViewer;
   const tabs = useMemo(
-    () => isIntern ? ["clients","payroll"] : ["dashboard","forecast","clients","payroll"],
+    () => isIntern ? ["payments","clients"] : ["dashboard","forecast","clients","payroll"],
     [isIntern]
   );
   useEffect(() => { if (!tabs.includes(tab)) setTab(tabs[0]); }, [tabs, tab]);
@@ -423,13 +425,31 @@ export default function App() {
         </div>
       </>)}
 
+      {/* ===================== PAYMENTS (E2d: Sara's worklist) ===================== */}
+      {tab==="payments"&&isIntern&&(
+        <PaymentsTab
+          d={d}
+          save={save}
+          today={today}
+          onNavigateToClient={(id) => { setPendingClientId(id); setTab("clients"); }}
+        />
+      )}
+
       {/* ===================== CLIENTS (E2c.1: master/detail + ranked) ===================== */}
       {tab==="clients"&&(
-        <ClientsTab d={d} save={save} profile={profile} isAdmin={isAdmin} isViewer={isViewer} isIntern={isIntern} />
+        <ClientsTab
+          d={d}
+          save={save}
+          profile={profile}
+          isAdmin={isAdmin}
+          isViewer={isViewer}
+          pendingClientId={pendingClientId}
+          onConsumePending={() => setPendingClientId(null)}
+        />
       )}
 
       {/* ===================== PAYROLL ===================== */}
-      {tab==="payroll"&&(<>
+      {tab==="payroll"&&!isIntern&&(<>
         <div style={{ display:"flex",justifyContent:"space-between",marginBottom:16 }}><div style={{ display:"flex",gap:8 }}>{Object.entries(DC).map(([dd,co])=><span key={dd} style={{ fontSize:10,color:co,fontWeight:600 }}>● {dd}</span>)}</div><div style={{ display:"flex",gap:8 }}><button onClick={()=>setArc(!arc)} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,cursor:"pointer" }}>{arc?"Hide":"Show"} Archived</button><button onClick={()=>save({...d,tm:[...d.tm,{id:"p"+Date.now(),nm:"New Hire",rl:"",dp:"Development",ct:"IN",co:0,on:true}]})} style={{ background:P.b,color:"white",border:"none",borderRadius:6,padding:"6px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add</button></div></div>
         {["US","PH","IN"].map(ct=>{const pp=d.tm.filter(t=>t.ct===ct&&(t.on||arc));if(!pp.length)return null;const mo=pp.filter(p=>p.on).reduce((s,p)=>s+p.co,0);return(<div key={ct} style={{ marginBottom:20 }}><div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}><span style={{ fontSize:16 }}>{FL[ct]}</span><span style={{ fontSize:13,fontWeight:700 }}>{ct==="US"?"United States":ct==="PH"?"Philippines":"India"}</span><Bdg c="r">{fmt(-mo)}/mo</Bdg></div><div style={{ display:"grid",gap:6 }}>{pp.map(p=>{const pi=d.tm.indexOf(p);return(<div key={p.id} style={{ background:p.on?P.c1:`${P.c1}80`,borderRadius:8,padding:"10px 14px",border:`1px solid ${P.bd}`,display:"flex",alignItems:"center",gap:12,opacity:p.on?1:.4 }}><div style={{ flex:1 }}><div style={{ display:"flex",alignItems:"center",gap:6 }}><input value={p.nm} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,nm:e.target.value};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:12,fontWeight:600,width:110 }}/><span style={{ fontSize:9,padding:"1px 6px",borderRadius:3,background:`${DC[p.dp]||P.td}20`,color:DC[p.dp]||P.td,fontWeight:600 }}>{p.dp}</span></div><input value={p.rl||""} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,rl:e.target.value};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",color:P.tm,fontFamily:"'DM Sans', sans-serif",fontSize:11,marginTop:1 }} placeholder="Role"/></div><select value={p.dp} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,dp:e.target.value};save({...d,tm:nt2});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:11,padding:4 }}>{["Development","Marketing","Operations","Leadership"].map(dd=><option key={dd}>{dd}</option>)}</select><NumIn value={p.co} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,co:+e.target.value};save({...d,tm:nt2});}} w={70}/><button onClick={()=>{const nt2=[...d.tm];nt2[pi]={...p,on:!p.on};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",cursor:"pointer",fontSize:14 }} title={p.on?"Archive":"Reactivate"}>{p.on?"📦":"♻️"}</button><button onClick={()=>save({...d,tm:d.tm.filter((_,i)=>i!==pi)})} style={{ background:"transparent",border:"none",color:P.rM,cursor:"pointer",fontSize:13 }}>×</button></div>);})}</div></div>);})}
       </>)}

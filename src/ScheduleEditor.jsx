@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState } from "react";
 import { P } from "./data.js";
-import { effectiveStatus, monthIdxFromDate, dateForMonth } from "./clientsHelpers.js";
+import { effectiveStatus, monthIdxFromDate, dateForMonth, applyStatusToEntry } from "./clientsHelpers.js";
 
 const STATUS_META = {
   P: { color: P.g, bg: P.gB, label: "Paid",     short: "P" },
@@ -151,17 +151,14 @@ export default function ScheduleEditor({ serviceContract: sc, onChange, today, e
   };
 
   const setStatus = (idx, newStatus) => {
-    const entry = schedule[idx];
-    const patch = { status: newStatus };
-    if (newStatus === "P") {
-      patch.paid = true;
-      if (!entry.paidDate) patch.paidDate = todayISO(today);
-    } else {
-      // U / L / C → not paid; clear paidDate
-      patch.paid = false;
-      patch.paidDate = null;
-    }
-    setEntry(idx, patch);
+    const updated = applyStatusToEntry(schedule[idx], newStatus, today);
+    const next = [...schedule];
+    next[idx] = updated;
+    onChange(next);
+  };
+
+  const setPaidDate = (idx, newDate) => {
+    setEntry(idx, { paidDate: newDate || null });
   };
 
   const addEntry = () => {
@@ -277,8 +274,12 @@ export default function ScheduleEditor({ serviceContract: sc, onChange, today, e
                     <td style={cellSty}>
                       <StatusChips value={status} onChange={(s) => setStatus(i, s)} editable={editable} />
                     </td>
-                    <td style={{ ...cellSty, fontSize: 10, color: P.tm, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {entry.paidDate || (entry.paid ? "—" : "")}
+                    <td style={cellSty}>
+                      {entry.paid ? (
+                        <DateCell value={entry.paidDate} onCommit={(v) => setPaidDate(i, v)} editable={editable} />
+                      ) : (
+                        <span style={{ fontSize: 10, color: P.td }}>—</span>
+                      )}
                     </td>
                     {canAddDelete && (
                       <td style={cellSty}>
