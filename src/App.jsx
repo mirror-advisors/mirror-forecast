@@ -435,9 +435,9 @@ export default function App() {
         </div>
       </>)}
 
-      {/* ===================== CLIENTS (E2b: edit-in-place) ===================== */}
+      {/* ===================== CLIENTS (E2c.1: master/detail + ranked) ===================== */}
       {tab==="clients"&&(
-        <ClientsTab d={d} save={save} isAdmin={isAdmin} isViewer={isViewer} isIntern={isIntern} />
+        <ClientsTab d={d} save={save} profile={profile} isAdmin={isAdmin} isViewer={isViewer} isIntern={isIntern} />
       )}
 
       {/* ===================== PAYROLL ===================== */}

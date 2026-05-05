@@ -1,37 +1,15 @@
-// Phase E2b — edit-in-place client card.
-// Field edits bubble through onChange(newClient) → ClientsTab → App.save() →
-// existing dirty/persist mechanism. No parallel save state.
+// Phase E2c.1 — full client detail panel.
+// Used by both List view's right pane AND Ranked view's slide-in drawer.
+// Self-contained: header, side-by-side service+zoho, contact, notes, schedule.
 
 import React, { useState } from "react";
 import { P } from "./data.js";
-import { Card, EditableField } from "./components.jsx";
+import { EditableField } from "./components.jsx";
 import {
   getSegment, clientValue, paymentDueStatus,
-  SEGMENT_LABELS, STATUS_LABELS,
-  generateScheduleForNew, deriveSegment, canEdit,
+  SEGMENT_LABELS, generateScheduleForNew, deriveSegment, canEdit,
 } from "./clientsHelpers.js";
-
-const STATUS_COLORS = {
-  active:    { bg: P.gB, fg: P.g },
-  "at-risk": { bg: P.aB, fg: P.a },
-  churned:   { bg: P.rB, fg: P.r },
-  pipeline:  { bg: P.c2, fg: P.tm },
-};
-const SEGMENT_COLORS = {
-  infinityMirror:     P.g,
-  supportRetainer:    P.t,
-  bankOfHours:        P.a,
-  fullProject:        P.b,
-  zohoCommissionOnly: "#38bdf8",
-  oneTime:            P.td,
-};
-const PMT_COLORS = {
-  paid:     { bg: P.gB, fg: P.g, label: "Paid" },
-  late:     { bg: P.rB, fg: P.r, label: "Late" },
-  due:      { bg: P.aB, fg: P.a, label: "Due" },
-  upcoming: { bg: P.c2, fg: P.tm, label: "Upcoming" },
-  unpaid:   { bg: P.c2, fg: P.tm, label: "Unpaid" },
-};
+import { StatusPill, SegmentPill, Pill, Avatar, SEGMENT_COLORS } from "./ClientPills.jsx";
 
 const SERVICE_TYPES = [
   ["retainer",         "Retainer (Infinity Mirror)"],
@@ -55,37 +33,22 @@ const ZOHO_PRODUCTS = [
 ];
 const FREQUENCY_OPTIONS = [["monthly", "Monthly"], ["annual", "Annual"]];
 
+const PMT_COLORS = {
+  paid:     { fg: P.g, label: "Paid" },
+  late:     { fg: P.r, label: "Late" },
+  due:      { fg: P.a, label: "Due" },
+  upcoming: { fg: P.tm, label: "Upcoming" },
+  unpaid:   { fg: P.tm, label: "Unpaid" },
+};
+
 const fmtMoney = (n) => {
   if (!n || n === 0) return "—";
   const a = Math.abs(Math.round(n));
   return n < 0 ? `($${a.toLocaleString()})` : `$${a.toLocaleString()}`;
 };
 
-const Pill = ({ children, color = P.tm, bg = `${P.c2}80`, fontSize = 9 }) => (
-  <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 9, background: bg, color, fontSize, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", textTransform: "capitalize", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>{children}</span>
-);
-
-const StatusPill = ({ status }) => {
-  const co = STATUS_COLORS[status] || STATUS_COLORS.pipeline;
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 11, background: co.bg, color: co.fg, fontSize: 10, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", textTransform: "capitalize", whiteSpace: "nowrap" }}>
-      <span style={{ width: 6, height: 6, borderRadius: 3, background: co.fg }} />
-      {STATUS_LABELS[status] || status || "—"}
-    </span>
-  );
-};
-
-const SegmentPill = ({ segment }) => (
-  <Pill color={SEGMENT_COLORS[segment] || P.tm} bg={`${SEGMENT_COLORS[segment] || P.tm}15`}>
-    {SEGMENT_LABELS[segment] || "—"}
-  </Pill>
-);
-
-const StreamPills = ({ client }) => (
-  <div style={{ display: "inline-flex", gap: 5 }}>
-    {client.serviceContract && <Pill color={P.g} bg={`${P.g}18`}>Service</Pill>}
-    {client.zohoCommission && <Pill color={P.t} bg={`${P.t}18`}>Zoho</Pill>}
-  </div>
+const sectionLabel = (text) => (
+  <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, fontFamily: "'DM Sans', sans-serif", marginBottom: 12, marginTop: 6 }}>{text}</div>
 );
 
 const fieldRow = (label, valueEl) => (
@@ -95,14 +58,11 @@ const fieldRow = (label, valueEl) => (
   </div>
 );
 
-const sectionLabel = (text) => (
-  <div style={{ fontSize: 10, color: P.td, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, fontFamily: "'DM Sans', sans-serif", marginBottom: 12, marginTop: 6 }}>{text}</div>
-);
-
-const PaymentScheduleTable = ({ entries, today }) => {
+// === Read-only payment schedule (E2c.4 turns this into an editor) ===
+function PaymentScheduleTable({ entries, today }) {
   if (!entries || entries.length === 0) return <div style={{ fontSize: 11, color: P.td, fontStyle: "italic", padding: "4px 0" }}>No scheduled payments.</div>;
   return (
-    <div style={{ marginTop: 4, maxHeight: 220, overflowY: "auto", border: `1px solid ${P.bd}40`, borderRadius: 6 }}>
+    <div style={{ marginTop: 4, maxHeight: 240, overflowY: "auto", border: `1px solid ${P.bd}40`, borderRadius: 6 }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'DM Sans', sans-serif" }}>
         <thead>
           <tr style={{ background: P.c2 }}>
@@ -117,7 +77,7 @@ const PaymentScheduleTable = ({ entries, today }) => {
             const co = PMT_COLORS[status];
             return (
               <tr key={i} style={{ borderBottom: `1px solid ${P.bd}25` }}>
-                <td style={{ padding: "5px 10px", fontSize: 11, color: P.tx, fontFamily: "'DM Sans', sans-serif" }}>{e.dueDate}</td>
+                <td style={{ padding: "5px 10px", fontSize: 11, color: P.tx }}>{e.dueDate}</td>
                 <td style={{ padding: "5px 10px", fontSize: 11, color: P.tx, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmtMoney(e.amount)}</td>
                 <td style={{ padding: "5px 10px", fontSize: 10, textAlign: "right" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: co.fg }}>
@@ -132,7 +92,7 @@ const PaymentScheduleTable = ({ entries, today }) => {
       </table>
     </div>
   );
-};
+}
 
 // === Add service contract inline form ===
 function AddServiceContractForm({ onCancel, onAdd }) {
@@ -158,14 +118,13 @@ function AddServiceContractForm({ onCancel, onAdd }) {
     onAdd(sc);
   };
 
-  const inputSty = { background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 4, color: P.tx, fontSize: 12, padding: "5px 8px", fontFamily: "'DM Sans', sans-serif" };
+  const inputSty = { background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 4, color: P.tx, fontSize: 12, padding: "5px 8px", fontFamily: "'DM Sans', sans-serif", width: "100%", boxSizing: "border-box" };
   const lblSty = { fontSize: 9, color: P.td, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3, fontWeight: 600 };
 
   return (
     <div style={{ padding: 14, background: P.c2, borderRadius: 6, marginBottom: 16, border: `1px solid ${P.bd}` }}>
-      <div style={sectionLabel("New service contract")[1]?.style || {}} />
       {sectionLabel("Add service contract")}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
         <div>
           <div style={lblSty}>Type</div>
           <select value={type} onChange={e => setType(e.target.value)} style={inputSty}>
@@ -223,13 +182,13 @@ function AddZohoCommissionForm({ onCancel, onAdd }) {
     onAdd(zc);
   };
 
-  const inputSty = { background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 4, color: P.tx, fontSize: 12, padding: "5px 8px", fontFamily: "'DM Sans', sans-serif" };
+  const inputSty = { background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 4, color: P.tx, fontSize: 12, padding: "5px 8px", fontFamily: "'DM Sans', sans-serif", width: "100%", boxSizing: "border-box" };
   const lblSty = { fontSize: 9, color: P.td, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3, fontWeight: 600 };
 
   return (
     <div style={{ padding: 14, background: P.c2, borderRadius: 6, marginBottom: 16, border: `1px solid ${P.bd}` }}>
       {sectionLabel("Add Zoho commission")}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
         <div>
           <div style={lblSty}>Zoho Product</div>
           <select value={zohoProduct} onChange={e => setZohoProduct(e.target.value)} style={inputSty}>
@@ -278,10 +237,85 @@ function AddZohoCommissionForm({ onCancel, onAdd }) {
   );
 }
 
-export default function ClientCard({ client, today, expanded, onToggle, onChange, isAdmin, isViewer }) {
-  const [addingService, setAddingService] = useState(false);
-  const [addingZoho, setAddingZoho] = useState(false);
+// === Service Contract section ===
+function ServiceContractBlock({ client, sc, segment, editable, onPatch, onAdd }) {
+  const [adding, setAdding] = useState(false);
+  if (!sc) {
+    if (adding) return <AddServiceContractForm onCancel={() => setAdding(false)} onAdd={(newSc) => { onAdd(newSc); setAdding(false); }} />;
+    return (
+      <div style={{ padding: 14, background: P.c2, borderRadius: 6, textAlign: "center" }}>
+        <div style={{ fontSize: 12, color: P.td, marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>No service contract</div>
+        {editable && (
+          <button onClick={() => setAdding(true)} style={{ background: P.g, color: P.bg, border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>+ Add service contract</button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div>
+      {sectionLabel("Service Contract")}
+      {fieldRow("Type", <EditableField type="enum" options={SERVICE_TYPES} value={sc.type} onChange={(v) => onPatch({ type: v, segment: deriveSegment(v) })} canEdit={editable} />)}
+      {fieldRow("Segment", <span style={{ color: P.tx, fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}>{SEGMENT_LABELS[segment] || "—"}</span>)}
+      {fieldRow("Monthly", <EditableField type="currency" value={sc.monthlyAmount} placeholder="—" onChange={(v) => onPatch({ monthlyAmount: v })} canEdit={editable} />)}
+      {fieldRow("Renewal Day", <EditableField type="integer" value={sc.monthlyRenewalDay} placeholder="1-31" onChange={(v) => onPatch({ monthlyRenewalDay: v })} canEdit={editable} />)}
+      {fieldRow("Start", <EditableField type="date" value={sc.startDate} placeholder="—" onChange={(v) => onPatch({ startDate: v || null })} canEdit={editable} />)}
+      {fieldRow("End", <EditableField type="date" value={sc.endDate} placeholder="—" onChange={(v) => onPatch({ endDate: v || null })} canEdit={editable} />)}
+      {fieldRow("Status", <EditableField type="enum" options={STATUS_OPTIONS} value={sc.status} onChange={(v) => onPatch({ status: v })} canEdit={editable} />)}
+      {fieldRow("In Forecast", <EditableField type="boolean" value={sc.inForecast !== false} onChange={(v) => onPatch({ inForecast: v })} canEdit={editable} />)}
+    </div>
+  );
+}
 
+// === Zoho Commission section ===
+function ZohoBlock({ zc, editable, onPatch, onAdd }) {
+  const [adding, setAdding] = useState(false);
+  if (!zc) {
+    if (adding) return <AddZohoCommissionForm onCancel={() => setAdding(false)} onAdd={(newZc) => { onAdd(newZc); setAdding(false); }} />;
+    return (
+      <div style={{ padding: 14, background: P.c2, borderRadius: 6, textAlign: "center" }}>
+        <div style={{ fontSize: 12, color: P.td, marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>No Zoho commission</div>
+        {editable && (
+          <button onClick={() => setAdding(true)} style={{ background: P.t, color: P.bg, border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>+ Add Zoho commission</button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div>
+      {sectionLabel("Zoho Commission")}
+      {fieldRow("Zoho Product", <EditableField type="enum" options={ZOHO_PRODUCTS} value={zc.zohoProduct} onChange={(v) => onPatch({ zohoProduct: v })} canEdit={editable} />)}
+      {fieldRow("Licenses", <EditableField type="integer" value={zc.licenses} placeholder="0" onChange={(v) => onPatch({ licenses: v ?? 0 })} canEdit={editable} />)}
+      {/* B2 fix: zc.frequency null guard */}
+      {fieldRow("Frequency", <EditableField type="enum" options={FREQUENCY_OPTIONS} value={zc.frequency || "annual"} onChange={(v) => onPatch({ frequency: v })} canEdit={editable} />)}
+      {zc.frequency === "monthly" ? (
+        <>
+          {fieldRow("Monthly Amount", <EditableField type="currency" value={zc.monthlyAmount} placeholder="—" onChange={(v) => onPatch({ monthlyAmount: v ?? 0 })} canEdit={editable} />)}
+          {fieldRow("Renewal Day", <EditableField type="integer" value={zc.renewalDay} placeholder="1-31" onChange={(v) => onPatch({ renewalDay: v })} canEdit={editable} />)}
+        </>
+      ) : (
+        <>
+          {fieldRow("Annual Amount", <EditableField type="currency" value={zc.annualAmount} placeholder="—" onChange={(v) => onPatch({ annualAmount: v ?? 0 })} canEdit={editable} />)}
+          {fieldRow(
+            "Renewal Date",
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {!zc.renewalDate && <span style={{ color: P.a, fontSize: 10, fontWeight: 700 }}>⚠ unset → $0 in forecast</span>}
+              <EditableField type="date" value={zc.renewalDate} placeholder="—" onChange={(v) => onPatch({ renewalDate: v || null })} canEdit={editable} />
+            </span>
+          )}
+        </>
+      )}
+      {fieldRow("Status", <EditableField type="enum" options={STATUS_OPTIONS} value={zc.status} onChange={(v) => onPatch({ status: v })} canEdit={editable} />)}
+      {fieldRow("In Forecast", <EditableField type="boolean" value={zc.inForecast !== false} onChange={(v) => onPatch({ inForecast: v })} canEdit={editable} />)}
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: P.tm, marginBottom: 4 }}>Note</div>
+        <EditableField type="longText" value={zc.note} placeholder="Add Zoho-specific note…" onChange={(v) => onPatch({ note: v })} canEdit={editable} />
+      </div>
+    </div>
+  );
+}
+
+// === Main detail panel ===
+export default function ClientDetail({ client, today, onChange, onClose, isAdmin, isViewer, narrow }) {
   const sc = client.serviceContract;
   const zc = client.zohoCommission;
   const segment = getSegment(client);
@@ -290,65 +324,49 @@ export default function ClientCard({ client, today, expanded, onToggle, onChange
   const totalValue = clientValue(client, today);
   const status = sc?.status || zc?.status || "active";
 
-  // Patch helpers — produce a new client object and bubble through onChange.
   const editable = canEdit() && !isViewer;
   const patch = (changes) => onChange && onChange({ ...client, ...changes });
   const patchSc = (changes) => patch({ serviceContract: { ...sc, ...changes } });
   const patchZc = (changes) => patch({ zohoCommission: { ...zc, ...changes } });
 
-  // === Collapsed row ===
-  if (!expanded) {
-    return (
-      <div onClick={onToggle} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: P.c1, border: `1px solid ${P.bd}`, borderRadius: 8, cursor: "pointer", transition: "background 120ms" }}
-           onMouseEnter={e => e.currentTarget.style.background = P.c2}
-           onMouseLeave={e => e.currentTarget.style.background = P.c1}>
-        <span style={{ fontSize: 10, color: P.td, width: 12, display: "inline-block" }}>▶</span>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: P.tx, fontFamily: "'DM Sans', sans-serif" }}>{client.nm}</span>
-          {segment && <SegmentPill segment={segment} />}
-          <StreamPills client={client} />
-          {sc?.inForecast === false && <Pill color={P.r} bg={`${P.r}18`}>Out of forecast</Pill>}
-          {!client.email && <Pill color={P.a} bg={`${P.a}15`}>⚠ no email</Pill>}
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 14, fontFamily: "'JetBrains Mono', monospace" }}>
-          <span style={{ fontSize: 12, color: P.tx, fontWeight: 600 }}>{fmtMoney(monthlyValue)}<span style={{ color: P.td, fontWeight: 400 }}>/mo</span></span>
-          <span style={{ fontSize: 11, color: P.tm }}>{annualValue > 0 ? fmtMoney(annualValue) + "/yr" : "—"}</span>
-        </div>
-        <StatusPill status={status} />
-      </div>
-    );
-  }
-
-  // === Expanded card ===
-  const lastEdited = client.lastEditedAt ? new Date(client.lastEditedAt).toLocaleDateString() : "—";
+  const lastEdited = client.lastEditedAt ? new Date(client.lastEditedAt).toLocaleString() : "—";
   const lastEditedBy = client.lastEditedBy || "—";
 
+  // Service + Zoho side-by-side on wide layout, stacked when narrow (drawer at <520px etc.)
+  const twoColumn = !narrow;
+
   return (
-    <Card style={{ padding: 0, overflow: "hidden", border: `1px solid ${P.bd}` }}>
-      {/* Header zone */}
-      <div onClick={onToggle} style={{ padding: "14px 18px", background: P.c2, borderBottom: `1px solid ${P.bd}`, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 14 }}>
-        <span style={{ fontSize: 10, color: P.td, marginTop: 6 }}>▼</span>
-        <div style={{ width: 36, height: 36, borderRadius: 18, background: SEGMENT_COLORS[segment] || P.tm, opacity: 0.6, display: "flex", alignItems: "center", justifyContent: "center", color: P.bg, fontWeight: 700, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
-          {client.nm.split(" ").slice(0, 2).map(s => s[0]).join("").toUpperCase()}
-        </div>
-        <div style={{ flex: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: P.c1, borderRadius: 8, border: `1px solid ${P.bd}`, overflow: "hidden" }}>
+      {/* Sticky header */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 1,
+        padding: "14px 18px", background: P.c2,
+        borderBottom: `1px solid ${P.bd}`,
+        display: "flex", alignItems: "flex-start", gap: 14,
+      }}>
+        <Avatar name={client.nm} segment={segment} />
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ fontSize: 18, fontWeight: 600, color: P.tx, fontFamily: "'DM Sans', sans-serif", letterSpacing: "-0.01em" }}>{client.nm}</span>
             <StatusPill status={status} />
             {segment && <SegmentPill segment={segment} />}
             {sc?.inForecast === false && <Pill color={P.r} bg={`${P.r}18`}>Out of forecast</Pill>}
+            {!client.email && <Pill color={P.a} bg={`${P.a}15`}>⚠ no email</Pill>}
           </div>
-          <div style={{ fontSize: 11, color: P.tm }}>last edited {lastEdited} by {lastEditedBy}</div>
         </div>
         <div style={{ textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: P.g }}>{fmtMoney(monthlyValue)}<span style={{ color: P.td, fontWeight: 400, fontSize: 12 }}>/mo</span></div>
           <div style={{ fontSize: 11, color: P.tm, marginTop: 2 }}>{annualValue > 0 ? fmtMoney(annualValue) + "/yr" : "—"}</div>
           <div style={{ fontSize: 10, color: P.td, marginTop: 4 }}>value: {fmtMoney(totalValue)}</div>
         </div>
+        {onClose && (
+          <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: P.tm, fontSize: 22, lineHeight: 1, cursor: "pointer", padding: "0 6px", marginLeft: 4 }}>×</button>
+        )}
       </div>
 
-      <div style={{ padding: 18 }} onClick={(e) => e.stopPropagation()}>
-        {/* Top metadata: Name + Email */}
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
+        {/* Name (separate row so it's editable even though it's also in header) */}
         <div style={{ marginBottom: 16 }}>
           {sectionLabel("Client")}
           {fieldRow("Name", <EditableField type="text" value={client.nm} onChange={(v) => patch({ nm: v || client.nm })} canEdit={editable} />)}
@@ -361,94 +379,39 @@ export default function ClientCard({ client, today, expanded, onToggle, onChange
           )}
         </div>
 
-        {/* Service Contract */}
-        {sc ? (
-          <div style={{ marginBottom: 16 }}>
-            {sectionLabel("Service Contract")}
-            {fieldRow("Type", <EditableField type="enum" options={SERVICE_TYPES} value={sc.type} onChange={(v) => patchSc({ type: v, segment: deriveSegment(v) })} canEdit={editable} />)}
-            {fieldRow("Segment", <span style={{ color: P.tx, fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}>{SEGMENT_LABELS[segment] || "—"}</span>)}
-            {fieldRow("Monthly", <EditableField type="currency" value={sc.monthlyAmount} placeholder="—" onChange={(v) => patchSc({ monthlyAmount: v })} canEdit={editable} />)}
-            {fieldRow("Renewal Day", <EditableField type="integer" value={sc.monthlyRenewalDay} placeholder="1-31" onChange={(v) => patchSc({ monthlyRenewalDay: v })} canEdit={editable} />)}
-            {fieldRow("Start", <EditableField type="date" value={sc.startDate} placeholder="—" onChange={(v) => patchSc({ startDate: v || null })} canEdit={editable} />)}
-            {fieldRow("End", <EditableField type="date" value={sc.endDate} placeholder="—" onChange={(v) => patchSc({ endDate: v || null })} canEdit={editable} />)}
-            {fieldRow("Status", <EditableField type="enum" options={STATUS_OPTIONS} value={sc.status} onChange={(v) => patchSc({ status: v })} canEdit={editable} />)}
-            {fieldRow("In Forecast", <EditableField type="boolean" value={sc.inForecast !== false} onChange={(v) => patchSc({ inForecast: v })} canEdit={editable} />)}
-
-            <div style={{ marginTop: 12 }}>
-              {sectionLabel(`Payment Schedule (${sc.paymentSchedule?.length || 0} entries)`)}
-              <PaymentScheduleTable entries={sc.paymentSchedule} today={today} />
-            </div>
-          </div>
-        ) : addingService ? (
-          <AddServiceContractForm
-            onCancel={() => setAddingService(false)}
-            onAdd={(newSc) => { patch({ serviceContract: newSc }); setAddingService(false); }}
+        {/* Side-by-side service + zoho */}
+        <div style={{ display: "grid", gridTemplateColumns: twoColumn ? "1fr 1fr" : "1fr", gap: 18, marginBottom: 16 }}>
+          <ServiceContractBlock
+            client={client} sc={sc} segment={segment} editable={editable}
+            onPatch={patchSc}
+            onAdd={(newSc) => patch({ serviceContract: newSc })}
           />
-        ) : (
-          <div style={{ marginBottom: 16, padding: 14, background: P.c2, borderRadius: 6, textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: P.td, marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>No service contract</div>
-            {editable && (
-              <button onClick={() => setAddingService(true)} style={{ background: P.g, color: P.bg, border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                + Add service contract
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Zoho Commission */}
-        {zc ? (
-          <div style={{ marginBottom: 16 }}>
-            {sectionLabel("Zoho Commission")}
-            {fieldRow("Zoho Product", <EditableField type="enum" options={ZOHO_PRODUCTS} value={zc.zohoProduct} onChange={(v) => patchZc({ zohoProduct: v })} canEdit={editable} />)}
-            {fieldRow("Licenses", <EditableField type="integer" value={zc.licenses} placeholder="0" onChange={(v) => patchZc({ licenses: v ?? 0 })} canEdit={editable} />)}
-            {/* B2 fix: zc.frequency null guard */}
-            {fieldRow("Frequency", <EditableField type="enum" options={FREQUENCY_OPTIONS} value={zc.frequency || "annual"} onChange={(v) => patchZc({ frequency: v })} canEdit={editable} />)}
-            {zc.frequency === "monthly" ? (
-              <>
-                {fieldRow("Monthly Amount", <EditableField type="currency" value={zc.monthlyAmount} placeholder="—" onChange={(v) => patchZc({ monthlyAmount: v ?? 0 })} canEdit={editable} />)}
-                {fieldRow("Renewal Day", <EditableField type="integer" value={zc.renewalDay} placeholder="1-31" onChange={(v) => patchZc({ renewalDay: v })} canEdit={editable} />)}
-              </>
-            ) : (
-              <>
-                {fieldRow("Annual Amount", <EditableField type="currency" value={zc.annualAmount} placeholder="—" onChange={(v) => patchZc({ annualAmount: v ?? 0 })} canEdit={editable} />)}
-                {fieldRow(
-                  "Renewal Date",
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                    {!zc.renewalDate && <span style={{ color: P.a, fontSize: 10, fontWeight: 700 }}>⚠ unset → $0 in forecast</span>}
-                    <EditableField type="date" value={zc.renewalDate} placeholder="—" onChange={(v) => patchZc({ renewalDate: v || null })} canEdit={editable} />
-                  </span>
-                )}
-              </>
-            )}
-            {fieldRow("Status", <EditableField type="enum" options={STATUS_OPTIONS} value={zc.status} onChange={(v) => patchZc({ status: v })} canEdit={editable} />)}
-            {fieldRow("In Forecast", <EditableField type="boolean" value={zc.inForecast !== false} onChange={(v) => patchZc({ inForecast: v })} canEdit={editable} />)}
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 11, color: P.tm, marginBottom: 4 }}>Note</div>
-              <EditableField type="longText" value={zc.note} placeholder="Add Zoho-specific note…" onChange={(v) => patchZc({ note: v })} canEdit={editable} />
-            </div>
-          </div>
-        ) : addingZoho ? (
-          <AddZohoCommissionForm
-            onCancel={() => setAddingZoho(false)}
-            onAdd={(newZc) => { patch({ zohoCommission: newZc }); setAddingZoho(false); }}
+          <ZohoBlock
+            zc={zc} editable={editable}
+            onPatch={patchZc}
+            onAdd={(newZc) => patch({ zohoCommission: newZc })}
           />
-        ) : (
-          <div style={{ marginBottom: 16, padding: 14, background: P.c2, borderRadius: 6, textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: P.td, marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>No Zoho commission</div>
-            {editable && (
-              <button onClick={() => setAddingZoho(true)} style={{ background: P.t, color: P.bg, border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                + Add Zoho commission
-              </button>
-            )}
-          </div>
-        )}
+        </div>
 
         {/* Notes */}
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ marginBottom: 16 }}>
           {sectionLabel("Notes")}
           <EditableField type="longText" value={client.notes} placeholder="Click to add notes…" onChange={(v) => patch({ notes: v })} canEdit={editable} />
         </div>
+
+        {/* Payment schedule (read-only in E2c.1; editor in E2c.4) */}
+        {sc && (
+          <div style={{ marginBottom: 8 }}>
+            {sectionLabel(`Payment Schedule (${sc.paymentSchedule?.length || 0} entries)`)}
+            <PaymentScheduleTable entries={sc.paymentSchedule} today={today} />
+          </div>
+        )}
       </div>
-    </Card>
+
+      {/* Footer */}
+      <div style={{ padding: "10px 18px", borderTop: `1px solid ${P.bd}`, fontSize: 11, color: P.tm, background: P.c1 }}>
+        last edited {lastEdited} by {lastEditedBy}
+      </div>
+    </div>
   );
 }

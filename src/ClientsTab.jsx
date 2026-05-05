@@ -1,14 +1,17 @@
-// Phase E2b — unified Clients tab with edit-in-place.
-// Receives `save` from App; bubbles client edits up through onClientChange.
-// Sara auto-routes to her worklist view; Paul/Mark default to By Segment.
+// Phase E2c.1 — unified Clients tab with master/detail (List) + sortable
+// table (Ranked) views. View pref + selection persisted per user in
+// localStorage. Sara still routes to her worklist view (unchanged); her
+// view-pref key is stubbed for future-proofing (Q7) but no toggle UI surfaces.
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { P } from "./data.js";
 import { Card, Lbl } from "./components.jsx";
-import ClientCard from "./ClientCard.jsx";
+import ClientList from "./ClientList.jsx";
+import ClientDetail from "./ClientDetail.jsx";
+import ClientTable from "./ClientTable.jsx";
+import ClientDrawer from "./ClientDrawer.jsx";
 import {
-  getSegment, clientValue, daysUntil, paymentDueStatus,
-  SEGMENT_LABELS, SEGMENT_ORDER, HISTORICAL_SEGMENT,
+  daysUntil, paymentDueStatus, nextClientId,
 } from "./clientsHelpers.js";
 
 const fmtMoney = (n) => {
@@ -17,211 +20,49 @@ const fmtMoney = (n) => {
   return n < 0 ? `($${a.toLocaleString()})` : `$${a.toLocaleString()}`;
 };
 
-const SEGMENT_COLORS = {
-  infinityMirror:     P.g,
-  supportRetainer:    P.t,
-  bankOfHours:        P.a,
-  fullProject:        P.b,
-  zohoCommissionOnly: "#38bdf8",
-  oneTime:            P.td,
-};
-
-const filterPills = [
-  ["all", "All"],
-  ["active", "Active"],
-  ["at-risk", "At-risk"],
-  ["churned", "Churned"],
-  ["pipeline", "Pipeline"],
+const FILTER_PILLS = [
+  ["all",            "All"],
+  ["active",         "Active"],
+  ["at-risk",        "At-risk"],
+  ["out-of-forecast","Out of forecast"],
 ];
 
 function clientStatus(c) {
   return c.serviceContract?.status || c.zohoCommission?.status || "active";
 }
 
+function matchesFilter(c, filterStatus) {
+  if (filterStatus === "all") return true;
+  if (filterStatus === "out-of-forecast") {
+    return c.serviceContract?.inForecast === false || c.zohoCommission?.inForecast === false;
+  }
+  return clientStatus(c) === filterStatus;
+}
+
 function matchesSearch(c, q) {
   if (!q) return true;
-  return c.nm.toLowerCase().includes(q.toLowerCase());
+  const ql = q.toLowerCase();
+  return (c.nm || "").toLowerCase().includes(ql)
+      || (c.email || "").toLowerCase().includes(ql);
 }
 
-// === Renewal Watch banner ===
-function RenewalWatch({ clients, today }) {
-  const within60 = clients
-    .filter(c => c.serviceContract?.endDate)
-    .map(c => ({ client: c, days: daysUntil(new Date(c.serviceContract.endDate), today) }))
-    .filter(x => x.days >= 0 && x.days <= 60)
-    .sort((a, b) => a.days - b.days);
-
-  const beyond60 = clients
-    .filter(c => c.serviceContract?.endDate)
-    .map(c => ({ client: c, days: daysUntil(new Date(c.serviceContract.endDate), today) }))
-    .filter(x => x.days > 60)
-    .sort((a, b) => a.days - b.days)[0];
-
-  return (
-    <Card style={{ padding: 16, marginBottom: 16, borderLeft: `3px solid ${P.a}` }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: within60.length > 0 ? 10 : 0 }}>
-        <Lbl>Renewal Watch ({within60.length} contract{within60.length === 1 ? "" : "s"} up in next 60 days)</Lbl>
-      </div>
-      {within60.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {within60.map(({ client, days }) => (
-            <div key={client.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 10px", background: P.c2, borderRadius: 5, fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}>
-              <span style={{ color: P.tx, fontWeight: 600 }}>{client.nm}</span>
-              <span style={{ color: P.a, fontFamily: "'JetBrains Mono', monospace" }}>{days} days · {client.serviceContract.endDate}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ fontSize: 12, color: P.tm, fontStyle: "italic" }}>
-          No contracts up for renewal in the next 60 days.
-          {beyond60 && (
-            <span style={{ display: "block", marginTop: 6, color: P.td, fontStyle: "normal" }}>
-              Next: <span style={{ color: P.tx, fontWeight: 600 }}>{beyond60.client.nm}</span> — <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{beyond60.days} days ({beyond60.client.serviceContract.endDate})</span>
-            </span>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// === By segment view ===
-function BySegmentView({ clients, today, expandedId, setExpandedId, onClientChange, isAdmin, isViewer }) {
-  const [historicalOpen, setHistoricalOpen] = useState(false);
-
-  const grouped = useMemo(() => {
-    const out = { infinityMirror: [], supportRetainer: [], bankOfHours: [], fullProject: [], zohoCommissionOnly: [], oneTime: [] };
-    clients.forEach(c => {
-      const seg = getSegment(c);
-      if (seg && out[seg]) out[seg].push(c);
-    });
-    return out;
-  }, [clients]);
-
-  const historical = grouped[HISTORICAL_SEGMENT] || [];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      {SEGMENT_ORDER.map(seg => {
-        const list = grouped[seg];
-        if (!list || list.length === 0) return null;
-        return (
-          <div key={seg}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 4, background: SEGMENT_COLORS[seg] }} />
-              <span style={{ fontSize: 12, color: P.tx, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.02em" }}>{SEGMENT_LABELS[seg]}</span>
-              <span style={{ fontSize: 11, color: P.td }}>({list.length})</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {list.map(c => (
-                <ClientCard key={c.id} client={c} today={today}
-                  expanded={expandedId === c.id}
-                  onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
-                  onChange={onClientChange}
-                  isAdmin={isAdmin} isViewer={isViewer}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Historical (collapsed by default) — separate visual treatment */}
-      {historical.length > 0 && (
-        <div style={{ marginTop: 8, opacity: 0.85 }}>
-          <div onClick={() => setHistoricalOpen(!historicalOpen)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer", padding: "6px 0" }}>
-            <span style={{ fontSize: 11, color: P.td, transition: "transform 0.15s", transform: historicalOpen ? "rotate(90deg)" : "none", display: "inline-block" }}>▶</span>
-            <span style={{ width: 8, height: 8, borderRadius: 4, background: SEGMENT_COLORS.oneTime }} />
-            <span style={{ fontSize: 12, color: P.tm, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.02em" }}>{SEGMENT_LABELS.oneTime}</span>
-            <span style={{ fontSize: 11, color: P.td }}>({historical.length})</span>
-          </div>
-          {historicalOpen && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {historical.map(c => (
-                <ClientCard key={c.id} client={c} today={today}
-                  expanded={expandedId === c.id}
-                  onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
-                  onChange={onClientChange}
-                  isAdmin={isAdmin} isViewer={isViewer}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// === By value view ===
-function ByValueView({ clients, today, expandedId, setExpandedId, onClientChange, isAdmin, isViewer }) {
-  const ranked = useMemo(() => {
-    return [...clients]
-      .map(c => ({
-        client: c,
-        value: clientValue(c, today),
-        breakdown: (() => {
-          const sc = c.serviceContract;
-          const zc = c.zohoCommission;
-          const sched = sc?.paymentSchedule || [];
-          const unpaidFuture = sched.filter(p => !p.paid && new Date(p.dueDate) >= today).reduce((s, p) => s + (p.amount || 0), 0);
-          const zohoMonthly12 = (zc?.monthlyAmount || 0) * 12;
-          const zohoAnnual = zc?.annualAmount || 0;
-          const parts = [];
-          if (unpaidFuture > 0) parts.push(`${fmtMoney(unpaidFuture)} unpaid future`);
-          if (zohoMonthly12 > 0) parts.push(`${fmtMoney(zohoMonthly12)} Zoho/yr`);
-          if (zohoAnnual > 0) parts.push(`${fmtMoney(zohoAnnual)} Zoho annual`);
-          return parts.length ? parts.join(" + ") : "—";
-        })(),
-      }))
-      .sort((a, b) => b.value - a.value || a.client.nm.localeCompare(b.client.nm));
-  }, [clients, today]);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {ranked.map(({ client, value, breakdown }) => (
-        <div key={client.id}>
-          <ClientCard client={client} today={today}
-            expanded={expandedId === client.id}
-            onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)}
-            onChange={onClientChange}
-            isAdmin={isAdmin} isViewer={isViewer}
-          />
-          {expandedId !== client.id && (
-            <div style={{ padding: "4px 14px 0 26px", fontSize: 10, color: P.td, fontFamily: "'DM Sans', sans-serif" }}>
-              value <span style={{ color: P.t, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>{fmtMoney(value)}</span> — {breakdown}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// === Sara's view ===
-function SaraView({ clients, today, expandedId, setExpandedId, onClientChange }) {
-  // Build worklist from all clients' paymentSchedule
+// === Sara's worklist view (unchanged from E2b — she's not in scope for E2c.1) ===
+function SaraView({ clients, today }) {
   const todayMonth = today.getFullYear() * 12 + today.getMonth();
-
   const allEntries = clients.flatMap(c =>
     (c.serviceContract?.paymentSchedule || []).map(p => ({
-      ...p,
-      clientId: c.id,
-      clientName: c.nm,
-      _due: new Date(p.dueDate),
+      ...p, clientId: c.id, clientName: c.nm, _due: new Date(p.dueDate),
     }))
   );
   const worklist = allEntries.filter(e => {
     const dueMonth = e._due.getFullYear() * 12 + e._due.getMonth();
-    if (dueMonth === todayMonth) return true; // current month
-    if (dueMonth < todayMonth && !e.paid) return true; // past unpaid
+    if (dueMonth === todayMonth) return true;
+    if (dueMonth < todayMonth && !e.paid) return true;
     return false;
   }).sort((a, b) => a._due - b._due);
 
   const lateEntries = worklist.filter(e => !e.paid && e._due < today && (e._due.getFullYear() * 12 + e._due.getMonth()) < todayMonth);
   const thisMonthEntries = worklist.filter(e => (e._due.getFullYear() * 12 + e._due.getMonth()) === todayMonth);
-
-  // Phase E2b counter split — "X late ($Y) · Z due this month ($W)"
   const lateAmount = lateEntries.reduce((s, e) => s + (e.amount || 0), 0);
   const dueAmount = thisMonthEntries.filter(e => !e.paid).reduce((s, e) => s + (e.amount || 0), 0);
 
@@ -251,7 +92,6 @@ function SaraView({ clients, today, expandedId, setExpandedId, onClientChange })
 
   return (
     <div>
-      {/* Worklist header — E2b split counter */}
       <Card style={{ padding: 16, marginBottom: 16, borderLeft: `3px solid ${P.t}` }}>
         <Lbl>{monthLabel} invoices</Lbl>
         <div style={{ fontSize: 13, color: P.tx, fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
@@ -265,7 +105,6 @@ function SaraView({ clients, today, expandedId, setExpandedId, onClientChange })
         </div>
       </Card>
 
-      {/* Late section */}
       {lateEntries.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <Lbl style={{ color: P.r }}>! Late ({lateEntries.length})</Lbl>
@@ -273,7 +112,6 @@ function SaraView({ clients, today, expandedId, setExpandedId, onClientChange })
         </div>
       )}
 
-      {/* This month section */}
       <div style={{ marginBottom: 24 }}>
         <Lbl>This month ({thisMonthEntries.length})</Lbl>
         {thisMonthEntries.length > 0 ? (
@@ -282,75 +120,155 @@ function SaraView({ clients, today, expandedId, setExpandedId, onClientChange })
           <div style={{ fontSize: 12, color: P.tm, fontStyle: "italic", padding: "8px 12px" }}>No invoices this month.</div>
         )}
       </div>
-
-      {/* All clients (simple list, no segmentation) */}
-      <div>
-        <Lbl>All clients ({clients.length})</Lbl>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {clients.map(c => (
-            <ClientCard key={c.id} client={c} today={today}
-              expanded={expandedId === c.id}
-              onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
-              onChange={onClientChange}
-              isAdmin={false} isViewer={true}
-            />
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
 
+// === Renewal Watch banner (unchanged from E2b) ===
+function RenewalWatch({ clients, today }) {
+  const within60 = clients
+    .filter(c => c.serviceContract?.endDate)
+    .map(c => ({ client: c, days: daysUntil(new Date(c.serviceContract.endDate), today) }))
+    .filter(x => x.days >= 0 && x.days <= 60)
+    .sort((a, b) => a.days - b.days);
+
+  return (
+    <Card style={{ padding: 12, marginBottom: 12, borderLeft: `3px solid ${P.a}` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Lbl>Renewal Watch ({within60.length} contract{within60.length === 1 ? "" : "s"} up in next 60 days)</Lbl>
+      </div>
+      {within60.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+          {within60.map(({ client, days }) => (
+            <div key={client.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", background: P.c2, borderRadius: 4, fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+              <span style={{ color: P.tx, fontWeight: 600 }}>{client.nm}</span>
+              <span style={{ color: P.a, fontFamily: "'JetBrains Mono', monospace" }}>{days}d · {client.serviceContract.endDate}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // === Main ClientsTab ===
-export default function ClientsTab({ d, save, isAdmin, isViewer, isIntern }) {
+export default function ClientsTab({ d, save, profile, isAdmin, isViewer, isIntern }) {
   const today = useMemo(() => new Date(), []);
-  const [viewMode, setViewMode] = useState(isIntern ? "sara" : "segment");
+  const userKey = profile?.id || profile?.email || "anon";
+  const viewPrefKey = `clients_view_pref:${userKey}`;
+  const selectedKey = `clients_selected:${userKey}`;
+
+  const [view, setView] = useState(() => {
+    if (typeof window === "undefined") return "list";
+    return localStorage.getItem(viewPrefKey) || "list";
+  });
+  const [selectedId, setSelectedId] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(selectedKey);
+  });
+  const [drawerClientId, setDrawerClientId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedId, setExpandedId] = useState(null);
 
-  // E2b: bubble client edits up to App via save(). Stamp lastEditedAt
-  // automatically; lastEditedBy stays null until E2c (real role/profile wiring).
+  // Q7: stub Sara view pref on first load (no toggle UI surfaced)
+  useEffect(() => {
+    if (isIntern && typeof window !== "undefined" && !localStorage.getItem(viewPrefKey)) {
+      localStorage.setItem(viewPrefKey, "sara");
+    }
+  }, [isIntern, viewPrefKey]);
+
+  // Persist view pref
+  useEffect(() => {
+    if (typeof window !== "undefined" && view) localStorage.setItem(viewPrefKey, view);
+  }, [view, viewPrefKey]);
+
+  // Persist selected client (List view)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (selectedId) localStorage.setItem(selectedKey, selectedId);
+  }, [selectedId, selectedKey]);
+
+  // Filter clients (shared by both views)
+  const filteredClients = useMemo(() => {
+    return d.cl.filter(c => matchesSearch(c, searchQuery) && matchesFilter(c, filterStatus));
+  }, [d.cl, filterStatus, searchQuery]);
+
+  // Auto-select first visible client in List view if nothing selected (or selected was filtered out)
+  useEffect(() => {
+    if (view !== "list" || filteredClients.length === 0) return;
+    if (!selectedId || !filteredClients.find(c => c.id === selectedId)) {
+      setSelectedId(filteredClients[0].id);
+    }
+  }, [view, filteredClients, selectedId]);
+
+  // Bubble client edits up to App via save()
   const onClientChange = useCallback((newClient) => {
     if (!save) return;
     const stamped = { ...newClient, lastEditedAt: new Date().toISOString() };
     save({ ...d, cl: d.cl.map(c => c.id === stamped.id ? stamped : c) });
   }, [d, save]);
 
-  // Filter clients based on status + search (used by segment & value views)
-  const filteredClients = useMemo(() => {
-    return d.cl.filter(c => {
-      if (!matchesSearch(c, searchQuery)) return false;
-      if (filterStatus === "all") return true;
-      return clientStatus(c) === filterStatus;
-    });
-  }, [d.cl, filterStatus, searchQuery]);
+  // + New client (C1.5: sequential c-id)
+  const onAddClient = useCallback(() => {
+    if (!save) return;
+    const newId = nextClientId(d.cl);
+    const newClient = {
+      id: newId, nm: "New Client", email: null, notes: "",
+      serviceContract: null, zohoCommission: null,
+      lastEditedAt: new Date().toISOString(), lastEditedBy: null,
+    };
+    save({ ...d, cl: [...d.cl, newClient] });
+    setSelectedId(newId);
+    if (view === "ranked") setDrawerClientId(newId);
+  }, [d, save, view]);
 
-  if (isIntern || viewMode === "sara") {
-    return <SaraView clients={d.cl} today={today} expandedId={expandedId} setExpandedId={setExpandedId} onClientChange={onClientChange} />;
-  }
+  // Sara fallback — no toggle, her worklist view
+  if (isIntern) return <SaraView clients={d.cl} today={today} />;
+
+  const selectedClient = d.cl.find(c => c.id === selectedId) || filteredClients[0] || null;
+  const drawerClient = drawerClientId ? d.cl.find(c => c.id === drawerClientId) : null;
+
+  const toggleBtnSty = (active) => ({
+    padding: "6px 14px", fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+    background: active ? P.bg : "transparent", color: active ? P.tx : P.tm,
+    border: "none", borderRadius: 5, cursor: "pointer",
+  });
+  const chipBtnSty = (active) => ({
+    padding: "5px 12px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600,
+    background: active ? P.c2 : "transparent", color: active ? P.tx : P.tm,
+    border: `1px solid ${active ? P.bd : "transparent"}`, borderRadius: 5, cursor: "pointer",
+  });
 
   return (
     <div>
-      {/* View toggle (Paul/Mark only) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      {/* Top bar: view toggle | filter chips | search | + new */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 4, padding: 3, background: P.c2, borderRadius: 7, border: `1px solid ${P.bd}` }}>
-          {[["segment", "By segment"], ["value", "By value"]].map(([k, l]) => (
-            <button key={k} onClick={() => setViewMode(k)} style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", background: viewMode === k ? P.bg : "transparent", color: viewMode === k ? P.tx : P.tm, border: "none", borderRadius: 5, cursor: "pointer" }}>{l}</button>
+          {[["list", "List"], ["ranked", "Ranked"]].map(([k, l]) => (
+            <button key={k} onClick={() => setView(k)} style={toggleBtnSty(view === k)}>{l}</button>
           ))}
         </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {FILTER_PILLS.map(([k, l]) => (
+            <button key={k} onClick={() => setFilterStatus(k)} style={chipBtnSty(filterStatus === k)}>{l}</button>
+          ))}
+        </div>
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search clients…"
+          style={{ background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 6, padding: "6px 12px", color: P.tx, fontSize: 12, fontFamily: "'DM Sans', sans-serif", width: 220 }}
+        />
         <div style={{ flex: 1 }} />
-        <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search clients..." style={{ background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 6, padding: "6px 12px", color: P.tx, fontSize: 12, fontFamily: "'DM Sans', sans-serif", width: 220 }} />
+        {!isViewer && (
+          <button
+            onClick={onAddClient}
+            style={{ background: P.b, color: "#fff", border: "none", borderRadius: 6, padding: "7px 14px", fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+          >+ New client</button>
+        )}
       </div>
 
-      {/* Filter chips */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
-        {filterPills.map(([k, l]) => (
-          <button key={k} onClick={() => setFilterStatus(k)} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, background: filterStatus === k ? P.c2 : "transparent", color: filterStatus === k ? P.tx : P.tm, border: `1px solid ${filterStatus === k ? P.bd : "transparent"}`, borderRadius: 5, cursor: "pointer" }}>{l}</button>
-        ))}
-      </div>
-
-      {/* Renewal Watch (hidden for Sara — handled by isIntern branch above) */}
+      {/* Renewal watch (compact, above main body) */}
       <RenewalWatch clients={d.cl} today={today} />
 
       {/* Body */}
@@ -358,10 +276,50 @@ export default function ClientsTab({ d, save, isAdmin, isViewer, isIntern }) {
         <Card style={{ padding: 32, textAlign: "center" }}>
           <div style={{ color: P.tm, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>No clients match this filter.</div>
         </Card>
-      ) : viewMode === "value" ? (
-        <ByValueView clients={filteredClients} today={today} expandedId={expandedId} setExpandedId={setExpandedId} onClientChange={onClientChange} isAdmin={isAdmin} isViewer={isViewer} />
+      ) : view === "list" ? (
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <ClientList
+            clients={filteredClients}
+            today={today}
+            selectedId={selectedClient?.id}
+            onSelect={setSelectedId}
+          />
+          <div style={{ flex: 1, minWidth: 0, height: "calc(100vh - 200px)", overflow: "hidden" }}>
+            {selectedClient ? (
+              <ClientDetail
+                client={selectedClient}
+                today={today}
+                onChange={onClientChange}
+                isAdmin={isAdmin}
+                isViewer={isViewer}
+                narrow={false}
+              />
+            ) : (
+              <Card style={{ padding: 60, textAlign: "center" }}>
+                <div style={{ color: P.tm, fontSize: 13 }}>Select a client from the list</div>
+              </Card>
+            )}
+          </div>
+        </div>
       ) : (
-        <BySegmentView clients={filteredClients} today={today} expandedId={expandedId} setExpandedId={setExpandedId} onClientChange={onClientChange} isAdmin={isAdmin} isViewer={isViewer} />
+        <ClientTable
+          clients={filteredClients}
+          today={today}
+          selectedClientId={drawerClientId}
+          onSelectClient={setDrawerClientId}
+        />
+      )}
+
+      {/* Drawer (Ranked view only, when row clicked) */}
+      {drawerClient && (
+        <ClientDrawer
+          client={drawerClient}
+          today={today}
+          onChange={onClientChange}
+          onClose={() => setDrawerClientId(null)}
+          isAdmin={isAdmin}
+          isViewer={isViewer}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
-// Phase E2b — pure helpers for the unified Clients tab.
-// No React, no side effects. Used by ClientsTab + ClientCard.
+// Phase E2b/E2c — pure helpers for the unified Clients tab.
+// No React, no side effects. Used by ClientsTab/ClientList/ClientDetail/ClientTable.
 
 const BASE_YEAR = 2026;
 const N = 24;
@@ -153,3 +153,37 @@ export const HISTORICAL_SEGMENT = "oneTime";
 
 // Permissions stub — E2c will replace with real role check.
 export function canEdit(/* user, field */) { return true; }
+
+// Compact subtitle for ClientList rows. Surface the most operationally
+// relevant fact: ending-soon contracts > status risk > monthly value > annual.
+const MO_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+export function clientSubtitle(client, today) {
+  const sc = client.serviceContract;
+  const zc = client.zohoCommission;
+  const status = sc?.status || zc?.status || "active";
+
+  if (sc?.endDate) {
+    const days = daysUntil(new Date(sc.endDate), today);
+    if (days >= 0 && days <= 180) {
+      const ed = new Date(sc.endDate);
+      return `ends ${MO_SHORT[ed.getMonth()]}'${String(ed.getFullYear()).slice(-2)}`;
+    }
+  }
+  if (status === "at-risk")  return "at-risk";
+  if (status === "churned")  return "churned";
+
+  const monthly = (sc?.monthlyAmount || 0) + (zc?.monthlyAmount || 0);
+  if (monthly > 0) return `$${Math.round(monthly).toLocaleString()}/mo`;
+  const annual = zc?.annualAmount || 0;
+  if (annual > 0) return `$${Math.round(annual).toLocaleString()}/yr`;
+  return "—";
+}
+
+// Generate the next sequential client id (c23, c24...) — never reuses old IDs.
+// Per C1.5 lockin: human-readable, no Date.now() junk.
+export function nextClientId(existingClients) {
+  const used = new Set((existingClients || []).map(c => c.id));
+  let n = 1;
+  while (used.has(`c${n}`)) n++;
+  return `c${n}`;
+}
