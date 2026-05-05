@@ -15,6 +15,9 @@ function monthIdxFromDate(dateStr) {
   return (y - BASE_YEAR) * 12 + (mo - 1);
 }
 
+// Status gate — active or at-risk contracts contribute; churned/pipeline don't.
+const isLive = (status) => status === "active" || status === "at-risk";
+
 export function compute(d) {
   // === Derive per-stream revenue from cl[] ===
   const rvDerived = {
@@ -29,52 +32,57 @@ export function compute(d) {
     const sc = c.serviceContract;
     const zc = c.zohoCommission;
 
-    // Service contract — retainer / project contribute to rv.im
-    if (sc && sc.inForecast !== false && (sc.status === "active" || sc.status === "at-risk")) {
-      if (sc.type === "retainer" || sc.type === "project") {
+    if (sc && sc.inForecast !== false && isLive(sc.status)) {
+      // Retainer / support-retainer / project → rv.im monthly through endDate.
+      if (sc.type === "retainer" || sc.type === "support-retainer" || sc.type === "project") {
         const monthly = new Array(N).fill(0);
         const startIdx = sc.startDate ? Math.max(0, monthIdxFromDate(sc.startDate) ?? 0) : 0;
-        let endIdx;
-        if (sc.endDate) endIdx = Math.min(N - 1, monthIdxFromDate(sc.endDate) ?? N - 1);
-        else if (sc.type === "project" && sc.termMonths) endIdx = Math.min(N - 1, startIdx + sc.termMonths - 1);
-        else endIdx = N - 1;
+        const endIdx = sc.endDate
+          ? Math.min(N - 1, monthIdxFromDate(sc.endDate) ?? (N - 1))
+          : (N - 1);
         for (let i = startIdx; i <= endIdx; i++) monthly[i] = sc.monthlyAmount || 0;
         for (let i = 0; i < N; i++) rvDerived.im[i] += monthly[i];
         rvBreakdown.im.push({ clientId: c.id, clientName: c.nm, monthly });
       }
+
+      // Bank-of-hours / one-time → unpaid future paymentSchedule entries → rv.ot.
+      // F1 fix: forward revenue from drawdown contracts must land in the forecast.
+      if (sc.type === "bank-of-hours" || sc.type === "one-time") {
+        const sched = sc.paymentSchedule || [];
+        let otEntry = null;
+        sched.forEach(p => {
+          if (p.paid) return; // historical paid — already in actuals or not forward
+          const idx = monthIdxFromDate(p.dueDate);
+          if (idx === null || idx < 0 || idx >= N) return;
+          if (!otEntry) {
+            otEntry = { clientId: c.id, clientName: c.nm, monthly: new Array(N).fill(0) };
+            rvBreakdown.ot.push(otEntry);
+          }
+          otEntry.monthly[idx] += p.amount || 0;
+          rvDerived.ot[idx] += p.amount || 0;
+        });
+      }
     }
 
-    // Zoho commission — monthly → rv.zm; annual → rv.za at renewalMonth
-    if (zc && zc.inForecast !== false && (zc.status === "active" || zc.status === "at-risk")) {
+    // Zoho commission → monthly to rv.zm; annual chunk to rv.za at renewal month.
+    if (zc && zc.inForecast !== false && isLive(zc.status)) {
       const monthly = new Array(N).fill(0);
       if (zc.frequency === "monthly") {
+        // Q1 lockin: monthly Zoho renewalDate is informational only — recurs indefinitely.
         const amt = zc.monthlyAmount || 0;
         for (let i = 0; i < N; i++) monthly[i] = amt;
         for (let i = 0; i < N; i++) rvDerived.zm[i] += monthly[i];
         rvBreakdown.zm.push({ clientId: c.id, clientName: c.nm, monthly });
-      } else if (zc.frequency === "annual" && typeof zc.renewalMonth === "number") {
-        if (zc.renewalMonth >= 0 && zc.renewalMonth < N) {
-          monthly[zc.renewalMonth] = zc.annualAmount || 0;
-          rvDerived.za[zc.renewalMonth] += monthly[zc.renewalMonth];
+      } else if (zc.frequency === "annual") {
+        // Derive renewalMonth from renewalDate (single source of truth — no drift).
+        const renewalIdx = zc.renewalDate ? monthIdxFromDate(zc.renewalDate) : null;
+        if (renewalIdx !== null && renewalIdx >= 0 && renewalIdx < N) {
+          monthly[renewalIdx] = zc.annualAmount || 0;
+          rvDerived.za[renewalIdx] += monthly[renewalIdx];
         }
         rvBreakdown.za.push({ clientId: c.id, clientName: c.nm, monthly });
       }
     }
-
-    // One-time service payments — kind:"service" only (zoho payments not summed here)
-    let otEntry = null;
-    (c.payments || []).forEach(p => {
-      if (p.kind && p.kind !== "service") return;
-      const mo = p.month ?? -1;
-      if (mo >= 0 && mo < N) {
-        if (!otEntry) {
-          otEntry = { clientId: c.id, clientName: c.nm, monthly: new Array(N).fill(0) };
-          rvBreakdown.ot.push(otEntry);
-        }
-        otEntry.monthly[mo] += p.amount || 0;
-        rvDerived.ot[mo] += p.amount || 0;
-      }
-    });
   });
 
   // Apply Q1 2026 actuals overrides (idx 0-3) — preserves reconciled history

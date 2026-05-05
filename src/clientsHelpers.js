@@ -1,14 +1,16 @@
-// Phase E2a — pure helpers for the unified Clients tab.
-// No React, no side effects. Used by ClientsTab + ClientCard + storage.js migration.
+// Phase E2b — pure helpers for the unified Clients tab.
+// No React, no side effects. Used by ClientsTab + ClientCard.
 
 const BASE_YEAR = 2026;
 const N = 24;
 
-// "YYYY-MM-15" — 15th-of-month convention for paymentSchedule dueDates
-export function dateForMonth(idx) {
+// "YYYY-MM-15" — 15th-of-month convention used when generating fresh schedules
+// (Add service contract form). Existing schedules preserve their own dueDates.
+export function dateForMonth(idx, day = 15) {
   const year = BASE_YEAR + Math.floor(idx / 12);
   const month = (idx % 12) + 1;
-  return `${year}-${String(month).padStart(2, "0")}-15`;
+  const d = String(day).padStart(2, "0");
+  return `${year}-${String(month).padStart(2, "0")}-${d}`;
 }
 
 // Convert a date string like "2026-05-01" to forecast index (0-23)
@@ -35,12 +37,12 @@ export function monthsRemaining(endDateStr, today) {
 }
 
 // Determine which UI segment a client belongs to.
-// Reads serviceContract.segment if set; else derives "supportOnly" for zoho-only clients.
+// Reads serviceContract.segment if set; else derives "zohoCommissionOnly" for zoho-only clients.
 export function getSegment(client) {
   const sc = client.serviceContract;
   const zc = client.zohoCommission;
   if (sc && sc.segment) return sc.segment;
-  if (!sc && zc) return "supportOnly";
+  if (!sc && zc) return "zohoCommissionOnly";
   return null;
 }
 
@@ -71,78 +73,39 @@ export function paymentDueStatus(payment, today) {
   return "upcoming";
 }
 
-// Generate paymentSchedule for a client based on serviceContract type + st[] history.
-// Q3 lock: skip blank past months. Forward generation: 12 months default for null endDate, else through endDate.
-export function generateSchedule(client, currentMonthIdx = null) {
-  const sc = client.serviceContract;
+// Generate an empty paymentSchedule for a freshly-added serviceContract.
+// Retainer / support-retainer: 12 forward months from current month.
+// Project: startDate through endDate.
+// Bank-of-hours / one-time: empty (caller adds entries explicitly).
+export function generateScheduleForNew(sc, today) {
   if (!sc) return [];
+  const t = today instanceof Date ? today : new Date();
+  const cm = (t.getFullYear() - BASE_YEAR) * 12 + t.getMonth();
+  const day = sc.monthlyRenewalDay || 15;
 
-  // Default cm to actual current month index from today (data.js calls without arg)
-  const cm = currentMonthIdx !== null ? currentMonthIdx : (() => {
-    const t = new Date();
-    return (t.getFullYear() - BASE_YEAR) * 12 + t.getMonth();
-  })();
-
-  // CASE 3: one-time → derive from payments[] kind:"service"
-  if (sc.type === "one-time") {
-    return (client.payments || [])
-      .filter(p => !p.kind || p.kind === "service")
-      .map(p => ({
-        dueDate: dateForMonth(p.month),
-        amount: p.amount,
-        paid: p.status === "P",
-        paidDate: null,
-        note: p.status === "L" ? "Late" : "",
-      }));
-  }
-
-  // CASE 2: project — startDate through endDate
-  if (sc.type === "project") {
-    const st = client.st || [];
-    const startIdx = sc.startDate ? monthIdxFromDate(sc.startDate) : null;
-    const endIdx = sc.endDate ? monthIdxFromDate(sc.endDate) : null;
-    if (startIdx === null || endIdx === null) return [];
+  if (sc.type === "retainer" || sc.type === "support-retainer") {
+    const endIdx = sc.endDate ? monthIdxFromDate(sc.endDate) : (cm + 11);
     const out = [];
-    for (let i = startIdx; i <= Math.min(endIdx, N - 1); i++) {
-      const mark = st[i] || "";
+    for (let i = cm; i <= Math.min(endIdx, N - 1); i++) {
       out.push({
-        dueDate: dateForMonth(i),
-        amount: sc.monthlyAmount,
-        paid: mark === "P",
-        paidDate: null,
-        note: mark === "L" ? "Late" : "",
+        dueDate: dateForMonth(i, day),
+        amount: sc.monthlyAmount || 0,
+        paid: false, paidDate: null, note: "",
       });
     }
     return out;
   }
 
-  // CASE 1: retainer — past explicit P/U/L (skip blanks) + forward from cm
-  if (sc.type === "retainer") {
-    const st = client.st || [];
+  if (sc.type === "project") {
+    const startIdx = sc.startDate ? monthIdxFromDate(sc.startDate) : cm;
+    const endIdx = sc.endDate ? monthIdxFromDate(sc.endDate) : startIdx;
+    if (startIdx === null || endIdx === null) return [];
     const out = [];
-    // Past explicit only
-    for (let i = 0; i < cm; i++) {
-      const mark = st[i];
-      if (mark === "P" || mark === "U" || mark === "L") {
-        out.push({
-          dueDate: dateForMonth(i),
-          amount: sc.monthlyAmount,
-          paid: mark === "P",
-          paidDate: null,
-          note: mark === "L" ? "Late" : "",
-        });
-      }
-    }
-    // Forward: 12 months from cm if endDate null, else through endDate
-    const endIdx = sc.endDate ? monthIdxFromDate(sc.endDate) : (cm + 11);
-    for (let i = cm; i <= Math.min(endIdx, N - 1); i++) {
-      const mark = st[i] || "";
+    for (let i = startIdx; i <= Math.min(endIdx, N - 1); i++) {
       out.push({
-        dueDate: dateForMonth(i),
-        amount: sc.monthlyAmount,
-        paid: mark === "P",
-        paidDate: null,
-        note: mark === "L" ? "Late" : "",
+        dueDate: dateForMonth(i, sc.monthlyRenewalDay || 1),
+        amount: sc.monthlyAmount || 0,
+        paid: false, paidDate: null, note: "",
       });
     }
     return out;
@@ -151,24 +114,42 @@ export function generateSchedule(client, currentMonthIdx = null) {
   return [];
 }
 
-// Map old serviceContract.type → new segment (Q1 locked: c5 Calco → infinityMirror).
-export function deriveSegment(type, clientId) {
+// Map serviceContract.type → segment. Used by Add Service form.
+export function deriveSegment(type) {
   if (type === "retainer") return "infinityMirror";
+  if (type === "support-retainer") return "supportRetainer";
+  if (type === "bank-of-hours") return "bankOfHours";
   if (type === "project") return "fullProject";
-  if (type === "one-time") return "scopeOnly";
+  if (type === "one-time") return "oneTime";
   return null;
 }
 
 export const SEGMENT_LABELS = {
-  infinityMirror: "Infinity Mirror",
-  scopeOnly: "Scope only",
-  fullProject: "Full project",
-  supportOnly: "Support only",
+  infinityMirror:      "Infinity Mirror",
+  supportRetainer:     "Support Retainer",
+  bankOfHours:         "Bank of Hours",
+  fullProject:         "Full Project",
+  zohoCommissionOnly:  "Zoho Commission Only",
+  oneTime:             "Historical (One-Time)",
 };
 
 export const STATUS_LABELS = {
-  active: "Active",
+  active:    "Active",
   "at-risk": "At-risk",
-  churned: "Churned",
-  pipeline: "Pipeline",
+  churned:   "Churned",
+  pipeline:  "Pipeline",
 };
+
+// Display order for By Segment view. oneTime renders separately as Historical.
+export const SEGMENT_ORDER = [
+  "infinityMirror",
+  "supportRetainer",
+  "bankOfHours",
+  "fullProject",
+  "zohoCommissionOnly",
+];
+
+export const HISTORICAL_SEGMENT = "oneTime";
+
+// Permissions stub — E2c will replace with real role check.
+export function canEdit(/* user, field */) { return true; }

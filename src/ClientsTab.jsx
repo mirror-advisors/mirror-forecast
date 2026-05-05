@@ -1,13 +1,14 @@
-// Phase E2a — unified Clients tab with three view modes (segment / value / Sara).
-// Read-only. Edit affordances disabled. Sara auto-routes to her view.
+// Phase E2b — unified Clients tab with edit-in-place.
+// Receives `save` from App; bubbles client edits up through onClientChange.
+// Sara auto-routes to her worklist view; Paul/Mark default to By Segment.
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { P } from "./data.js";
 import { Card, Lbl } from "./components.jsx";
 import ClientCard from "./ClientCard.jsx";
 import {
   getSegment, clientValue, daysUntil, paymentDueStatus,
-  SEGMENT_LABELS,
+  SEGMENT_LABELS, SEGMENT_ORDER, HISTORICAL_SEGMENT,
 } from "./clientsHelpers.js";
 
 const fmtMoney = (n) => {
@@ -16,8 +17,14 @@ const fmtMoney = (n) => {
   return n < 0 ? `($${a.toLocaleString()})` : `$${a.toLocaleString()}`;
 };
 
-const SEGMENT_ORDER = ["infinityMirror", "scopeOnly", "fullProject", "supportOnly"];
-const SEGMENT_COLORS = { infinityMirror: P.g, scopeOnly: P.a, fullProject: P.b, supportOnly: P.t };
+const SEGMENT_COLORS = {
+  infinityMirror:     P.g,
+  supportRetainer:    P.t,
+  bankOfHours:        P.a,
+  fullProject:        P.b,
+  zohoCommissionOnly: "#38bdf8",
+  oneTime:            P.td,
+};
 
 const filterPills = [
   ["all", "All"],
@@ -79,9 +86,11 @@ function RenewalWatch({ clients, today }) {
 }
 
 // === By segment view ===
-function BySegmentView({ clients, today, expandedId, setExpandedId, isAdmin, isViewer }) {
+function BySegmentView({ clients, today, expandedId, setExpandedId, onClientChange, isAdmin, isViewer }) {
+  const [historicalOpen, setHistoricalOpen] = useState(false);
+
   const grouped = useMemo(() => {
-    const out = { infinityMirror: [], scopeOnly: [], fullProject: [], supportOnly: [] };
+    const out = { infinityMirror: [], supportRetainer: [], bankOfHours: [], fullProject: [], zohoCommissionOnly: [], oneTime: [] };
     clients.forEach(c => {
       const seg = getSegment(c);
       if (seg && out[seg]) out[seg].push(c);
@@ -89,11 +98,13 @@ function BySegmentView({ clients, today, expandedId, setExpandedId, isAdmin, isV
     return out;
   }, [clients]);
 
+  const historical = grouped[HISTORICAL_SEGMENT] || [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {SEGMENT_ORDER.map(seg => {
         const list = grouped[seg];
-        if (list.length === 0) return null;
+        if (!list || list.length === 0) return null;
         return (
           <div key={seg}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -103,18 +114,47 @@ function BySegmentView({ clients, today, expandedId, setExpandedId, isAdmin, isV
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {list.map(c => (
-                <ClientCard key={c.id} client={c} today={today} expanded={expandedId === c.id} onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)} isAdmin={isAdmin} isViewer={isViewer} />
+                <ClientCard key={c.id} client={c} today={today}
+                  expanded={expandedId === c.id}
+                  onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                  onChange={onClientChange}
+                  isAdmin={isAdmin} isViewer={isViewer}
+                />
               ))}
             </div>
           </div>
         );
       })}
+
+      {/* Historical (collapsed by default) — separate visual treatment */}
+      {historical.length > 0 && (
+        <div style={{ marginTop: 8, opacity: 0.85 }}>
+          <div onClick={() => setHistoricalOpen(!historicalOpen)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer", padding: "6px 0" }}>
+            <span style={{ fontSize: 11, color: P.td, transition: "transform 0.15s", transform: historicalOpen ? "rotate(90deg)" : "none", display: "inline-block" }}>▶</span>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: SEGMENT_COLORS.oneTime }} />
+            <span style={{ fontSize: 12, color: P.tm, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.02em" }}>{SEGMENT_LABELS.oneTime}</span>
+            <span style={{ fontSize: 11, color: P.td }}>({historical.length})</span>
+          </div>
+          {historicalOpen && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {historical.map(c => (
+                <ClientCard key={c.id} client={c} today={today}
+                  expanded={expandedId === c.id}
+                  onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                  onChange={onClientChange}
+                  isAdmin={isAdmin} isViewer={isViewer}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // === By value view ===
-function ByValueView({ clients, today, expandedId, setExpandedId, isAdmin, isViewer }) {
+function ByValueView({ clients, today, expandedId, setExpandedId, onClientChange, isAdmin, isViewer }) {
   const ranked = useMemo(() => {
     return [...clients]
       .map(c => ({
@@ -141,7 +181,12 @@ function ByValueView({ clients, today, expandedId, setExpandedId, isAdmin, isVie
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {ranked.map(({ client, value, breakdown }) => (
         <div key={client.id}>
-          <ClientCard client={client} today={today} expanded={expandedId === client.id} onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)} isAdmin={isAdmin} isViewer={isViewer} />
+          <ClientCard client={client} today={today}
+            expanded={expandedId === client.id}
+            onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)}
+            onChange={onClientChange}
+            isAdmin={isAdmin} isViewer={isViewer}
+          />
           {expandedId !== client.id && (
             <div style={{ padding: "4px 14px 0 26px", fontSize: 10, color: P.td, fontFamily: "'DM Sans', sans-serif" }}>
               value <span style={{ color: P.t, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>{fmtMoney(value)}</span> — {breakdown}
@@ -154,7 +199,7 @@ function ByValueView({ clients, today, expandedId, setExpandedId, isAdmin, isVie
 }
 
 // === Sara's view ===
-function SaraView({ clients, today, expandedId, setExpandedId }) {
+function SaraView({ clients, today, expandedId, setExpandedId, onClientChange }) {
   // Build worklist from all clients' paymentSchedule
   const todayMonth = today.getFullYear() * 12 + today.getMonth();
 
@@ -176,10 +221,9 @@ function SaraView({ clients, today, expandedId, setExpandedId }) {
   const lateEntries = worklist.filter(e => !e.paid && e._due < today && (e._due.getFullYear() * 12 + e._due.getMonth()) < todayMonth);
   const thisMonthEntries = worklist.filter(e => (e._due.getFullYear() * 12 + e._due.getMonth()) === todayMonth);
 
-  const paidCount = worklist.filter(e => e.paid).length;
-  const totalCount = worklist.length;
-  const collected = worklist.filter(e => e.paid).reduce((s, e) => s + e.amount, 0);
-  const outstanding = worklist.filter(e => !e.paid).reduce((s, e) => s + e.amount, 0);
+  // Phase E2b counter split — "X late ($Y) · Z due this month ($W)"
+  const lateAmount = lateEntries.reduce((s, e) => s + (e.amount || 0), 0);
+  const dueAmount = thisMonthEntries.filter(e => !e.paid).reduce((s, e) => s + (e.amount || 0), 0);
 
   const monthLabel = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
@@ -207,15 +251,17 @@ function SaraView({ clients, today, expandedId, setExpandedId }) {
 
   return (
     <div>
-      {/* Worklist header */}
+      {/* Worklist header — E2b split counter */}
       <Card style={{ padding: 16, marginBottom: 16, borderLeft: `3px solid ${P.t}` }}>
         <Lbl>{monthLabel} invoices</Lbl>
         <div style={{ fontSize: 13, color: P.tx, fontFamily: "'DM Sans', sans-serif", marginTop: 4 }}>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: P.g }}>{paidCount} of {totalCount} paid</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: lateEntries.length > 0 ? P.r : P.tm }}>
+            {lateEntries.length} late ({fmtMoney(lateAmount)})
+          </span>
           <span style={{ color: P.td }}> · </span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: P.g }}>{fmtMoney(collected)} collected</span>
-          <span style={{ color: P.td }}> · </span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: P.r }}>{fmtMoney(outstanding)} outstanding</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: thisMonthEntries.length > 0 ? P.a : P.tm }}>
+            {thisMonthEntries.length} due this month ({fmtMoney(dueAmount)})
+          </span>
         </div>
       </Card>
 
@@ -242,7 +288,12 @@ function SaraView({ clients, today, expandedId, setExpandedId }) {
         <Lbl>All clients ({clients.length})</Lbl>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {clients.map(c => (
-            <ClientCard key={c.id} client={c} today={today} expanded={expandedId === c.id} onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)} isAdmin={false} isViewer={true} />
+            <ClientCard key={c.id} client={c} today={today}
+              expanded={expandedId === c.id}
+              onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
+              onChange={onClientChange}
+              isAdmin={false} isViewer={true}
+            />
           ))}
         </div>
       </div>
@@ -251,12 +302,20 @@ function SaraView({ clients, today, expandedId, setExpandedId }) {
 }
 
 // === Main ClientsTab ===
-export default function ClientsTab({ d, isAdmin, isViewer, isIntern }) {
+export default function ClientsTab({ d, save, isAdmin, isViewer, isIntern }) {
   const today = useMemo(() => new Date(), []);
   const [viewMode, setViewMode] = useState(isIntern ? "sara" : "segment");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+
+  // E2b: bubble client edits up to App via save(). Stamp lastEditedAt
+  // automatically; lastEditedBy stays null until E2c (real role/profile wiring).
+  const onClientChange = useCallback((newClient) => {
+    if (!save) return;
+    const stamped = { ...newClient, lastEditedAt: new Date().toISOString() };
+    save({ ...d, cl: d.cl.map(c => c.id === stamped.id ? stamped : c) });
+  }, [d, save]);
 
   // Filter clients based on status + search (used by segment & value views)
   const filteredClients = useMemo(() => {
@@ -268,7 +327,7 @@ export default function ClientsTab({ d, isAdmin, isViewer, isIntern }) {
   }, [d.cl, filterStatus, searchQuery]);
 
   if (isIntern || viewMode === "sara") {
-    return <SaraView clients={d.cl} today={today} expandedId={expandedId} setExpandedId={setExpandedId} />;
+    return <SaraView clients={d.cl} today={today} expandedId={expandedId} setExpandedId={setExpandedId} onClientChange={onClientChange} />;
   }
 
   return (
@@ -300,9 +359,9 @@ export default function ClientsTab({ d, isAdmin, isViewer, isIntern }) {
           <div style={{ color: P.tm, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>No clients match this filter.</div>
         </Card>
       ) : viewMode === "value" ? (
-        <ByValueView clients={filteredClients} today={today} expandedId={expandedId} setExpandedId={setExpandedId} isAdmin={isAdmin} isViewer={isViewer} />
+        <ByValueView clients={filteredClients} today={today} expandedId={expandedId} setExpandedId={setExpandedId} onClientChange={onClientChange} isAdmin={isAdmin} isViewer={isViewer} />
       ) : (
-        <BySegmentView clients={filteredClients} today={today} expandedId={expandedId} setExpandedId={setExpandedId} isAdmin={isAdmin} isViewer={isViewer} />
+        <BySegmentView clients={filteredClients} today={today} expandedId={expandedId} setExpandedId={setExpandedId} onClientChange={onClientChange} isAdmin={isAdmin} isViewer={isViewer} />
       )}
     </div>
   );

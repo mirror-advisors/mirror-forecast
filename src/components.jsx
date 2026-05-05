@@ -118,8 +118,11 @@ export function StatusChip({ value, onClick, selected = false, active = true, si
   );
 }
 
-export function SaveBar({ dirty, saving, onSave }) {
+export function SaveBar({ dirty, saving, onSave, count, onDiscard }) {
   if (!dirty && !saving) return null;
+  const label = typeof count === "number" && count > 0
+    ? `${count} unsaved change${count === 1 ? "" : "s"}`
+    : "Unsaved changes";
   return (
     <div style={{
       position: "fixed",
@@ -140,20 +143,212 @@ export function SaveBar({ dirty, saving, onSave }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: P.a }} />
-        <span style={{ fontSize: 13, color: P.tx, fontWeight: 600 }}>Unsaved changes</span>
+        <span style={{ fontSize: 13, color: P.tx, fontWeight: 600 }}>{label}</span>
       </div>
-      <button onClick={onSave} disabled={saving} style={{
-        background: saving ? P.c2 : P.b,
-        color: saving ? P.td : "#ffffff",
-        border: "none",
-        borderRadius: 6,
-        padding: "9px 22px",
-        fontSize: 13,
-        fontWeight: 700,
-        cursor: saving ? "default" : "pointer",
-        fontFamily: "'DM Sans', sans-serif",
-      }}>{saving ? "Saving\u2026" : "Save (\u2318S)"}</button>
+      <div style={{ display: "flex", gap: 8 }}>
+        {onDiscard && (
+          <button onClick={onDiscard} disabled={saving} style={{
+            background: "transparent",
+            color: P.tm,
+            border: `1px solid ${P.bd}`,
+            borderRadius: 6,
+            padding: "9px 16px",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: saving ? "default" : "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+          }}>Discard</button>
+        )}
+        <button onClick={onSave} disabled={saving} style={{
+          background: saving ? P.c2 : P.b,
+          color: saving ? P.td : "#ffffff",
+          border: "none",
+          borderRadius: 6,
+          padding: "9px 22px",
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: saving ? "default" : "pointer",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>{saving ? "Saving\u2026" : "Save (\u2318S)"}</button>
+      </div>
     </div>
+  );
+}
+
+// Phase E2b \u2014 generic edit-in-place field. Click to enter edit mode, blur or
+// Enter to commit (calls onChange with new value), Esc reverts. Integrates with
+// the existing d/saved dirty mechanism \u2014 onChange just bubbles up to App's
+// save() callback, which buffers the change. No parallel dirty system.
+//
+// Types: text | currency | integer | date | enum | boolean | longText
+//   - longText: textarea with explicit \u2713 Save button (not blur-commit)
+//   - boolean: toggle (no edit-mode dance \u2014 click flips immediately)
+//   - enum: requires `options` prop = array of [value, label] pairs (or strings)
+export function EditableField({ type = "text", value, onChange, options, placeholder, canEdit = true, displayFmt }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  // ===== boolean: instant toggle, no edit mode =====
+  if (type === "boolean") {
+    const on = !!value;
+    return (
+      <button
+        disabled={!canEdit}
+        onClick={() => canEdit && onChange(!on)}
+        style={{
+          background: on ? P.gB : P.c2,
+          color: on ? P.g : P.tm,
+          border: `1px solid ${on ? P.gM : P.bd}`,
+          borderRadius: 4,
+          padding: "3px 10px",
+          fontSize: 11,
+          fontWeight: 600,
+          cursor: canEdit ? "pointer" : "default",
+          fontFamily: "'DM Sans', sans-serif",
+          opacity: canEdit ? 1 : 0.6,
+        }}
+      >{on ? "Yes" : "No"}</button>
+    );
+  }
+
+  // ===== enum: select element =====
+  if (type === "enum") {
+    const opts = (options || []).map(o => Array.isArray(o) ? o : [o, o]);
+    return (
+      <select
+        disabled={!canEdit}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
+        style={{
+          background: P.c2, border: `1px solid ${P.bd}`, borderRadius: 4,
+          color: value ? P.tx : P.td, fontSize: 12, padding: "4px 8px",
+          fontFamily: "'DM Sans', sans-serif",
+          cursor: canEdit ? "pointer" : "default",
+          opacity: canEdit ? 1 : 0.6,
+        }}
+      >
+        <option value="">\u2014</option>
+        {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    );
+  }
+
+  // ===== display formatter (used in non-edit mode for currency/integer/date) =====
+  const display = (() => {
+    if (displayFmt) return displayFmt(value);
+    if (value == null || value === "") return placeholder || "\u2014";
+    if (type === "currency") return `$${Number(value).toLocaleString()}`;
+    if (type === "integer") return String(value);
+    return String(value);
+  })();
+
+  // ===== longText: textarea with explicit Save (per spec) =====
+  if (type === "longText") {
+    if (!editing) {
+      return (
+        <div
+          onClick={() => { if (canEdit) { setDraft(value || ""); setEditing(true); } }}
+          style={{
+            color: value ? P.tx : P.td,
+            fontStyle: value ? "normal" : "italic",
+            fontSize: 13,
+            fontFamily: "'DM Sans', sans-serif",
+            lineHeight: 1.5,
+            padding: "8px 10px",
+            cursor: canEdit ? "text" : "default",
+            background: P.c1,
+            border: `1px solid ${P.bd}40`,
+            borderRadius: 4,
+            minHeight: 32,
+            whiteSpace: "pre-wrap",
+          }}
+        >{value || (placeholder || "Click to add notes\u2026")}</div>
+      );
+    }
+    return (
+      <div>
+        <textarea
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") { setEditing(false); setDraft(""); } }}
+          rows={4}
+          style={{
+            width: "100%", boxSizing: "border-box",
+            background: P.c2, border: `1px solid ${P.b}`, borderRadius: 4,
+            color: P.tx, fontSize: 13, padding: 10, resize: "vertical",
+            fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5,
+          }}
+        />
+        <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+          <button
+            onClick={() => { setEditing(false); setDraft(""); }}
+            style={{ background: "transparent", color: P.tm, border: `1px solid ${P.bd}`, borderRadius: 4, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
+          >Cancel</button>
+          <button
+            onClick={() => { onChange(draft); setEditing(false); }}
+            style={{ background: P.b, color: "#ffffff", border: "none", borderRadius: 4, padding: "4px 14px", fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}
+          >\u2713 Save</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== text / currency / integer / date \u2014 click to edit, blur/Enter commits =====
+  if (!editing) {
+    return (
+      <span
+        onClick={() => { if (canEdit) { setDraft(value == null ? "" : String(value)); setEditing(true); } }}
+        style={{
+          color: value != null && value !== "" ? P.tx : P.td,
+          fontStyle: value != null && value !== "" ? "normal" : "italic",
+          fontSize: 12,
+          fontFamily: type === "currency" || type === "integer" ? "'JetBrains Mono', monospace" : "'DM Sans', sans-serif",
+          fontWeight: 500,
+          padding: "2px 6px",
+          borderRadius: 3,
+          cursor: canEdit ? "text" : "default",
+          borderBottom: canEdit ? `1px dashed ${P.bd}` : "none",
+        }}
+      >{display}</span>
+    );
+  }
+
+  const commit = () => {
+    let next = draft.trim();
+    if (next === "") {
+      onChange(null);
+    } else if (type === "currency" || type === "integer") {
+      const n = Number(next);
+      if (!isNaN(n)) onChange(type === "integer" ? Math.round(n) : n);
+    } else {
+      onChange(next);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <input
+      autoFocus
+      type={type === "date" ? "date" : type === "currency" || type === "integer" ? "number" : "text"}
+      step={type === "currency" ? "0.01" : type === "integer" ? "1" : undefined}
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.currentTarget.blur(); }
+        else if (e.key === "Escape") { setDraft(value == null ? "" : String(value)); setEditing(false); }
+      }}
+      style={{
+        background: P.c2, border: `1px solid ${P.b}`, borderRadius: 4,
+        color: type === "currency" || type === "integer" ? P.a : P.tx,
+        fontSize: 12, padding: "3px 8px",
+        fontFamily: type === "currency" || type === "integer" ? "'JetBrains Mono', monospace" : "'DM Sans', sans-serif",
+        textAlign: type === "currency" || type === "integer" ? "right" : "left",
+        width: type === "currency" || type === "integer" ? 120 : 180,
+      }}
+    />
   );
 }
 
