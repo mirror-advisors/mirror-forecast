@@ -73,6 +73,15 @@ export function paymentDueStatus(payment, today) {
   return "upcoming";
 }
 
+// E2c.4 — defensive fallback: returns explicit status or derives from paid/note.
+// Use in editors where missing status field shouldn't crash the UI.
+export function effectiveStatus(entry) {
+  if (entry?.status) return entry.status;
+  if (entry?.paid) return "P";
+  if (entry?.note === "Late") return "L";
+  return "U";
+}
+
 // Generate an empty paymentSchedule for a freshly-added serviceContract.
 // Retainer / support-retainer: 12 forward months from current month.
 // Project: startDate through endDate.

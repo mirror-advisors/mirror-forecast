@@ -33,8 +33,8 @@ export function compute(d) {
     const zc = c.zohoCommission;
 
     if (sc && sc.inForecast !== false && isLive(sc.status)) {
-      // Retainer / support-retainer / project → rv.im monthly through endDate.
-      if (sc.type === "retainer" || sc.type === "support-retainer" || sc.type === "project") {
+      // Retainer / support-retainer → rv.im monthly through endDate (contract terms).
+      if (sc.type === "retainer" || sc.type === "support-retainer") {
         const monthly = new Array(N).fill(0);
         const startIdx = sc.startDate ? Math.max(0, monthIdxFromDate(sc.startDate) ?? 0) : 0;
         const endIdx = sc.endDate
@@ -45,8 +45,23 @@ export function compute(d) {
         rvBreakdown.im.push({ clientId: c.id, clientName: c.nm, monthly });
       }
 
+      // Project → rv.im from unpaid future paymentSchedule entries (E2c.4: F1 extended).
+      // paymentSchedule is canonical; contract endDate becomes advisory.
+      if (sc.type === "project") {
+        const sched = sc.paymentSchedule || [];
+        const monthly = new Array(N).fill(0);
+        sched.forEach(p => {
+          if (p.paid) return;
+          const idx = monthIdxFromDate(p.dueDate);
+          if (idx === null || idx < 0 || idx >= N) return;
+          monthly[idx] += p.amount || 0;
+        });
+        for (let i = 0; i < N; i++) rvDerived.im[i] += monthly[i];
+        rvBreakdown.im.push({ clientId: c.id, clientName: c.nm, monthly });
+      }
+
       // Bank-of-hours / one-time → unpaid future paymentSchedule entries → rv.ot.
-      // F1 fix: forward revenue from drawdown contracts must land in the forecast.
+      // F1 fix (E2b): forward revenue from drawdown contracts must land in the forecast.
       if (sc.type === "bank-of-hours" || sc.type === "one-time") {
         const sched = sc.paymentSchedule || [];
         let otEntry = null;

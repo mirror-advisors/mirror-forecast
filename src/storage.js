@@ -28,20 +28,41 @@ function stripLegacy(c) {
   return out;
 }
 
+// E2c.4 — backfill `status` field on paymentSchedule entries that lack it.
+// Idempotent. Maps from legacy paid+note+dueDate semantics. Doesn't touch `paid`.
+function backfillScheduleStatus(client) {
+  const sc = client.serviceContract;
+  if (!sc || !Array.isArray(sc.paymentSchedule)) return client;
+  const today = new Date();
+  let mutated = false;
+  const sched = sc.paymentSchedule.map(p => {
+    if (p.status) return p;
+    let status;
+    if (p.paid === true)              status = "P";
+    else if (p.note === "Late")       status = "L";
+    else if (new Date(p.dueDate) < today) status = "L"; // overdue → Late
+    else                              status = "U";
+    mutated = true;
+    return { ...p, status };
+  });
+  if (!mutated) return client;
+  return { ...client, serviceContract: { ...sc, paymentSchedule: sched } };
+}
+
 function migrateData(parsed, defaultData) {
   if (!parsed.scenarios) parsed.scenarios = [];
   if (!parsed.actuals) parsed.actuals = {};
 
   if (isE2b(parsed)) {
-    console.log('[migrateData] E2b schema detected — passthrough + legacy strip');
-    parsed.cl = (parsed.cl || []).map(stripLegacy);
+    console.log('[migrateData] E2b schema detected — passthrough + legacy strip + status backfill');
+    parsed.cl = (parsed.cl || []).map(stripLegacy).map(backfillScheduleStatus);
     return parsed;
   }
 
   // Pre-E2b (E1 or E2a) detected. Per E2b migration spec: REPLACE cl[] entirely
   // with the rebuilt 22-client default. Preserve scenarios/actuals/rvActuals/tm.
   console.warn('[migrateData] Pre-E2b schema detected — replacing cl[] with E2b rebuild');
-  parsed.cl = defaultData.cl.map(stripLegacy);
+  parsed.cl = defaultData.cl.map(stripLegacy).map(backfillScheduleStatus);
   return parsed;
 }
 

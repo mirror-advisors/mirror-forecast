@@ -6,10 +6,11 @@ import React, { useState } from "react";
 import { P } from "./data.js";
 import { EditableField } from "./components.jsx";
 import {
-  getSegment, clientValue, paymentDueStatus,
+  getSegment, clientValue,
   SEGMENT_LABELS, generateScheduleForNew, deriveSegment, canEdit,
 } from "./clientsHelpers.js";
 import { StatusPill, SegmentPill, Pill, Avatar, SEGMENT_COLORS } from "./ClientPills.jsx";
+import ScheduleEditor from "./ScheduleEditor.jsx";
 
 const SERVICE_TYPES = [
   ["retainer",         "Retainer (Infinity Mirror)"],
@@ -33,14 +34,6 @@ const ZOHO_PRODUCTS = [
 ];
 const FREQUENCY_OPTIONS = [["monthly", "Monthly"], ["annual", "Annual"]];
 
-const PMT_COLORS = {
-  paid:     { fg: P.g, label: "Paid" },
-  late:     { fg: P.r, label: "Late" },
-  due:      { fg: P.a, label: "Due" },
-  upcoming: { fg: P.tm, label: "Upcoming" },
-  unpaid:   { fg: P.tm, label: "Unpaid" },
-};
-
 const fmtMoney = (n) => {
   if (!n || n === 0) return "—";
   const a = Math.abs(Math.round(n));
@@ -57,42 +50,6 @@ const fieldRow = (label, valueEl) => (
     <span style={{ minWidth: 0, textAlign: "right" }}>{valueEl}</span>
   </div>
 );
-
-// === Read-only payment schedule (E2c.4 turns this into an editor) ===
-function PaymentScheduleTable({ entries, today }) {
-  if (!entries || entries.length === 0) return <div style={{ fontSize: 11, color: P.td, fontStyle: "italic", padding: "4px 0" }}>No scheduled payments.</div>;
-  return (
-    <div style={{ marginTop: 4, maxHeight: 240, overflowY: "auto", border: `1px solid ${P.bd}40`, borderRadius: 6 }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'DM Sans', sans-serif" }}>
-        <thead>
-          <tr style={{ background: P.c2 }}>
-            <th style={{ textAlign: "left", padding: "6px 10px", fontSize: 9, color: P.td, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Due</th>
-            <th style={{ textAlign: "right", padding: "6px 10px", fontSize: 9, color: P.td, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Amount</th>
-            <th style={{ textAlign: "right", padding: "6px 10px", fontSize: 9, color: P.td, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e, i) => {
-            const status = paymentDueStatus(e, today);
-            const co = PMT_COLORS[status];
-            return (
-              <tr key={i} style={{ borderBottom: `1px solid ${P.bd}25` }}>
-                <td style={{ padding: "5px 10px", fontSize: 11, color: P.tx }}>{e.dueDate}</td>
-                <td style={{ padding: "5px 10px", fontSize: 11, color: P.tx, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmtMoney(e.amount)}</td>
-                <td style={{ padding: "5px 10px", fontSize: 10, textAlign: "right" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: co.fg }}>
-                    <span style={{ width: 5, height: 5, borderRadius: 3, background: co.fg }} />
-                    {co.label}{e.note ? ` · ${e.note}` : ""}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 // === Add service contract inline form ===
 function AddServiceContractForm({ onCancel, onAdd }) {
@@ -399,11 +356,15 @@ export default function ClientDetail({ client, today, onChange, onClose, isAdmin
           <EditableField type="longText" value={client.notes} placeholder="Click to add notes…" onChange={(v) => patch({ notes: v })} canEdit={editable} />
         </div>
 
-        {/* Payment schedule (read-only in E2c.1; editor in E2c.4) */}
+        {/* Payment schedule editor (E2c.4) */}
         {sc && (
           <div style={{ marginBottom: 8 }}>
-            {sectionLabel(`Payment Schedule (${sc.paymentSchedule?.length || 0} entries)`)}
-            <PaymentScheduleTable entries={sc.paymentSchedule} today={today} />
+            <ScheduleEditor
+              serviceContract={sc}
+              today={today}
+              editable={editable}
+              onChange={(newSchedule) => patchSc({ paymentSchedule: newSchedule })}
+            />
           </div>
         )}
       </div>
