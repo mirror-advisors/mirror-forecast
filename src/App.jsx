@@ -7,6 +7,7 @@ import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import Reconcile from "./Reconcile.jsx";
 import ClientsTab from "./ClientsTab.jsx";
+import RunwayChart from "./RunwayChart.jsx";
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isViewer, signOut } = useAuth();
@@ -224,21 +225,7 @@ export default function App() {
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:20 }}>
           <Card><Lbl>Revenue Breakdown</Lbl><Pie data={pieD}/></Card>
         </div>
-        <Card style={{ padding:0,overflow:"hidden",marginBottom:20 }}>
-          <div style={{ display:"grid",gridTemplateColumns:`repeat(${win.length},1fr)` }}>
-            {win.map((s,i)=>{
-              const bal = s.inCurrentYear ? c.bl[s.idx] : 0;
-              const net = s.inCurrentYear ? c.nt[s.idx] : 0;
-              const bg = s.isCurrent ? P.bB : bal > 5000 ? P.gB : bal > 0 ? P.aB : P.rB;
-              const fg = s.isCurrent ? P.b : bal > 5000 ? P.g : bal > 0 ? P.a : P.r;
-              return(<div key={i} style={{ padding:"12px 2px",textAlign:"center",background:bg,borderRight:i<win.length-1?`1px solid ${P.bg}`:undefined }}>
-                <div style={{ fontSize:9,color:s.isCurrent?P.b:fg,opacity:s.isCurrent?1:.6,fontWeight:s.isCurrent?700:400,fontFamily:"'DM Sans', sans-serif" }}>{s.label}</div>
-                <div style={{ fontSize:12,fontWeight:800,color:fg,fontFamily:"'JetBrains Mono', monospace" }}>{s.inCurrentYear?fK(bal):"—"}</div>
-                <div style={{ fontSize:9,color:fg,opacity:.4,fontFamily:"'JetBrains Mono', monospace" }}>{s.inCurrentYear?fK(net):""}</div>
-              </div>);
-            })}
-          </div>
-        </Card>
+        <RunwayChart c={c} d={d} today={today} runwayMonths={mgBase} />
         <Lbl>Unit Economics</Lbl>
         <div style={{ display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginTop:6,marginBottom:20 }}>
           {[["Rev/Client",fmt(Math.round(tRv/Math.max(aCl,1)/12)),P.t],["Rev/Head",fmt(Math.round(tRv/Math.max(c.at.length,1)/12)),P.t],["Clients/Dev",devs.length?(aCl/devs.length).toFixed(1):"—",P.t],["Devs",devs.length,P.tx],["Clients",aCl,P.tx]].map(([l,v,co])=><Card key={l} style={{ padding:12 }}><Lbl>{l}</Lbl><div style={{ fontSize:22,fontWeight:800,color:co,fontFamily:"'JetBrains Mono', monospace" }}>{v}</div></Card>)}

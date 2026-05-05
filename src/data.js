@@ -8,7 +8,14 @@ export const P = {
   b: "#60a5fa", bB: "#1a2538",
   p: "#b8a9e8", t: "#6bbfb0",
   tx: "#dee4f0", tm: "#8090a8", td: "#4a5478",
+  // E2c.2 — "out of money" deficit state for RunwayChart (darker than P.rB)
+  dr: "#3a0e0e", drF: "#ff8a8a",
 };
+
+// E2c.2 — buffer-thin threshold for chart color rule.
+// Cards render in red ("buffer thin") below this balance, even if monthly
+// net is positive. Tweak here to retune the dashboard signal.
+export const BUFFER_THIN_THRESHOLD = 10000;
 
 export const DC = { Development: P.b, Marketing: P.p, Operations: P.a, Leadership: P.t };
 export const FL = { US: "🇺🇸", PH: "🇵🇭", IN: "🇮🇳" };
