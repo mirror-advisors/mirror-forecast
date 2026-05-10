@@ -71,8 +71,9 @@ export const D0 = {
     // RSK 2026 ($4,944) paid by CC on 2/4 — captured in ccOwe, not oc[]. Future RSK obligations should go here.
     { n: "RSK Advisors (Tax)",  v: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
     { n: "CC Interest",         v: [0,0,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130] },
-    // May 2026 prorated partial: Gowtham 6 days ($88)
+    // May 2026 prorated partials: Gowtham 6 days ($88), Ravindar 6 days ($325)
     { n: "Gowtham (May partial)", v: [0,0,0,0,-88,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+    { n: "Ravindar (May partial)", v: [0,0,0,0,-325,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
   ],
 
   // Debt / CC — hits checking account
@@ -107,8 +108,9 @@ export const D0 = {
     { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1089, on:true },
     { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true, endMo:3 },
     { id:"p10",nm:"Aadrika",         rl:"Contractor",   dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
-    // Ravindar — benched after May 2026 (6 working days prorated from ₹96K/mo).
-    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:325, on:true, startMo:4, endMo:4 },
+    // Ravindar — benched after May 2026. No full months on our books (Apr $142 in actuals, May $325 via oc[]).
+    // startMo:4 + endMo:3 → empty range, $0 contribution via tm[]. co:1136 is reference rate only.
+    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:true, startMo:4, endMo:3 },
     // Shanee — full-time India, ₹40K/mo. Started May.
     { id:"p12",nm:"Shanee Patel",    rl:"Developer",    dp:"Development", ct:"IN", co:473,  on:true, startMo:4 },
     // Mark Alberto — variable comp, manage via scenarios. April $5K one-time tracked in oc[].

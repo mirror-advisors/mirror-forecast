@@ -130,7 +130,9 @@ export default function App() {
   const ntBase = Array.from({ length: c.rvBase.length }, (_, i) => c.rvBase[i] + c.exBase[i]);
   ntBase.forEach((n, i) => blBase.push(i === 0 ? d.openBal + n : blBase[i - 1] + n));
   const mgBase = countGreen(blBase);
-  const fdBase = blBase.findIndex(b => b <= 0);
+  // Forward-looking deficit: first bal<=0 from cm onward (matches RunwayChart).
+  const fdFwd = (() => { for (let i = cm; i < blBase.length; i++) if (blBase[i] <= 0) return i; return -1; })();
+  const fdFwdLabel = fdFwd >= 0 ? (fdFwd >= 12 ? `${MO[fdFwd % 12]}'${String(2026 + Math.floor(fdFwd / 12)).slice(-2)}` : MO[fdFwd]) : null;
 
   // With-scenarios runway (c.bl already includes scenarios)
   const mg = countGreen(c.bl);
@@ -199,7 +201,7 @@ export default function App() {
               <span style={{ fontSize:64,fontWeight:800,lineHeight:1,letterSpacing:"-0.04em",color:mgBase>=9?P.g:mgBase>=6?P.a:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{mgBase}</span>
               <span style={{ fontSize:16,color:P.tm }}>months green</span>
             </div>
-            <div style={{ marginTop:6,color:P.tm,fontSize:12 }}>{fdBase>=0?<>Deficit: <b style={{ color:P.r }}>{MO[fdBase]}</b></>:<span style={{ color:P.g }}>Green all year</span>}{" · Dec: "}<b style={{ color:blBase[11]>0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(blBase[11])}</b></div>
+            <div style={{ marginTop:6,color:P.tm,fontSize:12 }}>{fdFwdLabel?<>Deficit: <b style={{ color:P.r }}>{fdFwdLabel}</b></>:<span style={{ color:P.g }}>Green all year</span>}{" · Dec: "}<b style={{ color:blBase[11]>0?P.g:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(blBase[11])}</b></div>
           </Card>
           <div style={{ display:"grid",gridTemplateRows:"1fr 1fr",gap:16 }}>
             <Card style={{ padding:16,borderLeft:`3px solid ${hasActiveScenarios?P.p:P.bd}` }}>
@@ -411,9 +413,12 @@ export default function App() {
           <table style={{ width:"100%",borderCollapse:"collapse",fontSize:12 }}>
             <thead><tr><th style={{ ...th,textAlign:"left",width:160 }}></th>{win.map((s,i)=><th key={i} style={thCm(s)}>{s.label}</th>)}<th style={th}>Year</th></tr></thead>
             <tbody>
-              <XRow label={`${FL.US} US Payroll`} vals={winVals(c.us)} win={win} details={[{n:"Paul (CEO)",v:winVals(MO.map((_,i)=>i===0?0:i===1?-3917:-(c.at.find(t=>t.nm==="Paul")?.co||0)))},{n:"Sara",v:winVals(MO.map((_,i)=>i>=6?0:i===0?-824:i===1?-180:-(c.at.find(t=>t.nm==="Sara")?.co||0)))},{n:"Emp Taxes",v:winVals(d.et)},{n:"ADP Fees",v:winVals(d.af)}]}/>
-              <XRow label={`${FL.PH} Philippines`} vals={winVals(c.ph)} win={win} details={c.at.filter(t=>t.ct==="PH").map(t=>({n:`${t.nm} (${t.dp})`,v:winVals(MO.map(()=>-t.co))}))}/>
-              <XRow label={`${FL.IN} India`} vals={winVals(c.ind)} win={win} details={[...c.at.filter(t=>t.ct==="IN").map(t=>({n:t.nm,v:winVals(MO.map(()=>-t.co))})),{n:"Wise Fees",v:winVals(d.wf)}]}/>
+              <XRow label={`${FL.US} US Payroll`} vals={winVals(c.us)} win={win} details={[
+                ...c.at.filter(t=>t.ct==="US").map(t=>({n:t.nm,v:winVals(MO.map((_,i)=>{const sm=t.startMo??0;const em=t.endMo??23;if(i<sm||i>em)return 0;if(t.nm==="Paul"){if(i===0)return 0;if(i===1)return -3917;return -t.co;}if(t.nm==="Sara"){return -(i===0?824:i===1?180:i===4?324:t.co);}return -t.co;}))})),
+                {n:"Emp Taxes",v:winVals(d.et)},{n:"ADP Fees",v:winVals(d.af)}
+              ]}/>
+              <XRow label={`${FL.PH} Philippines`} vals={winVals(c.ph)} win={win} details={c.at.filter(t=>t.ct==="PH").map(t=>({n:`${t.nm} (${t.dp})`,v:winVals(MO.map((_,i)=>{const sm=t.startMo??0;const em=t.endMo??23;if(i<sm||i>em)return 0;if(t.nm==="Janna")return -(i<2?800:t.co);return -t.co;}))}))}/>
+              <XRow label={`${FL.IN} India`} vals={winVals(c.ind)} win={win} details={[...c.at.filter(t=>t.ct==="IN").map(t=>({n:t.nm,v:winVals(MO.map((_,i)=>{const sm=t.startMo??0;const em=t.endMo??23;if(i<sm||i>em)return 0;if(t.nm==="Soorya"&&i===0)return -2000;return -t.co;}))})),{n:"Wise Fees",v:winVals(d.wf)}]}/>
               <XRow label="Subscriptions" vals={winVals(c.sb)} win={win} details={d.sb.map(s=>({n:s.n,v:winVals(MO.map((_,i)=>{if(s.s&&i<s.s)return 0;if(s.e!==undefined&&i>s.e)return 0;return -s.a;}))}))}/>
               <XRow label="Other Costs" vals={winVals(c.oc)} win={win} details={d.oc.map(x=>({n:x.n,v:winVals(x.v)}))}/>
               <XRow label="Debt" vals={winVals(c.db)} win={win} details={d.db.map(x=>({n:x.n,v:winVals(x.v)}))}/>
