@@ -145,7 +145,7 @@ export function compute(d) {
       const em = p.endMo ?? (N - 1);
       if (i < sm || i > em) return;
       if (p.nm === "Paul") { if (i === 0) return; if (i === 1) { t -= 3917; return; } t -= p.co; return; }
-      if (p.nm === "Sara") { t -= (i === 0 ? 824 : i === 1 ? 180 : p.co); return; }
+      if (p.nm === "Sara") { t -= (i === 0 ? 824 : i === 1 ? 180 : i === 4 ? 324 : p.co); return; }
       t -= p.co;
     });
     return t;

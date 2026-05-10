@@ -71,6 +71,8 @@ export const D0 = {
     // RSK 2026 ($4,944) paid by CC on 2/4 — captured in ccOwe, not oc[]. Future RSK obligations should go here.
     { n: "RSK Advisors (Tax)",  v: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
     { n: "CC Interest",         v: [0,0,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130] },
+    // May 2026 prorated partial: Gowtham 6 days ($88)
+    { n: "Gowtham (May partial)", v: [0,0,0,0,-88,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
   ],
 
   // Debt / CC — hits checking account
@@ -103,10 +105,10 @@ export const D0 = {
     { id:"p5", nm:"Jeanna",          rl:"Support",      dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
     { id:"p6", nm:"Soorya",          rl:"Lead Dev",     dp:"Development", ct:"IN", co:1089, on:true },
     { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1089, on:true },
-    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true },
+    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true, endMo:3 },
     { id:"p10",nm:"Aadrika",         rl:"Contractor",   dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
-    // Ravindar — full-time India dev, ₹96K/mo. April was 3 days only; May = official start.
-    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:true, startMo:4 },
+    // Ravindar — benched after May 2026 (6 working days prorated from ₹96K/mo).
+    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:325, on:true, startMo:4, endMo:4 },
     // Shanee — full-time India, ₹40K/mo. Started May.
     { id:"p12",nm:"Shanee Patel",    rl:"Developer",    dp:"Development", ct:"IN", co:473,  on:true, startMo:4 },
     // Mark Alberto — variable comp, manage via scenarios. April $5K one-time tracked in oc[].
@@ -122,28 +124,28 @@ export const D0 = {
   // Service types: retainer | support-retainer | bank-of-hours | project | one-time
   // Segments:      infinityMirror | supportRetainer | bankOfHours | fullProject | zohoCommissionOnly | oneTime
   cl: [
-    // c1 Gomes Agency — Infinity Mirror, end Dec 19. Late Apr.
+    // c1 Gomes Agency — CHURNED May 2026. Service revenue removed from forecast.
     {
       id: "c1", nm: "Gomes Agency", email: "jake@gomesagency.com",
-      notes: "Late on April payment, no update despite contact attempts",
+      notes: "Churned May 2026 — no further service revenue expected",
       serviceContract: {
         type: "retainer", segment: "infinityMirror",
         monthlyAmount: 2000, monthlyRenewalDay: 19,
         startDate: null, endDate: "2026-12-19",
-        status: "active", inForecast: true,
+        status: "churned", inForecast: false,
         paymentSchedule: [
-          { dueDate: "2026-01-19", amount: 2000, paid: true,  paidDate: null, note: "" },
-          { dueDate: "2026-02-19", amount: 2000, paid: true,  paidDate: null, note: "" },
-          { dueDate: "2026-03-19", amount: 2000, paid: true,  paidDate: null, note: "" },
-          { dueDate: "2026-04-19", amount: 2000, paid: false, paidDate: null, note: "Late" },
-          { dueDate: "2026-05-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-06-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-07-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-08-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-09-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-10-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-11-19", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-12-19", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-01-19", amount: 2000, paid: true,  paidDate: null, note: "", status: "P" },
+          { dueDate: "2026-02-19", amount: 2000, paid: true,  paidDate: null, note: "", status: "P" },
+          { dueDate: "2026-03-19", amount: 2000, paid: true,  paidDate: null, note: "", status: "P" },
+          { dueDate: "2026-04-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-05-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-06-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-07-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-08-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-09-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-10-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-11-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-12-19", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
         ],
       },
       zohoCommission: {
@@ -219,30 +221,30 @@ export const D0 = {
       lastEditedAt: null, lastEditedBy: null,
     },
 
-    // c4 VanBoxel — Infinity Mirror at-risk, hasn't paid since Feb 3. inForecast:false.
+    // c4 VanBoxel — CHURNED May 2026. Was at-risk, inForecast already false.
     {
       id: "c4", nm: "VanBoxel", email: "kyle@vanboxelsupply.com",
-      notes: "Hasn't paid since Feb 3, critical mode",
+      notes: "Churned May 2026 — non-collectable invoices written off",
       serviceContract: {
         type: "retainer", segment: "infinityMirror",
         monthlyAmount: 2000, monthlyRenewalDay: 3,
         startDate: null, endDate: "2027-02-03",
-        status: "at-risk", inForecast: false,
+        status: "churned", inForecast: false,
         paymentSchedule: [
-          { dueDate: "2026-01-03", amount: 2000, paid: true,  paidDate: null, note: "" },
-          { dueDate: "2026-02-03", amount: 2000, paid: true,  paidDate: null, note: "" },
-          { dueDate: "2026-03-03", amount: 2000, paid: false, paidDate: null, note: "Late" },
-          { dueDate: "2026-04-03", amount: 2000, paid: false, paidDate: null, note: "Late" },
-          { dueDate: "2026-05-03", amount: 2000, paid: false, paidDate: null, note: "Late" },
-          { dueDate: "2026-06-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-07-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-08-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-09-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-10-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-11-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-12-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2027-01-03", amount: 2000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2027-02-03", amount: 2000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-01-03", amount: 2000, paid: true,  paidDate: null, note: "", status: "P" },
+          { dueDate: "2026-02-03", amount: 2000, paid: true,  paidDate: null, note: "", status: "P" },
+          { dueDate: "2026-03-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-04-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-05-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-06-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-07-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-08-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-09-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-10-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-11-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2026-12-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2027-01-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
+          { dueDate: "2027-02-03", amount: 2000, paid: false, paidDate: null, note: "Written off — churned", status: "C" },
         ],
       },
       zohoCommission: {
