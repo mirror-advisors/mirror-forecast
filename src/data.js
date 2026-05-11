@@ -71,9 +71,6 @@ export const D0 = {
     // RSK 2026 ($4,944) paid by CC on 2/4 — captured in ccOwe, not oc[]. Future RSK obligations should go here.
     { n: "RSK Advisors (Tax)",  v: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
     { n: "CC Interest",         v: [0,0,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130,-130] },
-    // May 2026 prorated partials: Gowtham 6 days ($88), Ravindar 6 days ($325)
-    { n: "Gowtham (May partial)", v: [0,0,0,0,-88,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
-    { n: "Ravindar (May partial)", v: [0,0,0,0,-325,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
   ],
 
   // Debt / CC — hits checking account
@@ -106,11 +103,10 @@ export const D0 = {
     { id:"p5", nm:"Jeanna",          rl:"Support",      dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
     { id:"p6", nm:"Soorya",          rl:"Lead Dev",     dp:"Development", ct:"IN", co:1089, on:true },
     { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1089, on:true },
-    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true, endMo:3 },
+    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true, endMo:3, monthOverrides:{4:88} },
     { id:"p10",nm:"Aadrika",         rl:"Contractor",   dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
-    // Ravindar — benched after May 2026. No full months on our books (Apr $142 in actuals, May $325 via oc[]).
-    // startMo:4 + endMo:3 → empty range, $0 contribution via tm[]. co:1136 is reference rate only.
-    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:true, startMo:4, endMo:3 },
+    // Ravindar — benched after May 2026. Apr $142 in actuals (not forecast). May $325 via monthOverride.
+    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:true, startMo:4, endMo:4, monthOverrides:{4:325} },
     // Shanee — full-time India, ₹40K/mo. Started May.
     { id:"p12",nm:"Shanee Patel",    rl:"Developer",    dp:"Development", ct:"IN", co:473,  on:true, startMo:4 },
     // Mark Alberto — variable comp, manage via scenarios. April $5K one-time tracked in oc[].
@@ -318,21 +314,27 @@ export const D0 = {
       lastEditedAt: null, lastEditedBy: null,
     },
 
-    // c7 Plastics Products Mfg — Full project, May–Sep 2026, $12k/mo.
+    // c7 Plastics Products Mfg — 12-month payment cadence (Scenario A), $60K total.
     {
       id: "c7", nm: "Plastics Products Mfg", email: null,
-      notes: "Confirmed, paying this week — invoice unpaid as of May 4",
+      notes: "12-month payment cadence per amendment. Original 5-month $12K/mo restructured to spread payments. Total contract value unchanged at $60K. Scenario A (no ongoing support opt-in).",
       serviceContract: {
         type: "project", segment: "fullProject",
         monthlyAmount: 12000, monthlyRenewalDay: null,
-        startDate: "2026-05-01", endDate: "2026-09-30",
+        startDate: "2026-05-01", endDate: "2027-04-30",
         status: "active", inForecast: true,
         paymentSchedule: [
-          { dueDate: "2026-05-01", amount: 12000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-06-01", amount: 12000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-07-01", amount: 12000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-08-01", amount: 12000, paid: false, paidDate: null, note: "" },
-          { dueDate: "2026-09-01", amount: 12000, paid: false, paidDate: null, note: "" },
+          { dueDate: "2026-05-15", amount: 10000, paid: false, paidDate: null, status: "U", note: "Upfront covers May + Apr 2027" },
+          { dueDate: "2026-06-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2026-07-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2026-08-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2026-09-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "Project completion" },
+          { dueDate: "2026-10-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2026-11-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2026-12-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2027-01-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2027-02-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
+          { dueDate: "2027-03-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
         ],
       },
       zohoCommission: null,

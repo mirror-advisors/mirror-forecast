@@ -138,37 +138,39 @@ export function compute(d) {
   const oc = idxRange(N).map(i => d.oc.reduce((s, c) => s + (c.v[i] || 0), 0));
   const db = idxRange(N).map(i => d.db.reduce((s, c) => s + (c.v[i] || 0), 0));
   const at = d.tm.filter(t => t.on);
+  // monthOverrides trumps startMo/endMo — checked first.
+  // If override exists for month i, use it regardless of range.
+  // Otherwise fall through to range check + co (or named-person hardcode).
+  const tmCost = (p, i) => {
+    const mo = p.monthOverrides;
+    if (mo && i in mo) return mo[i];
+    const sm = p.startMo ?? 0;
+    const em = p.endMo ?? (N - 1);
+    if (i < sm || i > em) return 0;
+    return p.co;
+  };
   const us = idxRange(N).map(i => {
     let t = (d.et[i] || 0) + (d.af[i] || 0);
     at.filter(p => p.ct === "US").forEach(p => {
-      const sm = p.startMo ?? 0;
-      const em = p.endMo ?? (N - 1);
-      if (i < sm || i > em) return;
-      if (p.nm === "Paul") { if (i === 0) return; if (i === 1) { t -= 3917; return; } t -= p.co; return; }
-      if (p.nm === "Sara") { t -= (i === 0 ? 824 : i === 1 ? 180 : i === 4 ? 324 : p.co); return; }
-      t -= p.co;
+      if (p.nm === "Paul") { if (i === 0) return; if (i === 1) { t -= 3917; return; } t -= tmCost(p, i); return; }
+      if (p.nm === "Sara") { t -= (i === 0 ? 824 : i === 1 ? 180 : i === 4 ? 324 : tmCost(p, i)); return; }
+      t -= tmCost(p, i);
     });
     return t;
   });
   const ph = idxRange(N).map(i => {
     let t = 0;
     at.filter(p => p.ct === "PH").forEach(p => {
-      const sm = p.startMo ?? 0;
-      const em = p.endMo ?? (N - 1);
-      if (i < sm || i > em) return;
-      if (p.nm === "Janna") { t -= (i < 2 ? 800 : p.co); return; }
-      t -= p.co;
+      if (p.nm === "Janna") { t -= (i < 2 ? 800 : tmCost(p, i)); return; }
+      t -= tmCost(p, i);
     });
     return t;
   });
   const ind = idxRange(N).map(i => {
     let t = d.wf[i] || 0;
     at.filter(p => p.ct === "IN").forEach(p => {
-      const sm = p.startMo ?? 0;
-      const em = p.endMo ?? (N - 1);
-      if (i < sm || i > em) return;
       if (p.nm === "Soorya" && i === 0) { t -= 2000; return; }
-      t -= p.co;
+      t -= tmCost(p, i);
     });
     return t;
   });
