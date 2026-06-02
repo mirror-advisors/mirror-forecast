@@ -107,8 +107,8 @@ export const D0 = {
     { id:"p3", nm:"Janna",           rl:"Mktg Lead",    dp:"Marketing",   ct:"PH", co:608,  on:true },
     { id:"p4", nm:"Mark Atienza",    rl:"Marketing",    dp:"Marketing",   ct:"PH", co:276,  on:true, startMo:1 },
     { id:"p5", nm:"Jeanna",          rl:"Support",      dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
-    { id:"p6", nm:"Soorya",          rl:"Lead Dev",     dp:"Development", ct:"IN", co:1070, on:true },
-    { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1070, on:true },
+    { id:"p6", nm:"Soorya",          rl:"Developer",    dp:"Development", ct:"IN", co:1070, on:true },
+    { id:"p7", nm:"Yuva",            rl:"Lead Dev",     dp:"Development", ct:"IN", co:1070, on:true },
     // Gowtham — benched Jun 2026 forward; Apr/May actuals preserved via oc[] partial line.
     { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:false, endMo:3, monthOverrides:{4:88} },
     { id:"p10",nm:"Aadrika",         rl:"Contractor",   dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
@@ -157,9 +157,9 @@ export const D0 = {
       },
       zohoCommission: {
         zohoProduct: "One", licenses: 21,
-        frequency: "monthly", monthlyAmount: 810, annualAmount: 0,
+        frequency: "monthly", monthlyAmount: 129.60, annualAmount: 0,
         renewalDate: null, renewalDay: 5,
-        status: "churned", inForecast: false, note: "Churned with service contract Jun 2026",
+        status: "active", inForecast: true, note: "Service churned; Zoho licenses retained — $129.60/mo recurring",
       },
       lastEditedAt: null, lastEditedBy: null,
     },
@@ -257,8 +257,8 @@ export const D0 = {
       zohoCommission: {
         zohoProduct: "One", licenses: 14,
         frequency: "annual", monthlyAmount: 0, annualAmount: 399,
-        renewalDate: "2026-08-29", renewalDay: null,
-        status: "churned", inForecast: false, note: "Churned with service contract Jun 2026",
+        renewalDate: "2026-11-13", renewalDay: null,
+        status: "active", inForecast: true, note: "Service churned; Zoho licenses retained — annual $399 renews Nov 13",
       },
       lastEditedAt: null, lastEditedBy: null,
     },
@@ -511,16 +511,16 @@ export const D0 = {
       lastEditedAt: null, lastEditedBy: null,
     },
 
-    // c18 Modern Practice — Zoho One 124 lic, no commission. Q5 lockin: keep object, $0 annual.
+    // c18 Modern Practice — Quit Zoho. Excluded from forecast.
     {
       id: "c18", nm: "Modern Practice", email: "omid@modpracticesolutions.com",
-      notes: "No more commission, likely not renewing. Discuss with Mark.",
+      notes: "Quit Zoho — will not renew. No further commission anticipated.",
       serviceContract: null,
       zohoCommission: {
         zohoProduct: "One", licenses: 124,
         frequency: "annual", monthlyAmount: 0, annualAmount: 0,
         renewalDate: null, renewalDay: null,
-        status: "active", inForecast: true, note: "",
+        status: "churned", inForecast: false, note: "Quit Zoho",
       },
       lastEditedAt: null, lastEditedBy: null,
     },

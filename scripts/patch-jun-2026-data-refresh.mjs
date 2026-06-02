@@ -324,17 +324,86 @@ function applyGroup9(d) {
   return 1;
 }
 
+// ─── Group 11: Labels + c1/c4 zoho restore + c18 exclude ────────────────────
+// Mirror Advisors earns both service retainers AND Zoho licensing commissions;
+// they are independent. c1 Gomes & c4 VanBoxel ended SERVICE but kept Zoho.
+function applyGroup11(d) {
+  let changes = 0;
+
+  // 11.1 Personnel rl labels (Yuva = Lead Dev, Soorya = Developer)
+  const LBL = { p6: 'Developer', p7: 'Lead Dev' };
+  for (const [id, rl] of Object.entries(LBL)) {
+    const t = (d.tm || []).find(x => x.id === id);
+    if (!t) { console.log(`  ! tm[${id}] missing`); continue; }
+    if (t.rl !== rl) {
+      console.log(`  ✓ tm[${id}] ${t.nm}: rl "${t.rl}" → "${rl}"`);
+      t.rl = rl;
+      changes++;
+    } else { console.log(`  – tm[${id}] ${t.nm}: rl already "${rl}"`); }
+  }
+
+  // 11.2 c1 Gomes zoho — active, $129.60/mo (NOT 810). Service stays churned.
+  const c1 = (d.cl || []).find(x => x.id === 'c1');
+  if (c1?.zohoCommission) {
+    const zc = c1.zohoCommission;
+    const targets = { status: 'active', inForecast: true, monthlyAmount: 129.60 };
+    const diffs = [];
+    for (const [k, v] of Object.entries(targets)) {
+      if (zc[k] !== v) { diffs.push(`${k}:${zc[k]}→${v}`); zc[k] = v; }
+    }
+    if (diffs.length) {
+      zc.note = 'Service churned; Zoho licenses retained — $129.60/mo recurring';
+      console.log(`  ✓ c1 Gomes zoho: ${diffs.join(', ')}`);
+      changes++;
+    } else { console.log('  – c1 Gomes zoho: already active @ $129.60'); }
+  }
+
+  // 11.3 c4 VanBoxel zoho — active, $399 annual, renewal Nov 13 2026.
+  const c4 = (d.cl || []).find(x => x.id === 'c4');
+  if (c4?.zohoCommission) {
+    const zc = c4.zohoCommission;
+    const targets = { status: 'active', inForecast: true, annualAmount: 399, renewalDate: '2026-11-13' };
+    const diffs = [];
+    for (const [k, v] of Object.entries(targets)) {
+      if (zc[k] !== v) { diffs.push(`${k}:${zc[k]}→${v}`); zc[k] = v; }
+    }
+    if (diffs.length) {
+      zc.note = 'Service churned; Zoho licenses retained — annual $399 renews Nov 13';
+      console.log(`  ✓ c4 VanBoxel zoho: ${diffs.join(', ')}`);
+      changes++;
+    } else { console.log('  – c4 VanBoxel zoho: already active @ Nov 13'); }
+  }
+
+  // 11.4 c18 Modern Practice zoho — quit Zoho, exclude entirely.
+  const c18 = (d.cl || []).find(x => x.id === 'c18');
+  if (c18?.zohoCommission) {
+    const zc = c18.zohoCommission;
+    if (zc.status === 'churned' && zc.inForecast === false) {
+      console.log('  – c18 Modern Practice zoho: already churned/excluded');
+    } else {
+      zc.status = 'churned';
+      zc.inForecast = false;
+      zc.note = 'Quit Zoho';
+      console.log('  ✓ c18 Modern Practice zoho: → churned, inForecast:false');
+      changes++;
+    }
+  }
+
+  return changes;
+}
+
 // ─── Dispatch ───────────────────────────────────────────────────────────────
 const GROUPS = {
-  1: { name: 'Cash + Stripe loan removal', fn: applyGroup1 },
-  2: { name: 'Personnel (tm[]) + et[] zero-out', fn: applyGroup2 },
-  3: { name: 'oc[] rebuild', fn: applyGroup3 },
-  4: { name: 'sb[] SaaS rebuild', fn: applyGroup4 },
-  5: { name: 'Churn c1 + c4 zoho', fn: applyGroup5 },
-  6: { name: 'c3 380 Guide status active', fn: applyGroup6 },
-  7: { name: 'Plastics c7 May paid + zoho add', fn: applyGroup7 },
-  8: { name: 'Zoho renewal date fixes (c19, c20)', fn: applyGroup8 },
-  9: { name: 'Clear scenarios[]', fn: applyGroup9 },
+  1:  { name: 'Cash + Stripe loan removal', fn: applyGroup1 },
+  2:  { name: 'Personnel (tm[]) + et[] zero-out', fn: applyGroup2 },
+  3:  { name: 'oc[] rebuild', fn: applyGroup3 },
+  4:  { name: 'sb[] SaaS rebuild', fn: applyGroup4 },
+  5:  { name: 'Churn c1 + c4 zoho', fn: applyGroup5 },
+  6:  { name: 'c3 380 Guide status active', fn: applyGroup6 },
+  7:  { name: 'Plastics c7 May paid + zoho add', fn: applyGroup7 },
+  8:  { name: 'Zoho renewal date fixes (c19, c20)', fn: applyGroup8 },
+  9:  { name: 'Clear scenarios[]', fn: applyGroup9 },
+  11: { name: 'Cleanup (labels, c1/c4 restore, c18 exclude)', fn: applyGroup11 },
 };
 
 async function backup() {
