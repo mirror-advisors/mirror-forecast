@@ -6,7 +6,7 @@ import { compute } from '../src/compute.js';
 import { monthIdxFromDate } from '../src/clientsHelpers.js';
 
 const c = compute(D0);
-const cm = 4; // May 2026 (today is 2026-05-05)
+const cm = 5; // June 2026
 
 function colorState(bal, net) {
   if (bal <= 0) return 'DEFICIT';
@@ -57,13 +57,35 @@ for (let i = cm; i < 24; i++) {
 for (let i = cm; i < 24; i++) {
   if (c.rvDerived.za[i] > 5000) push(i, 'Zoho renewals');
 }
-for (let i = cm; i < 24; i++) {
-  if (c.bl[i] <= 0) { push(i, 'First deficit'); break; }
+// Forward-looking first deficit from BASELINE balance (no scenarios), matching
+// RunwayChart.jsx subtitle and the Baseline Runway card in App.jsx.
+const blBase = [];
+const ntBase = c.rvBase.map((v, i) => v + c.exBase[i]);
+ntBase.forEach((n, i) => blBase.push(i === 0 ? D0.openBal + n : blBase[i - 1] + n));
+let forwardDeficitIdx = -1;
+for (let i = cm; i < blBase.length; i++) { if (blBase[i] <= 0) { forwardDeficitIdx = i; break; } }
+if (forwardDeficitIdx >= 0) push(forwardDeficitIdx, 'First deficit');
+
+// Title — computed, not hardcoded. Mirrors RunwayChart's subtitle.
+function countGreen(bal) {
+  let count = 0, i = cm;
+  while (i < bal.length && bal[i] > 0) { count++; i++; }
+  if (i < bal.length) {
+    const lastPos = bal[i - 1];
+    const burn = lastPos - bal[i];
+    if (burn > 0) count += Math.min(lastPos / burn, 1);
+  }
+  return Math.round(count * 4) / 4;
 }
+const runwayMonths = countGreen(blBase);
+const deficitLabel = forwardDeficitIdx >= 0 ? labelForIdx(forwardDeficitIdx) : null;
+const titleStr = deficitLabel
+  ? `Runway: ${runwayMonths.toFixed(1)} months · deficit ${deficitLabel}`
+  : `Runway: ${runwayMonths.toFixed(1)} months · green all horizon`;
 
 console.log('=== E2c.2 RUNWAY CHART VERIFICATION ===');
-console.log(`Today: 2026-05-05  cm: ${cm}  BUFFER_THIN_THRESHOLD: $${BUFFER_THIN_THRESHOLD.toLocaleString()}`);
-console.log("Title: \"Runway: 12.0 months · deficit Apr'27\"");
+console.log(`cm: ${cm} (${labelForIdx(cm)})  BUFFER_THIN_THRESHOLD: $${BUFFER_THIN_THRESHOLD.toLocaleString()}`);
+console.log(`Title: "${titleStr}"`);
 console.log('Legend: ● Healthy   ● Burning   ● Thin   ● Deficit');
 console.log('');
 console.log('Idx Month   Net      Balance    State    Current?  Annotations');

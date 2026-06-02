@@ -27,8 +27,8 @@ export const TIERS = {};
 export const PIE_COLORS = { za:"#6bbfb0", zm:"#60a5fa", im:"#e4b44e", mk:"#b8a9e8", ot:"#e08888" };
 
 export const D0 = {
-  // Mar 31 ending balance per Chase6692 statement
-  openBal: 1309, cashNow: 24361.66, savings: 50, sLoan: 0, ccOwe: -9553.37,
+  // Mar 31 ending balance per Chase6692 statement; cashNow = Chase ...6692 after 06/01/2026 activity
+  openBal: 1309, cashNow: 24338.66, savings: 50, sLoan: 0, ccOwe: -9553.37,
 
   // Revenue: derived from cl[] (im/za/zm/ot) + manual rv.mk/pCruzy/pPatson
   // Q1 2026 actuals (idx 0-3) preserved in rvActuals; idx 4+ derived from clients
@@ -46,23 +46,28 @@ export const D0 = {
     zm: { 0: 0, 1: 0, 2: 0, 3: 1224 },
   },
 
-  // Subscriptions on CC — tracked for visibility, cash impact is CC Paydown in db[]
+  // Subscriptions on CC — tracked for visibility only (excluded from ex per compute.js).
+  // Cash impact flows via db[] "CC Paydown". Total $562/mo verified per-line Jun 2026.
   sb: [
-    { n: "Canva", a: 15 },
-    { n: "Microsoft", a: 24 },
-    { n: "Wix", a: 26 },
-    { n: "Regus", a: 114 },
-    { n: "Claude (Team)", a: 224, s: 2 },
-    { n: "Verizon (CC)", a: 0 },
-    { n: "Google WS", a: 121, s: 2 },
-    { n: "Zoho Corp", a: 49, s: 2 },
+    { n: "Anthropic/Claude", a: 219 },
+    { n: "Regus",            a: 121 },
+    { n: "Google Workspace", a: 61 },
+    { n: "Canva",            a: 48 },
+    { n: "Wix",              a: 26 },
+    { n: "Microsoft",        a: 24 },
+    { n: "Webflow",          a: 20 },
+    { n: "Zoom",             a: 18 },
+    { n: "Supabase",         a: 14 },
+    { n: "Proton",           a: 7 },
+    { n: "Vercel",           a: 4 },
   ],
 
   // Other costs — checking account only
+  // Jun 2026 refresh: Chase Fee + Wire Fees consolidated into single Bank Fees -$30/mo from idx 5+.
+  // Cell Phone line carries historical Verizon actuals (idx 0-4) and ACHMA VISB -$174 from idx 5+.
   oc: [
-    { n: "Chase Fee",           v: [-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15] },
-    { n: "Wire Fees",           v: [0,-15,-30,-15,0,-15,0,-15,0,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15,-15] },
-    { n: "Verizon (checking)",  v: [-136,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141,-141] },
+    { n: "Cell Phone",          v: [-136,-141,-141,-141,-141,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174,-174] },
+    { n: "Bank Fees",           v: [0,0,0,0,0,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30,-30] },
     { n: "Old Acct Transfer",   v: [-398,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
     // Mark Alberto one-time COO payment via ADP April 15
     { n: "Mark Alberto (COO)",  v: [0,0,0,-5000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
@@ -77,12 +82,12 @@ export const D0 = {
   db: [
     // CC Paydown: Jan $77, Feb $800, Mar $2,500, Apr $2,000 actuals; May+ $600/mo baseline
     { n: "CC Paydown", v: [-77,-800,-2500,-2000,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600,-600] },
-    // Stripe loan repaid via 20% of payout transactions, netted from rv.za revenue. No separate cash outflow line needed.
-    { n: "Stripe Loan", v: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
   ],
 
-  // ADP employment taxes — Mar actual: $1,723.57 gross - $223.62 refund = $1,499.95
-  et: [-523,-1188,-1500,-1177,-1177,-1177,-1177,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000],
+  // ADP employment taxes — Q1 2026 actuals (idx 0-3) and May (idx 4) preserved.
+  // Jun 2026+ zeroed because tm[] co for Paul/Sara is now "all-in" (gross + employer liability),
+  // and a separate et[] line would double-count ~$700/mo employer-tax share.
+  et: [-523,-1188,-1500,-1177,-1177,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 
   // ADP processing fees — Mar actual: $85.48 x2 = $170.96
   // Apr: extra run for Mark Alberto one-time ~$85 additional
@@ -92,25 +97,29 @@ export const D0 = {
   // Mar actual: $3,294.73 total Wise - ~$2,272 salaries = ~$1,023 fees (FX + transfer fees)
   wf: [-1109,-1340,-1023,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100,-100],
 
-  // Salaries reflect May 2026 rates; co is a flat monthly value applied from startMo onward
+  // Salaries reflect Jun 2026 rates; co is a flat monthly value applied from startMo onward
   // (see compute.js for hardcoded Q1 special cases on Paul, Sara, Janna, Soorya).
+  // Paul/Sara co is "all-in" (gross + employer liability) — et[] zeroed from Jun+ to avoid double-count.
   tm: [
-    { id:"p1", nm:"Paul",            rl:"CEO",          dp:"Leadership",  ct:"US", co:9167, on:true },
-    // Sara: hourly variable, ~16hrs/wk @ $12 = $832/mo. May go FT — endMo removed for long-term retention.
-    { id:"p2", nm:"Sara",            rl:"Intern",       dp:"Operations",  ct:"US", co:832,  on:true },
-    { id:"p3", nm:"Janna",           rl:"Mktg Lead",    dp:"Marketing",   ct:"PH", co:556,  on:true },
+    { id:"p1", nm:"Paul",            rl:"CEO",          dp:"Leadership",  ct:"US", co:9868, on:true },
+    // Sara: variable hourly, all-in ~$741/mo.
+    { id:"p2", nm:"Sara",            rl:"Intern",       dp:"Operations",  ct:"US", co:741,  on:true },
+    { id:"p3", nm:"Janna",           rl:"Mktg Lead",    dp:"Marketing",   ct:"PH", co:608,  on:true },
     { id:"p4", nm:"Mark Atienza",    rl:"Marketing",    dp:"Marketing",   ct:"PH", co:276,  on:true, startMo:1 },
     { id:"p5", nm:"Jeanna",          rl:"Support",      dp:"Marketing",   ct:"PH", co:276,  on:false, startMo:2, endMo:2 },
-    { id:"p6", nm:"Soorya",          rl:"Lead Dev",     dp:"Development", ct:"IN", co:1089, on:true },
-    { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1089, on:true },
-    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:true, endMo:3, monthOverrides:{4:88} },
+    { id:"p6", nm:"Soorya",          rl:"Lead Dev",     dp:"Development", ct:"IN", co:1070, on:true },
+    { id:"p7", nm:"Yuva",            rl:"Developer",    dp:"Development", ct:"IN", co:1070, on:true },
+    // Gowtham — benched Jun 2026 forward; Apr/May actuals preserved via oc[] partial line.
+    { id:"p8", nm:"Gowtham",         rl:"Developer",    dp:"Development", ct:"IN", co:308,  on:false, endMo:3, monthOverrides:{4:88} },
     { id:"p10",nm:"Aadrika",         rl:"Contractor",   dp:"Development", ct:"IN", co:1400, on:false, startMo:0, endMo:1 },
-    // Ravindar — benched after May 2026. Apr $142 in actuals (not forecast). May $325 via monthOverride.
-    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:true, startMo:4, endMo:4, monthOverrides:{4:325} },
-    // Shanee — full-time India, ₹40K/mo. Started May.
-    { id:"p12",nm:"Shanee Patel",    rl:"Developer",    dp:"Development", ct:"IN", co:473,  on:true, startMo:4 },
+    // Ravindar — benched Jun 2026 forward; May $325 actual preserved via oc[] partial line.
+    { id:"p11",nm:"Ravindar Madastu",rl:"Developer",    dp:"Development", ct:"IN", co:1136, on:false, startMo:4, endMo:4, monthOverrides:{4:325} },
+    // Shanee — full-time India, ₹40K/mo ≈ $465. Started May.
+    { id:"p12",nm:"Shanee Patel",    rl:"Developer",    dp:"Development", ct:"IN", co:465,  on:true, startMo:4 },
     // Mark Alberto — variable comp, manage via scenarios. April $5K one-time tracked in oc[].
     { id:"p13",nm:"Mark Alberto",    rl:"COO (var)",    dp:"Leadership",  ct:"US", co:0,    on:true, startMo:3 },
+    // Tryon Scott — PH PT, ₱16,000 ≈ $276. Started Jun 2026.
+    { id:"p14",nm:"Tryon Scott",     rl:"Support",      dp:"Marketing",   ct:"PH", co:276,  on:true, startMo:5 },
   ],
 
   // Phase E2b — full rebuild from authoritative spreadsheet (2026-05-04).
@@ -150,7 +159,7 @@ export const D0 = {
         zohoProduct: "One", licenses: 21,
         frequency: "monthly", monthlyAmount: 810, annualAmount: 0,
         renewalDate: null, renewalDay: 5,
-        status: "active", inForecast: true, note: "",
+        status: "churned", inForecast: false, note: "Churned with service contract Jun 2026",
       },
       lastEditedAt: null, lastEditedBy: null,
     },
@@ -190,15 +199,15 @@ export const D0 = {
       lastEditedAt: null, lastEditedBy: null,
     },
 
-    // c3 380 Guide — Infinity Mirror at-risk, end Aug 2 2026. Late Apr + May due.
+    // c3 380 Guide — Infinity Mirror, end Aug 2 2026. INV-0160/0164 late = collection note, not churn.
     {
       id: "c3", nm: "380 Guide", email: "shannon@fmblegacy.com",
-      notes: "Late on April payment, May now due",
+      notes: "Overdue invoices INV-0160, INV-0164 — timing/collection only, contract intact",
       serviceContract: {
         type: "retainer", segment: "infinityMirror",
         monthlyAmount: 2000, monthlyRenewalDay: 2,
         startDate: null, endDate: "2026-08-02",
-        status: "at-risk", inForecast: true,
+        status: "active", inForecast: true,
         paymentSchedule: [
           { dueDate: "2026-01-02", amount: 2000, paid: true,  paidDate: null, note: "" },
           { dueDate: "2026-02-02", amount: 2000, paid: true,  paidDate: null, note: "" },
@@ -249,7 +258,7 @@ export const D0 = {
         zohoProduct: "One", licenses: 14,
         frequency: "annual", monthlyAmount: 0, annualAmount: 399,
         renewalDate: "2026-08-29", renewalDay: null,
-        status: "active", inForecast: true, note: "",
+        status: "churned", inForecast: false, note: "Churned with service contract Jun 2026",
       },
       lastEditedAt: null, lastEditedBy: null,
     },
@@ -324,7 +333,7 @@ export const D0 = {
         startDate: "2026-05-01", endDate: "2027-04-30",
         status: "active", inForecast: true,
         paymentSchedule: [
-          { dueDate: "2026-05-15", amount: 10000, paid: false, paidDate: null, status: "U", note: "Upfront covers May + Apr 2027" },
+          { dueDate: "2026-05-15", amount: 10000, paid: true,  paidDate: null, status: "P", note: "Upfront covers May + Apr 2027" },
           { dueDate: "2026-06-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
           { dueDate: "2026-07-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
           { dueDate: "2026-08-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
@@ -337,7 +346,12 @@ export const D0 = {
           { dueDate: "2027-03-15", amount: 5000, paid: false, paidDate: null, status: "U", note: "" },
         ],
       },
-      zohoCommission: null,
+      zohoCommission: {
+        zohoProduct: "One", licenses: 20,
+        frequency: "annual", monthlyAmount: 0, annualAmount: 1944,
+        renewalDate: "2027-05-12", renewalDay: null,
+        status: "active", inForecast: true, note: "Renewal passed May 2026, next May 2027",
+      },
       lastEditedAt: null, lastEditedBy: null,
     },
 
@@ -511,7 +525,7 @@ export const D0 = {
       lastEditedAt: null, lastEditedBy: null,
     },
 
-    // c19 New Hope — Zoho annual, renewal May 28 2026.
+    // c19 New Hope — Zoho annual. 2026 renewal passed; next renewal May 28 2027.
     {
       id: "c19", nm: "New Hope", email: "tammywynn@newhope-cdc.org",
       notes: "",
@@ -519,21 +533,21 @@ export const D0 = {
       zohoCommission: {
         zohoProduct: "One", licenses: 20,
         frequency: "annual", monthlyAmount: 0, annualAmount: 1918.08,
-        renewalDate: "2026-05-28", renewalDay: null,
-        status: "active", inForecast: true, note: "",
+        renewalDate: "2027-05-28", renewalDay: null,
+        status: "active", inForecast: true, note: "2026 renewal received; next May 2027",
       },
       lastEditedAt: null, lastEditedBy: null,
     },
 
-    // c20 Surface Solutions — Zoho One. Q5 lockin: keep object, $0 annual (defensive default).
+    // c20 Surface Solutions — Zoho One annual $300, renews 4/23/2027.
     {
       id: "c20", nm: "Surface Solutions", email: "sam@surfacesolution.biz",
       notes: "Longshot, will talk to Mark",
       serviceContract: null,
       zohoCommission: {
         zohoProduct: "One", licenses: 24,
-        frequency: "annual", monthlyAmount: 0, annualAmount: 0,
-        renewalDate: null, renewalDay: null,
+        frequency: "annual", monthlyAmount: 0, annualAmount: 300,
+        renewalDate: "2027-04-23", renewalDay: null,
         status: "active", inForecast: true, note: "",
       },
       lastEditedAt: null, lastEditedBy: null,

@@ -71,11 +71,22 @@ export default function RunwayChart({ c, d, today, runwayMonths }) {
     return Math.max(0, (t.getFullYear() - BASE_YEAR) * 12 + t.getMonth());
   }, [today]);
 
-  // Forward-looking first deficit (after cm). Historical deficits ignored.
+  // Forward-looking first deficit (after cm) — computed from BASELINE balance
+  // (no scenarios), so the subtitle matches the "Baseline Runway" card in App.jsx.
+  // Per-card coloring below still uses c.bl (with scenarios) for the lived view.
+  const blBase = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < c.rvBase.length; i++) {
+      const n = c.rvBase[i] + c.exBase[i];
+      out.push(i === 0 ? d.openBal + n : out[i - 1] + n);
+    }
+    return out;
+  }, [c.rvBase, c.exBase, d.openBal]);
+
   const forwardDeficitIdx = useMemo(() => {
-    for (let i = cm; i < c.bl.length; i++) if (c.bl[i] <= 0) return i;
+    for (let i = cm; i < blBase.length; i++) if (blBase[i] <= 0) return i;
     return -1;
-  }, [c.bl, cm]);
+  }, [blBase, cm]);
 
   // Annotations: per-idx list, computed from c + d
   const annotationsByIdx = useMemo(() => {
@@ -111,13 +122,13 @@ export default function RunwayChart({ c, d, today, runwayMonths }) {
       }
     }
 
-    // First forward deficit
+    // First forward deficit (baseline)
     if (forwardDeficitIdx >= 0) {
-      push(forwardDeficitIdx, { label: "First deficit", title: `Cumulative balance crosses zero (${fK(c.bl[forwardDeficitIdx])})`, color: P.r });
+      push(forwardDeficitIdx, { label: "First deficit", title: `Cumulative balance crosses zero (${fK(blBase[forwardDeficitIdx])})`, color: P.r });
     }
 
     return map;
-  }, [d, c, cm, forwardDeficitIdx]);
+  }, [d, c, cm, forwardDeficitIdx, blBase]);
 
   const months = useMemo(() => {
     const out = [];

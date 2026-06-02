@@ -5,7 +5,7 @@ import { compute } from '../src/compute.js';
 
 // Force "today" for repeatability — the live app uses real Date(). For our
 // purposes (May 4, 2026) cm=4. Comment out the override to use real wall clock.
-const CM_OVERRIDE = 4; // May 2026
+const CM_OVERRIDE = 5; // June 2026
 
 const c = compute(D0);
 const cm = CM_OVERRIDE !== null ? CM_OVERRIDE : new Date().getMonth();
@@ -35,7 +35,8 @@ const blBase = [];
 const ntBase = c.rvBase.map((v, i) => v + c.exBase[i]);
 ntBase.forEach((n, i) => blBase.push(i === 0 ? D0.openBal + n : blBase[i - 1] + n));
 const mgBase = countGreen(blBase, D0.openBal);
-const fdBase = blBase.findIndex(b => b <= 0);
+// Forward-looking deficit only: ignore historical negatives before cm.
+const fdBase = (() => { for (let i = cm; i < blBase.length; i++) if (blBase[i] <= 0) return i; return -1; })();
 
 const sm = a => a.reduce((s, v) => s + v, 0);
 const fmt = n => {
