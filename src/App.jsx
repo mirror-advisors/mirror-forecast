@@ -7,7 +7,6 @@ import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
 import Reconcile from "./Reconcile.jsx";
 import ClientsTab from "./ClientsTab.jsx";
-import PaymentsTab from "./PaymentsTab.jsx";
 import RunwayChart from "./RunwayChart.jsx";
 
 export default function App() {
@@ -22,7 +21,6 @@ export default function App() {
   const [arc, setArc] = useState(false); // payroll: show archived
   const [expandedLines, setExpandedLines] = useState({}); // forecast revenue stream expand state
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 768);
-  const [pendingClientId, setPendingClientId] = useState(null); // E2d: cross-tab nav (PaymentsTab → ClientsTab)
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -80,12 +78,12 @@ export default function App() {
   // violation (R-310 "Rendered more hooks than during the previous render")
   // happens if any useEffect/useState/useMemo is placed after a conditional
   // early return — the bug that took the live app down on first push.
+  // Sara's intern surface (PaymentsTab) was removed Jun 2026 — she tracks
+  // invoices in Zoho Books now. Anyone without admin or viewer role gets the
+  // deprecated-account screen below; the tab list is uniform otherwise.
   const isIntern = !isAdmin && !isViewer;
-  const tabs = useMemo(
-    () => isIntern ? ["payments","clients"] : ["dashboard","forecast","clients","payroll"],
-    [isIntern]
-  );
-  useEffect(() => { if (!tabs.includes(tab)) setTab(tabs[0]); }, [tabs, tab]);
+  const tabs = ["dashboard", "forecast", "clients", "payroll"];
+  useEffect(() => { if (!tabs.includes(tab)) setTab(tabs[0]); }, [tab]);
 
   // Count clients with unsaved edits — drives the "N unsaved changes" pill.
   const dirtyCount = useMemo(() => {
@@ -97,6 +95,13 @@ export default function App() {
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
   if (!d) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading data...</div>);
+  if (isIntern) return (
+    <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",flexDirection:"column",gap:14,background:P.bg,color:P.tx,fontFamily:"'DM Sans', sans-serif",padding:20,textAlign:"center" }}>
+      <div style={{ fontSize:16,fontWeight:600 }}>This account is no longer active.</div>
+      <div style={{ fontSize:13,color:P.tm,maxWidth:360 }}>Invoice tracking has moved to Zoho Books. Contact Paul if you need access.</div>
+      <button onClick={signOut} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:5,padding:"8px 18px",fontFamily:"'DM Sans', sans-serif",fontSize:11,cursor:"pointer",marginTop:6 }}>Sign Out</button>
+    </div>
+  );
 
   const c = compute(d);
   const cm = new Date().getMonth();
@@ -192,7 +197,7 @@ export default function App() {
       <div style={{ maxWidth:1300,margin:"0 auto",padding:"24px 16px" }}>
 
       {/* ===================== DASHBOARD ===================== */}
-      {tab==="dashboard"&&!isIntern&&(<>
+      {tab==="dashboard"&&(<>
         {/* Runway Cards */}
         <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:16,marginBottom:20 }}>
           <Card style={{ padding:20 }}>
@@ -258,7 +263,7 @@ export default function App() {
       </>)}
 
       {/* ===================== FORECAST ===================== */}
-      {tab==="forecast"&&!isIntern&&(<>
+      {tab==="forecast"&&(<>
         <div style={{ display:"flex",justifyContent:"flex-end",marginBottom:16 }}>
           <button onClick={()=>setScForm({ name:"",type:"revenue",amount:2000,startMo:cm,duration:0 })} style={{ background:P.a,color:P.bg,border:"none",borderRadius:6,padding:"8px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add Scenario</button>
         </div>
@@ -430,31 +435,11 @@ export default function App() {
         </div>
       </>)}
 
-      {/* ===================== PAYMENTS (E2d: Sara's worklist) ===================== */}
-      {tab==="payments"&&isIntern&&(
-        <PaymentsTab
-          d={d}
-          save={save}
-          today={today}
-          onNavigateToClient={(id) => { setPendingClientId(id); setTab("clients"); }}
-        />
-      )}
-
-      {/* ===================== CLIENTS (E2c.1: master/detail + ranked) ===================== */}
-      {tab==="clients"&&(
-        <ClientsTab
-          d={d}
-          save={save}
-          profile={profile}
-          isAdmin={isAdmin}
-          isViewer={isViewer}
-          pendingClientId={pendingClientId}
-          onConsumePending={() => setPendingClientId(null)}
-        />
-      )}
+      {/* ===================== CLIENTS (Paul-only reference list) ===================== */}
+      {tab==="clients"&&(<ClientsTab d={d} />)}
 
       {/* ===================== PAYROLL ===================== */}
-      {tab==="payroll"&&!isIntern&&(<>
+      {tab==="payroll"&&(<>
         <div style={{ display:"flex",justifyContent:"space-between",marginBottom:16 }}><div style={{ display:"flex",gap:8 }}>{Object.entries(DC).map(([dd,co])=><span key={dd} style={{ fontSize:10,color:co,fontWeight:600 }}>● {dd}</span>)}</div><div style={{ display:"flex",gap:8 }}><button onClick={()=>setArc(!arc)} style={{ background:P.c2,color:P.tm,border:`1px solid ${P.bd}`,borderRadius:6,padding:"6px 12px",fontFamily:"'DM Sans', sans-serif",fontSize:11,cursor:"pointer" }}>{arc?"Hide":"Show"} Archived</button><button onClick={()=>save({...d,tm:[...d.tm,{id:"p"+Date.now(),nm:"New Hire",rl:"",dp:"Development",ct:"IN",co:0,on:true}]})} style={{ background:P.b,color:"white",border:"none",borderRadius:6,padding:"6px 14px",fontFamily:"'DM Sans', sans-serif",fontSize:11,fontWeight:700,cursor:"pointer" }}>+ Add</button></div></div>
         {["US","PH","IN"].map(ct=>{const pp=d.tm.filter(t=>t.ct===ct&&(t.on||arc));if(!pp.length)return null;const mo=pp.filter(p=>p.on).reduce((s,p)=>s+p.co,0);return(<div key={ct} style={{ marginBottom:20 }}><div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}><span style={{ fontSize:16 }}>{FL[ct]}</span><span style={{ fontSize:13,fontWeight:700 }}>{ct==="US"?"United States":ct==="PH"?"Philippines":"India"}</span><Bdg c="r">{fmt(-mo)}/mo</Bdg></div><div style={{ display:"grid",gap:6 }}>{pp.map(p=>{const pi=d.tm.indexOf(p);return(<div key={p.id} style={{ background:p.on?P.c1:`${P.c1}80`,borderRadius:8,padding:"10px 14px",border:`1px solid ${P.bd}`,display:"flex",alignItems:"center",gap:12,opacity:p.on?1:.4 }}><div style={{ flex:1 }}><div style={{ display:"flex",alignItems:"center",gap:6 }}><input value={p.nm} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,nm:e.target.value};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:12,fontWeight:600,width:110 }}/><span style={{ fontSize:9,padding:"1px 6px",borderRadius:3,background:`${DC[p.dp]||P.td}20`,color:DC[p.dp]||P.td,fontWeight:600 }}>{p.dp}</span></div><input value={p.rl||""} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,rl:e.target.value};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",color:P.tm,fontFamily:"'DM Sans', sans-serif",fontSize:11,marginTop:1 }} placeholder="Role"/></div><select value={p.dp} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,dp:e.target.value};save({...d,tm:nt2});}} style={{ background:P.c2,border:`1px solid ${P.bd}`,borderRadius:4,color:P.tx,fontFamily:"'DM Sans', sans-serif",fontSize:11,padding:4 }}>{["Development","Marketing","Operations","Leadership"].map(dd=><option key={dd}>{dd}</option>)}</select><NumIn value={p.co} onChange={e=>{const nt2=[...d.tm];nt2[pi]={...p,co:+e.target.value};save({...d,tm:nt2});}} w={70}/><button onClick={()=>{const nt2=[...d.tm];nt2[pi]={...p,on:!p.on};save({...d,tm:nt2});}} style={{ background:"transparent",border:"none",cursor:"pointer",fontSize:14 }} title={p.on?"Archive":"Reactivate"}>{p.on?"📦":"♻️"}</button><button onClick={()=>save({...d,tm:d.tm.filter((_,i)=>i!==pi)})} style={{ background:"transparent",border:"none",color:P.rM,cursor:"pointer",fontSize:13 }}>×</button></div>);})}</div></div>);})}
       </>)}
