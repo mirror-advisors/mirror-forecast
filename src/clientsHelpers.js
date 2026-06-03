@@ -1,5 +1,7 @@
-// Phase E2b/E2c — pure helpers for the unified Clients tab.
-// No React, no side effects. Used by ClientsTab/ClientList/ClientDetail/ClientTable.
+// Pure helpers shared across the app.
+// No React, no side effects. Active consumer post-Jun 2026 cleanup:
+// RunwayChart.jsx (monthIdxFromDate). Other exports are retained for now
+// — trim in a focused dead-code pass when convenient.
 
 const BASE_YEAR = 2026;
 const N = 24;

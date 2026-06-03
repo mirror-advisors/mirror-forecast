@@ -329,7 +329,7 @@ export const D0 = {
       notes: "12-month payment cadence per amendment. Original 5-month $12K/mo restructured to spread payments. Total contract value unchanged at $60K. Scenario A (no ongoing support opt-in).",
       serviceContract: {
         type: "project", segment: "fullProject",
-        monthlyAmount: 12000, monthlyRenewalDay: null,
+        monthlyAmount: 0, monthlyRenewalDay: null,
         startDate: "2026-05-01", endDate: "2027-04-30",
         status: "active", inForecast: true,
         paymentSchedule: [

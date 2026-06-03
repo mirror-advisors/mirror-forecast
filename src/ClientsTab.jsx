@@ -122,6 +122,16 @@ const dotColorFor = (kind) =>
 const statusLabelFor = (kind) =>
   kind === "service-zoho" ? "Service + Zoho" : kind === "zoho-only" ? "Zoho only" : "Zoho · svc ended";
 
+const SERVICE_TYPE_LABEL = {
+  "retainer":          "Retainer",
+  "support-retainer":  "Support retainer",
+  "project":           "Project",
+  "bank-of-hours":     "Bank of hours",
+  "one-time":          "One-time",
+};
+
+const hasMonthlyAmount = (type) => type === "retainer" || type === "support-retainer";
+
 // ─── inline SVG flag (lieu of @tabler/icons-react ti-flag) ──────────────────
 
 function FlagIcon({ color = T.amber, size = 12 }) {
@@ -236,16 +246,25 @@ function DetailPanel({ client, today, onClose }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 18 }}>
-        <DetailRow label="Service Retainer">
+        <DetailRow label="Service">
           {sc ? (
             scActive ? (
-              <span>
-                <span style={{ fontFamily: FONT_MONO }}>${(sc.monthlyAmount || 0).toLocaleString()}</span>
-                <span style={{ color: T.txtMuted }}>/mo · </span>
-                <span style={{ color: T.txtMuted }}>
-                  {sc.endDate ? `ends ${fmtEndDate(sc.endDate)}` : "month-to-month"}
+              hasMonthlyAmount(sc.type) ? (
+                <span>
+                  <span style={{ fontFamily: FONT_MONO }}>${(sc.monthlyAmount || 0).toLocaleString()}</span>
+                  <span style={{ color: T.txtMuted }}>/mo · </span>
+                  <span style={{ color: T.txtMuted }}>
+                    {sc.endDate ? `ends ${fmtEndDate(sc.endDate)}` : "month-to-month"}
+                  </span>
                 </span>
-              </span>
+              ) : (
+                <span>
+                  <span>{SERVICE_TYPE_LABEL[sc.type] || sc.type}</span>
+                  <span style={{ color: T.txtMuted }}>
+                    {sc.endDate ? ` · ends ${fmtEndDate(sc.endDate)}` : ""}
+                  </span>
+                </span>
+              )
             ) : (
               <span style={{ color: T.serviceChurned, fontStyle: "italic" }}>churned</span>
             )

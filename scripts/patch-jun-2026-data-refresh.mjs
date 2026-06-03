@@ -392,6 +392,25 @@ function applyGroup11(d) {
   return changes;
 }
 
+// ─── Group 12: Zero legacy Plastics monthlyAmount ───────────────────────────
+// The $12,000 was the original retainer concept before Plastics was
+// restructured into the May $10K + 10×$5K schedule. compute.js only reads
+// monthlyAmount for retainer types (project uses paymentSchedule), so this
+// is purely defensive — prevents any future code path from accidentally
+// reading the stale $12K. paymentSchedule is the source of truth.
+function applyGroup12(d) {
+  const c = (d.cl || []).find(x => x.id === 'c7');
+  if (!c?.serviceContract) { console.log('  ! c7 serviceContract not found'); return 0; }
+  if (c.serviceContract.monthlyAmount === 0) {
+    console.log('  – c7 Plastics serviceContract.monthlyAmount: already 0');
+    return 0;
+  }
+  const prev = c.serviceContract.monthlyAmount;
+  c.serviceContract.monthlyAmount = 0;
+  console.log(`  ✓ c7 Plastics serviceContract.monthlyAmount: ${prev} → 0 (paymentSchedule stays)`);
+  return 1;
+}
+
 // ─── Dispatch ───────────────────────────────────────────────────────────────
 const GROUPS = {
   1:  { name: 'Cash + Stripe loan removal', fn: applyGroup1 },
@@ -404,6 +423,7 @@ const GROUPS = {
   8:  { name: 'Zoho renewal date fixes (c19, c20)', fn: applyGroup8 },
   9:  { name: 'Clear scenarios[]', fn: applyGroup9 },
   11: { name: 'Cleanup (labels, c1/c4 restore, c18 exclude)', fn: applyGroup11 },
+  12: { name: 'Zero Plastics legacy monthlyAmount', fn: applyGroup12 },
 };
 
 async function backup() {
