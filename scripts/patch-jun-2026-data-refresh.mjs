@@ -18,46 +18,21 @@
  *   node scripts/patch-jun-2026-data-refresh.mjs --apply --group 1   # apply one group
  *   node scripts/patch-jun-2026-data-refresh.mjs --apply             # apply all enabled groups
  *
- * Requires SUPABASE_SERVICE_ROLE_KEY in .env.local
+ * Requires SUPABASE_SERVICE_ROLE_KEY in .env (or .env.local).
+ * Reads/writes via the relational tables + save_forecast_rows() RPC, not the blob.
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createClient } from '@supabase/supabase-js';
+import { loadForecast as fetchRow, saveForecast as writeRow } from './lib/forecastStore.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
-const envPath = resolve(ROOT, '.env.local');
-const envLines = readFileSync(envPath, 'utf-8').split('\n');
-const env = {};
-for (const line of envLines) {
-  const m = line.match(/^([^#=]+)=(.*)$/);
-  if (m) env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
-}
-
-const SUPABASE_URL = env.SUPABASE_URL || 'https://pkphesuvwzlowbssepxi.supabase.co';
-const SUPABASE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SUPABASE_KEY) {
-  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not found in .env.local');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-async function fetchRow() {
-  const { data, error } = await supabase.from('forecast_data').select('data').eq('id', 1).single();
-  if (error) { console.error('Fetch error:', error); process.exit(1); }
-  return data.data;
-}
-
-async function writeRow(payload) {
-  const { error } = await supabase
-    .from('forecast_data')
-    .upsert({ id: 1, data: payload, updated_at: new Date().toISOString() });
-  if (error) { console.error('Write error:', error); process.exit(1); }
-}
+// fetchRow() reads the relational tables (reassembled into `d`); writeRow(d) writes
+// via the atomic save_forecast_rows() RPC. The app no longer reads the JSONB blob,
+// so patches MUST go through the RPC. See scripts/lib/forecastStore.mjs.
 
 // ─── Group 1: Cash + Stripe loan removal ────────────────────────────────────
 function applyGroup1(d) {

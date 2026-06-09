@@ -14,49 +14,21 @@
  *   node scripts/patch-may-2026-ops.mjs --backup     # Step 1: backup + print BEFORE
  *   node scripts/patch-may-2026-ops.mjs --apply      # Step 2: apply patches + print AFTER
  *
- * Requires SUPABASE_SERVICE_ROLE_KEY in .env.local
+ * Requires SUPABASE_SERVICE_ROLE_KEY in .env (or .env.local).
+ * Reads/writes via the relational tables + save_forecast_rows() RPC, not the blob.
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createClient } from '@supabase/supabase-js';
+import { loadForecast as fetchRow, saveForecast as writeRow } from './lib/forecastStore.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
-// Load .env.local
-const envPath = resolve(ROOT, '.env.local');
-const envLines = readFileSync(envPath, 'utf-8').split('\n');
-const env = {};
-for (const line of envLines) {
-  const m = line.match(/^([^#=]+)=(.*)$/);
-  if (m) env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
-}
-
-const SUPABASE_URL = env.SUPABASE_URL || 'https://pkphesuvwzlowbssepxi.supabase.co';
-const SUPABASE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SUPABASE_KEY) {
-  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not found in .env.local');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function fetchRow() {
-  const { data, error } = await supabase.from('forecast_data').select('data').eq('id', 1).single();
-  if (error) { console.error('Fetch error:', error); process.exit(1); }
-  return data.data;
-}
-
-async function writeRow(payload) {
-  const { error } = await supabase
-    .from('forecast_data')
-    .upsert({ id: 1, data: payload, updated_at: new Date().toISOString() });
-  if (error) { console.error('Write error:', error); process.exit(1); }
-}
+// fetchRow() reads the relational tables; writeRow(d) writes via the
+// save_forecast_rows() RPC. See scripts/lib/forecastStore.mjs.
 
 function findClient(d, id) { return d.cl.find(c => c.id === id); }
 function findTm(d, id) { return d.tm.find(t => t.id === id); }
