@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { MO, P, DC, FL, PIE_COLORS, D0, fmt, fK, sm, getRollingWindow, getWinVal } from "./data.js";
 import { loadData, saveData } from "./storage.js";
-import { compute } from "./compute.js";
+import { compute, currentMonthIdx, BASE_YEAR } from "./compute.js";
 import { Card, Lbl, Bdg, NumIn, Pie, XRow, Toast, SaveBar } from "./components.jsx";
 import { useAuth } from "./AuthContext.jsx";
 import LoginPage from "./LoginPage.jsx";
@@ -104,8 +104,14 @@ export default function App() {
   );
 
   const c = compute(d);
-  const cm = new Date().getMonth();
   const today = new Date();
+  const N = c.bl.length;
+  // Horizon idx of the current month, anchored at Jan 2026 and clamped to the
+  // horizon. Date-driven so it survives the year rollover (was getMonth(), which
+  // silently reset to 0 every January and broke the runway from Jan 2027 on).
+  const cm = Math.min(Math.max(0, currentMonthIdx(today)), N - 1);
+  // Month label that stays correct past December (e.g. "Jan'27").
+  const moLabel = (i) => (i < 12 ? MO[i] : `${MO[i % 12]}'${String(BASE_YEAR + Math.floor(i / 12)).slice(-2)}`);
 
   // Decimal runway: walks positive months from cm, interpolates fractional remainder
   // when crossing zero, or projects beyond array end using last 3 months' avg burn.
@@ -227,7 +233,7 @@ export default function App() {
         </div>
         {/* Cash & Debt */}
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
-          <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ display:"flex",alignItems:"baseline",gap:6 }}><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div><button onClick={()=>{const v=prompt("Enter current bank balance:",d.cashNow);if(v!==null&&!isNaN(+v))save({...d,cashNow:Math.round(+v*100)/100});}} style={{ background:"transparent",border:`1px solid ${P.bd}`,borderRadius:4,padding:"2px 6px",color:P.td,fontSize:9,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>edit</button></div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const lastRecon=Object.entries(d.actuals||{}).sort((a,b)=>+b[0]-+a[0])[0];if(lastRecon)return<div style={{ fontSize:9,color:P.g,marginTop:4 }}>Verified: {MO[lastRecon[0]]} {new Date(lastRecon[1].reconDate).toLocaleDateString()}</div>;return null;})()}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Bank balance vs. {MO[cm]} forecast: {delta>0?"+":""}{fmt(delta)}</div>:null;})()}</Card>
+          <Card style={{ padding:12 }}><Lbl>Cash</Lbl><div style={{ display:"flex",alignItems:"baseline",gap:6 }}><div style={{ fontSize:22,fontWeight:800,color:P.g,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(d.cashNow)}</div><button onClick={()=>{const v=prompt("Enter current bank balance:",d.cashNow);if(v!==null&&!isNaN(+v))save({...d,cashNow:Math.round(+v*100)/100});}} style={{ background:"transparent",border:`1px solid ${P.bd}`,borderRadius:4,padding:"2px 6px",color:P.td,fontSize:9,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>edit</button></div>{d.savings>0&&<div style={{ fontSize:11,color:P.tm,marginTop:4 }}>Savings: {fmt(d.savings)}</div>}{(()=>{const lastRecon=Object.entries(d.actuals||{}).sort((a,b)=>+b[0]-+a[0])[0];if(lastRecon)return<div style={{ fontSize:9,color:P.g,marginTop:4 }}>Verified: {MO[lastRecon[0]]} {new Date(lastRecon[1].reconDate).toLocaleDateString()}</div>;return null;})()}{(()=>{const delta=d.cashNow-(c.bl[cm]);return Math.abs(delta)>500?<div style={{ fontSize:10,color:P.a,marginTop:4 }}>Bank balance vs. {moLabel(cm)} forecast: {delta>0?"+":""}{fmt(delta)}</div>:null;})()}</Card>
           <Card style={{ padding:12 }}><Lbl>Debt</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.r,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(Math.abs(d.sLoan+d.ccOwe))}</div></Card>
           <Card style={{ padding:12 }}><Lbl>2026 Revenue</Lbl><div style={{ fontSize:22,fontWeight:800,color:P.t,fontFamily:"'JetBrains Mono', monospace" }}>{fmt(tRv)}</div></Card>
         </div>

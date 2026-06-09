@@ -1,11 +1,30 @@
 import { MO } from "./data.js";
 
-// Forecast horizon: 24 months (idx 0-11 = 2026, idx 12-23 = 2027).
-const N = 24;
-const BASE_YEAR = 2026;
+// Forecast horizon is anchored at Jan 2026 (idx 0). The horizon LENGTH (N) is now
+// DERIVED from the data (longest monthly vector, floored at 24) so the forecast
+// rolls forward automatically as later-dated months are added — see horizonOf().
+export const BASE_YEAR = 2026;
 const idxRange = (n) => Array.from({ length: n }, (_, i) => i);
 
-// "2026-05-01" → 4 (May 2026, 0-indexed within 24-month horizon)
+// Length of the forecast horizon for dataset d: explicit d.horizon wins, else the
+// longest monthly vector present, never below 24 months.
+export function horizonOf(d) {
+  const lens = [d?.et, d?.af, d?.wf, d?.rv?.mk, d?.rv?.ot, d?.rv?.pCruzy, d?.rv?.pPatson];
+  (d?.oc || []).forEach((x) => lens.push(x?.v));
+  (d?.db || []).forEach((x) => lens.push(x?.v));
+  const max = lens.reduce((m, a) => Math.max(m, Array.isArray(a) ? a.length : 0), 0);
+  return d?.horizon || Math.max(24, max);
+}
+
+// Horizon index of the current calendar month, anchored at BASE_YEAR/Jan (idx 0).
+// Date-driven so it stays correct across the 2026→2027 rollover (getMonth() alone
+// would reset to 0 every January). Callers clamp to [0, N-1].
+export function currentMonthIdx(today = new Date()) {
+  const t = today instanceof Date ? today : new Date();
+  return (t.getFullYear() - BASE_YEAR) * 12 + t.getMonth();
+}
+
+// "2026-05-01" → 4 (May 2026, 0-indexed within the horizon)
 function monthIdxFromDate(dateStr) {
   if (!dateStr) return null;
   const m = /^(\d{4})-(\d{2})/.exec(dateStr);
@@ -19,6 +38,7 @@ function monthIdxFromDate(dateStr) {
 const isLive = (status) => status === "active" || status === "at-risk";
 
 export function compute(d) {
+  const N = horizonOf(d);
   // === Derive per-stream revenue from cl[] ===
   const rvDerived = {
     im: new Array(N).fill(0),

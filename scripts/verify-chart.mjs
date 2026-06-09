@@ -2,11 +2,11 @@
 // against the rebuilt data. Prints what the user SHOULD see in the browser
 // so they can spot-check without a screenshot.
 import { D0, MO, BUFFER_THIN_THRESHOLD } from '../src/data.js';
-import { compute } from '../src/compute.js';
+import { compute, currentMonthIdx } from '../src/compute.js';
 import { monthIdxFromDate } from '../src/clientsHelpers.js';
 
 const c = compute(D0);
-const cm = 5; // June 2026
+const cm = Math.min(Math.max(0, currentMonthIdx()), c.bl.length - 1); // date-driven, year-safe
 
 function colorState(bal, net) {
   if (bal <= 0) return 'DEFICIT';
@@ -31,7 +31,7 @@ function fK(n) {
 
 function labelForIdx(i) {
   const year = 2026 + Math.floor(i / 12);
-  return year > 2026 ? `${MO[i % 12]}'27` : MO[i % 12];
+  return year > 2026 ? `${MO[i % 12]}'${String(year).slice(-2)}` : MO[i % 12];
 }
 
 // Compute annotations per spec
@@ -45,16 +45,16 @@ const push = (idx, label) => {
   const sc = cl.serviceContract;
   if (sc?.type === 'project' && sc?.endDate) {
     const idx = monthIdxFromDate(sc.endDate);
-    if (idx != null && idx >= cm && idx < 24) {
+    if (idx != null && idx >= cm && idx < c.bl.length) {
       const first = (cl.nm || '').split(' ')[0];
       push(idx, `${first} ends`);
     }
   }
 });
-for (let i = cm; i < 24; i++) {
+for (let i = cm; i < c.bl.length; i++) {
   if (c.nt[i] < 0) { push(i, 'Net flips negative'); break; }
 }
-for (let i = cm; i < 24; i++) {
+for (let i = cm; i < c.bl.length; i++) {
   if (c.rvDerived.za[i] > 5000) push(i, 'Zoho renewals');
 }
 // Forward-looking first deficit from BASELINE balance (no scenarios), matching
@@ -90,7 +90,7 @@ console.log('Legend: ● Healthy   ● Burning   ● Thin   ● Deficit');
 console.log('');
 console.log('Idx Month   Net      Balance    State    Current?  Annotations');
 console.log('─── ───── ────────  ────────  ───────  ────────  ──────────────────');
-for (let i = cm; i < 24; i++) {
+for (let i = cm; i < c.bl.length; i++) {
   const bal = c.bl[i];
   const net = c.nt[i];
   const state = colorState(bal, net);

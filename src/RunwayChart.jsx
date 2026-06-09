@@ -13,7 +13,6 @@ import { MO, P, BUFFER_THIN_THRESHOLD, fK } from "./data.js";
 import { Lbl } from "./components.jsx";
 import { monthIdxFromDate } from "./clientsHelpers.js";
 
-const N = 24;
 const BASE_YEAR = 2026;
 
 const STATE = {
@@ -70,6 +69,9 @@ export default function RunwayChart({ c, d, today, runwayMonths }) {
     const t = today instanceof Date ? today : new Date();
     return Math.max(0, (t.getFullYear() - BASE_YEAR) * 12 + t.getMonth());
   }, [today]);
+
+  // Horizon length derived from the projection (was a hardcoded 24).
+  const N = c.bl.length;
 
   // Forward-looking first deficit (after cm) — computed from BASELINE balance
   // (no scenarios), so the subtitle matches the "Baseline Runway" card in App.jsx.
@@ -134,7 +136,7 @@ export default function RunwayChart({ c, d, today, runwayMonths }) {
     const out = [];
     for (let i = cm; i < N; i++) out.push(i);
     return out;
-  }, [cm]);
+  }, [cm, N]);
 
   const deficitLabel = forwardDeficitIdx >= 0 ? labelForIdx(forwardDeficitIdx) : null;
   const runwayColor = runwayMonths >= 9 ? P.g : runwayMonths >= 6 ? P.a : P.r;
