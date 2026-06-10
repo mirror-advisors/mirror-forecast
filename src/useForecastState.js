@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { D0 } from "./data.js";
-import { loadData, saveData } from "./storage.js";
+import { loadData, saveGranular, changedTables } from "./storage.js";
 
 // Owns all forecast-data state: the loaded `d` snapshot, the saved baseline,
 // dirty tracking, persistence, and the ⌘S / beforeunload guards. compute()
@@ -27,15 +27,17 @@ export function useForecastState({ isAdmin, isViewer } = {}) {
   const discard = useCallback(() => { if (isViewer) return; setD(saved); }, [saved, isViewer]);
   const dirty = !!(d && saved && d !== saved);
 
+  // persist() writes ONLY the tables that changed since the last save (granular);
+  // client-table bundles route through the atomic RPC inside saveGranular.
   const persist = useCallback(async () => {
     if (isViewer) return;
     if (!d || !dirty || saving) return;
     setSaving(true);
-    const result = await saveData(d);
+    const result = await saveGranular(d, changedTables(d, saved));
     setSaving(false);
     if (result && result.ok === false) showToast("Save failed — check your connection", "err");
     else { setSaved(d); showToast("Saved ✓", "ok"); }
-  }, [d, dirty, saving, showToast, isViewer]);
+  }, [d, saved, dirty, saving, showToast, isViewer]);
 
   useEffect(() => {
     const h = (e) => {
