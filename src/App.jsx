@@ -393,7 +393,7 @@ export default function App() {
       </>)}
 
       {/* ===================== CLIENTS (Paul-only reference list) ===================== */}
-      {tab==="clients"&&(<ClientsTab d={d} />)}
+      {tab==="clients"&&(<ClientsTab d={d} save={save} isAdmin={isAdmin} />)}
 
       {/* ===================== PAYROLL ===================== */}
       {tab==="payroll"&&(<>
