@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { MO, P, DC, FL, PIE_COLORS, D0, fmt, fK, sm, getRollingWindow, getWinVal } from "./data.js";
-import { loadData, saveData } from "./storage.js";
+import { MO, P, DC, FL, PIE_COLORS, fmt, fK, sm, getRollingWindow, getWinVal } from "./data.js";
+import { useForecastState } from "./useForecastState.js";
 import { compute, currentMonthIdx, BASE_YEAR } from "./compute.js";
 import { Card, Lbl, Bdg, NumIn, Pie, XRow, Toast, SaveBar } from "./components.jsx";
 import { useAuth } from "./AuthContext.jsx";
@@ -11,10 +11,6 @@ import RunwayChart from "./RunwayChart.jsx";
 
 export default function App() {
   const { user, profile, loading: authLoading, isAdmin, isViewer, signOut } = useAuth();
-  const [d, setD] = useState(null);
-  const [saved, setSaved] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [scForm, setScForm] = useState(null); // forecast scenario add form
   const [showRecon, setShowRecon] = useState(false);
@@ -28,49 +24,9 @@ export default function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  useEffect(() => { loadData(D0).then(x => { setD(x); setSaved(x); }); }, []);
-
-  // save() is local-only — buffers edits into draft state.
-  // persist() pushes the draft to Supabase; triggered by Save button or ⌘S.
-  // Viewers (read-only role) get a no-op so they can't accidentally write.
-  const save = useCallback((nd) => { if (isViewer) return; setD(nd); }, [isViewer]);
-  const discard = useCallback(() => { if (isViewer) return; setD(saved); }, [saved, isViewer]);
-  const showToast = useCallback((msg, type) => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  }, []);
-  const dirty = !!(d && saved && d !== saved);
-  const persist = useCallback(async () => {
-    if (isViewer) return;
-    if (!d || !dirty || saving) return;
-    setSaving(true);
-    const result = await saveData(d);
-    setSaving(false);
-    if (result && result.ok === false) {
-      showToast("Save failed — check your connection", "err");
-    } else {
-      setSaved(d);
-      showToast("Saved ✓", "ok");
-    }
-  }, [d, dirty, saving, showToast, isViewer]);
-
-  useEffect(() => {
-    const h = (e) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
-        e.preventDefault();
-        persist();
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [persist]);
-
-  useEffect(() => {
-    if (!dirty) return;
-    const h = (e) => { e.preventDefault(); e.returnValue = ""; };
-    window.addEventListener("beforeunload", h);
-    return () => window.removeEventListener("beforeunload", h);
-  }, [dirty]);
+  // All forecast-data state (load, draft buffer, dirty, persist, ⌘S, beforeunload)
+  // lives in useForecastState; compute() consumes the single `d` it returns.
+  const { d, saved, saving, toast, dirty, dirtyCount, save, discard, persist, showToast } = useForecastState({ isAdmin, isViewer });
 
   const win = useMemo(() => getRollingWindow(), []);
 
@@ -85,12 +41,7 @@ export default function App() {
   const tabs = ["dashboard", "forecast", "clients", "payroll"];
   useEffect(() => { if (!tabs.includes(tab)) setTab(tabs[0]); }, [tab]);
 
-  // Count clients with unsaved edits — drives the "N unsaved changes" pill.
-  const dirtyCount = useMemo(() => {
-    if (!d || !saved || d === saved) return 0;
-    const savedById = new Map((saved.cl || []).map(c => [c.id, JSON.stringify(c)]));
-    return (d.cl || []).reduce((n, c) => n + (savedById.get(c.id) === JSON.stringify(c) ? 0 : 1), 0);
-  }, [d, saved]);
+  // dirtyCount comes from useForecastState (drives the "N unsaved changes" pill).
 
   if (authLoading) return (<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:P.tm,fontFamily:"'DM Sans', sans-serif",background:P.bg }}>Loading...</div>);
   if (!user) return <LoginPage />;
